@@ -4,10 +4,15 @@ const { optimizedUploadService } = require('../config/optimized-upload');
 const { 
   optimizedUploadToS3, 
   optimizedUploadSingleToS3,
-  generatePresignedUploadUrl,
-  uploadRateLimit,
-  memoryMonitor
+  generatePresignedUploadUrl
 } = require('../middleware/optimized-upload');
+const { 
+  userUploadRateLimit, 
+  createUploadSession, 
+  trackUploadInSession, 
+  memoryMonitor,
+  uploadErrorHandler 
+} = require('../middleware/concurrency-safe-upload');
 const { protect } = require('../middleware/auth');
 
 // Get optimized multer configuration
@@ -20,7 +25,7 @@ const upload = optimizedUploadService.getOptimizedMulterConfig();
  */
 router.post('/presigned',
   protect,
-  uploadRateLimit(10, 60000), // 10 requests per minute
+  userUploadRateLimit(15, 60000), // 15 requests per minute per user
   generatePresignedUploadUrl
 );
 
@@ -32,7 +37,7 @@ router.post('/presigned',
 router.post('/:folder/single-stream', 
   protect,
   memoryMonitor,
-  uploadRateLimit(5, 60000), // 5 uploads per minute
+  userUploadRateLimit(5, 60000), // 5 uploads per minute
   upload.single('file'),
   optimizedUploadSingleToS3,
   (req, res) => {
@@ -61,7 +66,7 @@ router.post('/:folder/single-stream',
 router.post('/:folder/multiple-stream',
   protect,
   memoryMonitor,
-  uploadRateLimit(3, 60000), // 3 multi-uploads per minute
+  userUploadRateLimit(3, 60000), // 3 multi-uploads per minute
   upload.array('files', 10), // Maximum 10 files
   optimizedUploadToS3,
   (req, res) => {
@@ -90,7 +95,7 @@ router.post('/:folder/multiple-stream',
 router.post('/profile-stream',
   protect,
   memoryMonitor,
-  uploadRateLimit(5, 60000),
+  userUploadRateLimit(5, 60000),
   upload.single('profile'),
   async (req, res) => {
     try {
@@ -144,6 +149,70 @@ router.post('/profile-stream',
 );
 
 /**
+ * @route   POST /api/uploads-optimized/station-image-single
+ * @desc    Upload single station image using streaming (OPTIMIZED FOR DISTRIBUTED SYSTEMS)
+ * @access  Private
+ */
+router.post('/station-image-single',
+  protect,
+  createUploadSession,
+  userUploadRateLimit(15, 60000), // 15 single image uploads per minute per user
+  memoryMonitor,
+  upload.single('image'),
+  trackUploadInSession,
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No image uploaded'
+        });
+      }
+
+      let fileStream;
+      const tempFilesToCleanup = [];
+      
+      if (req.file.buffer) {
+        fileStream = optimizedUploadService.bufferToStream(req.file.buffer);
+      } else if (req.file.path) {
+        fileStream = require('fs').createReadStream(req.file.path);
+        tempFilesToCleanup.push(req.file.path);
+      }
+
+      const result = await optimizedUploadService.uploadFileStream(
+        fileStream,
+        req.file.originalname,
+        'Images',
+        req.file.mimetype,
+        req.file.size
+      );
+      
+      // Clean up temp file
+      for (const tempFile of tempFilesToCleanup) {
+        await optimizedUploadService.cleanupTempFile(tempFile);
+      }
+
+      res.json({
+        success: true,
+        message: 'Station image uploaded successfully',
+        image: {
+          ...result,
+          fieldName: req.file.fieldname,
+          mimetype: req.file.mimetype
+        },
+        memoryUsage: req.memoryUsage
+      });
+    } catch (error) {
+      console.error('Error uploading station image:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Station image upload failed'
+      });
+    }
+  }
+);
+
+/**
  * @route   POST /api/uploads-optimized/station-images-stream
  * @desc    Upload multiple station images using streaming
  * @access  Private
@@ -151,7 +220,7 @@ router.post('/profile-stream',
 router.post('/station-images-stream',
   protect,
   memoryMonitor,
-  uploadRateLimit(2, 60000), // 2 station image uploads per minute
+  userUploadRateLimit(2, 60000), // 2 station image uploads per minute
   upload.array('images', 15), // Maximum 15 images with streaming
   async (req, res) => {
     try {
@@ -266,7 +335,7 @@ router.get('/memory-status',
 router.post('/documents-stream',
   protect,
   memoryMonitor,
-  uploadRateLimit(3, 60000),
+  userUploadRateLimit(3, 60000),
   upload.array('documents', 8), // Maximum 8 documents
   async (req, res) => {
     try {
@@ -345,7 +414,7 @@ router.post('/documents-stream',
 router.post('/document-stream',
   protect,
   memoryMonitor,
-  uploadRateLimit(1, 30000), // 1 document upload per 30 seconds
+  userUploadRateLimit(1, 30000), // 1 document upload per 30 seconds
   upload.single('document'), // Single document upload
   async (req, res) => {
     try {
@@ -398,5 +467,8 @@ router.post('/document-stream',
     }
   }
 );
+
+// Apply concurrency-safe error handling to all routes
+router.use(uploadErrorHandler);
 
 module.exports = router;

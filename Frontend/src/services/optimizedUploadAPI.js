@@ -164,9 +164,91 @@ class OptimizedUploadService {
   }
 
   /**
-   * Upload multiple station images efficiently
+   * Upload multiple station images efficiently (SEQUENTIAL FOR DISTRIBUTED SYSTEMS)
+   * Uploads one image at a time to avoid large payloads that exceed Nginx limits
    */
-  async uploadStationImages(files) {
+  async uploadStationImages(files, onProgress = null) {
+    console.log(`🔄 Starting sequential upload of ${files.length} station images...`);
+    
+    const results = [];
+    const errors = [];
+    const totalFiles = files.length;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      try {
+        console.log(`📤 Uploading image ${i + 1}/${totalFiles}: ${file.name}`);
+        
+        if (onProgress) {
+          onProgress({
+            current: i + 1,
+            total: totalFiles,
+            filename: file.name,
+            status: 'uploading'
+          });
+        }
+        
+        // Upload single image
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const { data } = await optimizedUploadClient.post('/station-image-single', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        
+        if (data.success) {
+          results.push(data.image);
+          console.log(`✅ Successfully uploaded: ${file.name}`);
+          
+          if (onProgress) {
+            onProgress({
+              current: i + 1,
+              total: totalFiles,
+              filename: file.name,
+              status: 'completed'
+            });
+          }
+        } else {
+          console.error(`❌ Failed to upload: ${file.name} - ${data.message}`);
+          errors.push({ file: file.name, error: data.message });
+        }
+        
+      } catch (error) {
+        console.error(`🚨 Error uploading ${file.name}:`, error);
+        errors.push({ file: file.name, error: error.response?.data?.message || error.message });
+        
+        if (onProgress) {
+          onProgress({
+            current: i + 1,
+            total: totalFiles,
+            filename: file.name,
+            status: 'error',
+            error: error.response?.data?.message || error.message
+          });
+        }
+      }
+    }
+    
+    console.log(`📊 Station images upload complete: ${results.length}/${totalFiles} successful`);
+    
+    return {
+      success: errors.length === 0,
+      images: results,
+      errors: errors,
+      uploaded: results.length,
+      failed: errors.length,
+      total: totalFiles
+    };
+  }
+
+  /**
+   * DEPRECATED: Upload multiple station images using streaming (CAUSES 413 ERRORS IN DISTRIBUTED SYSTEMS)
+   * @deprecated Use uploadStationImages() instead for better distributed system compatibility
+   */
+  async uploadStationImagesLegacy(files) {
     const formData = new FormData();
     
     Array.from(files).forEach(file => {

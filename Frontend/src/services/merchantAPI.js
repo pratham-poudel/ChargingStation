@@ -255,11 +255,30 @@ export const merchantAPI = {
         }
       }
       
-      // Upload images using optimized service
+      // Upload images using optimized service (SEQUENTIAL FOR DISTRIBUTED SYSTEMS)
       let uploadedImages = [];
       if (files.images.length > 0) {
-        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images);
-        uploadedImages = imageResult.images || [];
+        console.log(`🔄 Starting sequential upload of ${files.images.length} station images...`);
+        
+        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images, (progress) => {
+          console.log(`📤 Upload progress: ${progress.current}/${progress.total} - ${progress.filename} (${progress.status})`);
+        });
+        
+        if (imageResult.success) {
+          uploadedImages = imageResult.images || [];
+          console.log(`✅ Successfully uploaded ${imageResult.uploaded}/${imageResult.total} images`);
+        } else {
+          console.error(`❌ Image upload failed: ${imageResult.failed}/${imageResult.total} failed`);
+          console.error('Upload errors:', imageResult.errors);
+          
+          // If some images failed, you might want to throw an error or handle partial success
+          if (imageResult.uploaded === 0) {
+            throw new Error(`All image uploads failed. First error: ${imageResult.errors[0]?.error || 'Unknown error'}`);
+          } else {
+            console.warn(`⚠️ Partial upload success: ${imageResult.uploaded}/${imageResult.total} images uploaded`);
+            uploadedImages = imageResult.images || [];
+          }
+        }
       }
       
       // Upload station master photo
@@ -304,11 +323,27 @@ export const merchantAPI = {
         }
       }
       
-      // Upload new images if any
+      // Upload new images if any (SEQUENTIAL FOR DISTRIBUTED SYSTEMS)
       let uploadedImages = [];
       if (files.images.length > 0) {
-        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images);
-        uploadedImages = imageResult.images || [];
+        console.log(`🔄 Starting sequential upload of ${files.images.length} new station images...`);
+        
+        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images, (progress) => {
+          console.log(`📤 Update upload progress: ${progress.current}/${progress.total} - ${progress.filename} (${progress.status})`);
+        });
+        
+        if (imageResult.success) {
+          uploadedImages = imageResult.images || [];
+          console.log(`✅ Successfully uploaded ${imageResult.uploaded}/${imageResult.total} new images`);
+        } else {
+          console.error(`❌ New image upload failed: ${imageResult.failed}/${imageResult.total} failed`);
+          
+          if (imageResult.uploaded === 0) {
+            throw new Error(`All new image uploads failed. First error: ${imageResult.errors[0]?.error || 'Unknown error'}`);
+          } else {
+            uploadedImages = imageResult.images || [];
+          }
+        }
       }
       
       // Upload new station master photo if provided

@@ -3,10 +3,7 @@ const ChargingStation = require('../models/ChargingStation');
 const { authorizeVendor } = require('../middleware/auth');
 const { checkVendorSubscription, checkStationLimit } = require('../middleware/subscriptionCheck');
 const { body, param, validationResult } = require('express-validator');
-// Remove old multer and uploadFile imports
-// const multer = require('multer');
-// const path = require('path');
-// const { uploadFile } = require('../config/minio');
+const ConcurrencySafeStationService = require('../services/ConcurrencySafeStationService');
 
 // Import optimized upload service
 const { optimizedUploadService } = require('../config/optimized-upload');
@@ -260,9 +257,31 @@ router.post('/',
       const stationData = {
         ...req.body,
         vendor: req.vendor.id
-      };      // Handle station images
-      if (req.files && req.files.images && req.files.images.length > 0) {
-        console.log('Uploading station images to MinIO...');
+      };      // Handle station images - Check for pre-uploaded images first
+      if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
+        console.log('📤 Using pre-uploaded station images:', req.body.images.length, 'images');
+        console.log('📋 Pre-uploaded images data:', req.body.images.map(img => ({ 
+          url: img.url, 
+          objectName: img.objectName, 
+          originalName: img.originalName 
+        })));
+        
+        // Images are already uploaded via optimized API, just use the URLs
+        const images = req.body.images.map((img, index) => ({
+          url: img.url,
+          objectName: img.objectName,
+          originalName: img.originalName || img.fileName,
+          isPrimary: index === 0, // First image as primary
+          isThumbnail: index === 0, // First image as thumbnail  
+          uploadedAt: img.uploadedAt ? new Date(img.uploadedAt) : new Date()
+        }));
+        
+        stationData.images = images;
+        console.log('✅ Set pre-uploaded station images in station data:', images.length, 'images');
+        
+      } else if (req.files && req.files.images && req.files.images.length > 0) {
+        // Fallback: Handle station images via file upload (legacy approach)
+        console.log('Uploading station images to MinIO via files...');
         const images = [];
         
         for (let i = 0; i < req.files.images.length; i++) {
@@ -366,9 +385,27 @@ router.post('/',
         console.log('✅ Set station master photo URL in station data');
       }
 
-      // Create station
-      const station = new ChargingStation(stationData);
-      await station.save();
+      // Create station using concurrency-safe service
+      let station;
+      
+      if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
+        // Use pre-uploaded images with atomic transaction
+        console.log('🔄 Creating station with pre-uploaded images using atomic transaction...');
+        station = await ConcurrencySafeStationService.handlePreUploadedImages(
+          null, // null for new station
+          stationData, 
+          req.body.images, 
+          req.vendor.id
+        );
+      } else {
+        // Handle legacy file uploads or no images
+        const images = stationData.images || [];
+        station = await ConcurrencySafeStationService.createStationWithImages(
+          stationData, 
+          images, 
+          req.vendor.id
+        );
+      }
 
       await station.populate('vendor', 'name businessName');
 
@@ -454,9 +491,26 @@ router.put('/:id',
         );
       }
 
-      // Handle new image uploads with actual MinIO upload
-      if (req.files && req.files.images && req.files.images.length > 0) {
-        console.log('Uploading new station images to MinIO...');
+      // Handle new images - Check for pre-uploaded images first
+      if (updateData.newImages && Array.isArray(updateData.newImages) && updateData.newImages.length > 0) {
+        console.log('Using pre-uploaded new station images:', updateData.newImages.length, 'images');
+        
+        // New images are already uploaded via optimized API, just add them to station
+        const newImages = updateData.newImages.map((img, index) => ({
+          url: img.url,
+          objectName: img.objectName,
+          originalName: img.originalName || img.fileName,
+          isPrimary: station.images.length === 0 && index === 0, // First image as primary if no existing images
+          isThumbnail: station.images.length === 0 && index === 0, // First image as thumbnail if no existing images
+          uploadedAt: img.uploadedAt ? new Date(img.uploadedAt) : new Date()
+        }));
+        
+        station.images.push(...newImages);
+        console.log('✅ Added pre-uploaded new station images');
+        
+      } else if (req.files && req.files.images && req.files.images.length > 0) {
+        // Fallback: Handle new image uploads with actual MinIO upload (legacy approach)
+        console.log('Uploading new station images to MinIO via files...');
         const newImages = [];
         
         for (let i = 0; i < req.files.images.length; i++) {
