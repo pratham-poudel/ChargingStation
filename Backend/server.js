@@ -94,6 +94,7 @@ if (process.env.NODE_ENV === 'development') {
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
+    server:'Backend Server 1',
     timestamp: new Date().toISOString(),
     service: 'Charging Station API',
     version: '1.0.0'
