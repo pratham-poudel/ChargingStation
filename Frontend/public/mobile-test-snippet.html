@@ -1,0 +1,48 @@
+<!-- Add this HTML snippet to any page on your website -->
+<div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+    <button 
+        id="mobileTestBtn" 
+        onclick="quickMobileTest()" 
+        style="
+            background: #1e40af; 
+            color: white; 
+            border: none; 
+            padding: 12px 16px; 
+            border-radius: 50px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+        ">
+        🔔 Test
+    </button>
+</div>
+
+<script>
+// Show test button only in mobile app
+if (window.ReactNativeWebView) {
+    document.getElementById('mobileTestBtn').style.display = 'block';
+}
+
+function quickMobileTest() {
+    if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'SHOW_LOCAL_NOTIFICATION',
+            payload: {
+                title: 'Hello from ChargEase! 👋',
+                body: 'This notification was triggered from your website.',
+                data: { source: 'floating_button' }
+            }
+        }));
+        
+        // Visual feedback
+        const btn = document.getElementById('mobileTestBtn');
+        btn.innerHTML = '✅';
+        btn.style.background = '#059669';
+        setTimeout(() => {
+            btn.innerHTML = '🔔 Test';
+            btn.style.background = '#1e40af';
+        }, 2000);
+    }
+}
+</script>

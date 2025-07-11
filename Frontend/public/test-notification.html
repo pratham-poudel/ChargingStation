@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mobile Notifications</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-container {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        button {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #dcfce7; color: #166534; }
+        .error { background: #fef2f2; color: #dc2626; }
+        .info { background: #dbeafe; color: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <h1>🔔 Mobile Notification Test</h1>
+    
+    <div class="test-container">
+        <h3>Test Local Notifications</h3>
+        <p>These buttons will send messages to the React Native app to trigger local notifications:</p>
+        
+        <button onclick="testBasicNotification()">
+            📢 Test Basic Notification
+        </button>
+        
+        <button onclick="testBookingNotification()">
+            📅 Test Booking Notification
+        </button>
+        
+        <button onclick="testChargingNotification()">
+            ⚡ Test Charging Notification
+        </button>
+        
+        <button onclick="requestPushToken()">
+            🔑 Request Push Token
+        </button>
+        
+        <div id="status"></div>
+    </div>
+
+    <div class="test-container">
+        <h3>🎯 How It Works</h3>
+        <p><strong>In Mobile App:</strong> These notifications appear as native mobile notifications</p>
+        <p><strong>In Web Browser:</strong> These are just test buttons (no notifications)</p>
+        <p><strong>Detection:</strong> The app automatically detects if it's running in the mobile WebView</p>
+    </div>
+
+    <script>
+        // Check if we're running in React Native WebView
+        const isInMobileApp = window.ReactNativeWebView !== undefined;
+        
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => statusDiv.innerHTML = '', 3000);
+        }
+
+        function testBasicNotification() {
+            if (!isInMobileApp) {
+                showStatus('❌ Not in mobile app - this only works in React Native WebView', 'error');
+                return;
+            }
+
+            const message = {
+                type: 'SHOW_LOCAL_NOTIFICATION',
+                payload: {
+                    title: 'Test Notification',
+                    body: 'This is a test from your website!',
+                    data: { test: true, timestamp: new Date().toISOString() }
+                }
+            };
+
+            window.ReactNativeWebView.postMessage(JSON.stringify(message));
+            showStatus('✅ Basic notification sent to mobile app!', 'success');
+        }
+
+        function testBookingNotification() {
+            if (!isInMobileApp) {
+                showStatus('❌ Not in mobile app - this only works in React Native WebView', 'error');
+                return;
+            }
+
+            const message = {
+                type: 'SHOW_LOCAL_NOTIFICATION',
+                payload: {
+                    title: 'Booking Confirmed! 📅',
+                    body: 'Your charging station booking for 2:00 PM has been confirmed.',
+                    data: { 
+                        type: 'booking',
+                        bookingId: 'BK12345',
+                        stationName: 'Downtown Charging Hub'
+                    }
+                }
+            };
+
+            window.ReactNativeWebView.postMessage(JSON.stringify(message));
+            showStatus('✅ Booking notification sent!', 'success');
+        }
+
+        function testChargingNotification() {
+            if (!isInMobileApp) {
+                showStatus('❌ Not in mobile app - this only works in React Native WebView', 'error');
+                return;
+            }
+
+            const message = {
+                type: 'SHOW_LOCAL_NOTIFICATION',
+                payload: {
+                    title: 'Charging Complete! ⚡',
+                    body: 'Your vehicle is fully charged. Session time: 45 minutes.',
+                    data: { 
+                        type: 'charging',
+                        sessionId: 'CS67890',
+                        chargingTime: '45 min',
+                        energyDelivered: '25 kWh'
+                    }
+                }
+            };
+
+            window.ReactNativeWebView.postMessage(JSON.stringify(message));
+            showStatus('✅ Charging notification sent!', 'success');
+        }
+
+        function requestPushToken() {
+            if (!isInMobileApp) {
+                showStatus('❌ Not in mobile app - this only works in React Native WebView', 'error');
+                return;
+            }
+
+            const message = {
+                type: 'REQUEST_PUSH_TOKEN'
+            };
+
+            window.ReactNativeWebView.postMessage(JSON.stringify(message));
+            showStatus('✅ Push token requested from mobile app!', 'success');
+        }
+
+        // Show current environment
+        window.addEventListener('load', () => {
+            if (isInMobileApp) {
+                showStatus('✅ Running in ChargEase Mobile App - Notifications will work!', 'success');
+            } else {
+                showStatus('ℹ️ Running in web browser - Open in ChargEase mobile app to test notifications', 'info');
+            }
+        });
+
+        // Listen for messages from React Native
+        window.addEventListener('message', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'EXPO_PUSH_TOKEN') {
+                    showStatus(`✅ Received push token: ${data.token.substring(0, 20)}...`, 'success');
+                }
+            } catch (error) {
+                console.log('Received non-JSON message:', event.data);
+            }
+        });
+    </script>
+</body>
+</html>

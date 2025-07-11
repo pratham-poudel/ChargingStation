@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnstile Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .turnstile-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Turnstile Integration Test</h1>
+        
+        <div id="status" class="status info">
+            Loading Turnstile...
+        </div>
+
+        <div class="turnstile-container">
+            <div id="turnstile-widget"></div>
+        </div>
+
+        <div style="text-align: center;">
+            <button id="testBackend" onclick="testBackend()">Test Backend Route</button>
+            <button id="validateToken" onclick="validateToken()" disabled>Validate Token</button>
+            <button id="resetWidget" onclick="resetWidget()">Reset Widget</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script>
+        let currentToken = null;
+        const API_BASE_URL = 'http://localhost:5000/api';
+
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function addResult(message, type = 'info') {
+            const resultsEl = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            resultsEl.appendChild(div);
+        }
+
+        function renderTurnstile() {
+            if (window.turnstile) {
+                window.turnstile.render('#turnstile-widget', {
+                    sitekey: '0x4AAAAAABkbXuuHrbv9NQwk',
+                    theme: 'light',
+                    size: 'normal',
+                    callback: function(token) {
+                        console.log('Turnstile callback received token:', token ? `${token.substring(0, 10)}...` : 'null');
+                        currentToken = token;
+                        document.getElementById('validateToken').disabled = !token;
+                        updateStatus('Token received! Click "Validate Token" to test backend validation.', 'success');
+                        addResult('Token received from Turnstile widget', 'success');
+                    },
+                    'error-callback': function(error) {
+                        console.log('Turnstile error:', error);
+                        updateStatus(`Turnstile error: ${error}`, 'error');
+                        addResult(`Turnstile error: ${error}`, 'error');
+                    },
+                    'expired-callback': function() {
+                        console.log('Turnstile token expired');
+                        currentToken = null;
+                        document.getElementById('validateToken').disabled = true;
+                        updateStatus('Token expired. Please complete the challenge again.', 'info');
+                        addResult('Token expired', 'info');
+                    }
+                });
+                updateStatus('Turnstile widget loaded successfully!', 'success');
+            } else {
+                updateStatus('Failed to load Turnstile script', 'error');
+            }
+        }
+
+        async function testBackend() {
+            try {
+                updateStatus('Testing backend route...', 'info');
+                const response = await fetch(`${API_BASE_URL}/turnstile/test`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus('Backend route is working!', 'success');
+                    addResult('Backend test successful', 'success');
+                } else {
+                    updateStatus('Backend test failed', 'error');
+                    addResult('Backend test failed', 'error');
+                }
+            } catch (error) {
+                updateStatus(`Backend test error: ${error.message}`, 'error');
+                addResult(`Backend test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function validateToken() {
+            if (!currentToken) {
+                updateStatus('No token to validate', 'error');
+                return;
+            }
+
+            try {
+                updateStatus('Validating token with backend...', 'info');
+                const response = await fetch(`${API_BASE_URL}/turnstile/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: currentToken,
+                        action: 'test_validation'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus('Token validation successful!', 'success');
+                    addResult('Token validation successful', 'success');
+                } else {
+                    updateStatus(`Token validation failed: ${data.message}`, 'error');
+                    addResult(`Token validation failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`Validation error: ${error.message}`, 'error');
+                addResult(`Validation error: ${error.message}`, 'error');
+            }
+        }
+
+        function resetWidget() {
+            if (window.turnstile) {
+                window.turnstile.reset();
+                currentToken = null;
+                document.getElementById('validateToken').disabled = true;
+                updateStatus('Widget reset. Please complete the challenge again.', 'info');
+                addResult('Widget reset', 'info');
+            }
+        }
+
+        // Wait for Turnstile to load
+        window.onload = function() {
+            if (window.turnstile) {
+                renderTurnstile();
+            } else {
+                // Wait a bit more for the script to load
+                setTimeout(() => {
+                    if (window.turnstile) {
+                        renderTurnstile();
+                    } else {
+                        updateStatus('Turnstile failed to load after timeout', 'error');
+                    }
+                }, 2000);
+            }
+        };
+    </script>
+</body>
+</html> 

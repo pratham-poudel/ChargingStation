@@ -1,0 +1,32 @@
+User-agent: *
+Allow: /
+
+# Allow all major search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+# Disallow admin and management areas
+Disallow: /station-management/
+Disallow: /merchant/
+Disallow: /api/
+Disallow: /admin/
+
+# Allow sitemap
+Sitemap: https://chargease.com.np/sitemap.xml
+Sitemap: https://chargease.com.np/sitemap-stations.xml
+Sitemap: https://chargease.com.np/sitemap-locations.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1

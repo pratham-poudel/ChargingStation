@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile App Navigation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .nav-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .nav-button {
+            display: block;
+            width: 100%;
+            background: #1e40af;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 10px 0;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+        }
+        .nav-button:hover {
+            background: #1d4ed8;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .info { background: #dbeafe; color: #1d4ed8; }
+        .success { background: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+    <h1>📱 ChargEase Mobile Navigation</h1>
+    
+    <div class="nav-container">
+        <h3>🧪 Test Notifications</h3>
+        <p>Navigate to the notification test page:</p>
+        
+        <a href="/test-notification.html" class="nav-button">
+            🔔 Go to Notification Test Page
+        </a>
+        
+        <button onclick="navigateToTest()" class="nav-button">
+            🚀 Navigate via JavaScript
+        </button>
+        
+        <button onclick="testNotificationHere()" class="nav-button">
+            📢 Quick Test Notification
+        </button>
+    </div>
+
+    <div class="nav-container">
+        <h3>📍 Current Page Info</h3>
+        <div id="pageInfo" class="status info">Loading...</div>
+    </div>
+
+    <script>
+        // Check if we're in mobile app
+        const isInMobileApp = window.ReactNativeWebView !== undefined;
+        
+        function updatePageInfo() {
+            const pageInfoDiv = document.getElementById('pageInfo');
+            const info = [
+                `📱 Environment: ${isInMobileApp ? 'ChargEase Mobile App' : 'Web Browser'}`,
+                `🌐 Current URL: ${window.location.href}`,
+                `📍 Page: ${window.location.pathname}`
+            ].join('<br>');
+            
+            pageInfoDiv.innerHTML = info;
+            pageInfoDiv.className = `status ${isInMobileApp ? 'success' : 'info'}`;
+        }
+
+        function navigateToTest() {
+            // Method 1: Simple navigation
+            window.location.href = '/test-notification.html';
+        }
+
+        function testNotificationHere() {
+            if (!isInMobileApp) {
+                alert('❌ This only works in the ChargEase mobile app');
+                return;
+            }
+
+            const message = {
+                type: 'SHOW_LOCAL_NOTIFICATION',
+                payload: {
+                    title: 'Quick Test! 🚀',
+                    body: 'This notification was sent from the main page!',
+                    data: { source: 'navigation_page', timestamp: new Date().toISOString() }
+                }
+            };
+
+            window.ReactNativeWebView.postMessage(JSON.stringify(message));
+            
+            // Show feedback
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '✅ Notification Sent!';
+            button.style.background = '#059669';
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.style.background = '#1e40af';
+            }, 2000);
+        }
+
+        // Update page info when loaded
+        window.addEventListener('load', updatePageInfo);
+    </script>
+</body>
+</html>
