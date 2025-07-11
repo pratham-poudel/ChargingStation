@@ -122,8 +122,22 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
       return slotCalculationCache.get(cacheKey)
     }
 
-    const isToday = selectedDate === new Date().toISOString().split('T')[0]
-    const maxEndTime = 24 * 60 // End of day
+    // Get operating hours for the selected date
+    const operatingHours = getOperatingHoursForDate(selectedDate)
+    
+    // Calculate max end time based on operating hours
+    let maxEndTime = 24 * 60 // Default to end of day
+    if (!operatingHours.is24Hours && operatingHours.close) {
+      const closeMinutes = timeToMinutes(operatingHours.close)
+      const openMinutes = timeToMinutes(operatingHours.open || '00:00')
+      
+      // Handle next-day closing
+      if (closeMinutes <= openMinutes) {
+        maxEndTime = closeMinutes + 24 * 60
+      } else {
+        maxEndTime = closeMinutes
+      }
+    }
     
     const standardDurations = [30, 60, 90, 120, 180, 240, 300, 360, 480] // 30min to 8h
     const availableDurations = []
@@ -159,15 +173,31 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
   }, [slotCalculationCache])
 
   // Memoized calculation of maximum continuous duration available from a start time
-  const getMaxContinuousDuration = useCallback((startMinutes, existingBookings) => {
+  const getMaxContinuousDuration = useCallback((startMinutes, existingBookings, selectedDate) => {
     // Create cache key for memoization
-    const cacheKey = `max-${startMinutes}-${JSON.stringify(existingBookings.map(b => `${b.startTime}-${b.endTime}`))}`
+    const cacheKey = `max-${startMinutes}-${selectedDate}-${JSON.stringify(existingBookings.map(b => `${b.startTime}-${b.endTime}`))}`
     
     if (slotCalculationCache.has(cacheKey)) {
       return slotCalculationCache.get(cacheKey)
     }
 
-    const maxEndTime = 24 * 60
+    // Get operating hours for the selected date
+    const operatingHours = getOperatingHoursForDate(selectedDate)
+    
+    // Calculate max end time based on operating hours
+    let maxEndTime = 24 * 60 // Default to end of day
+    if (!operatingHours.is24Hours && operatingHours.close) {
+      const closeMinutes = timeToMinutes(operatingHours.close)
+      const openMinutes = timeToMinutes(operatingHours.open || '00:00')
+      
+      // Handle next-day closing
+      if (closeMinutes <= openMinutes) {
+        maxEndTime = closeMinutes + 24 * 60
+      } else {
+        maxEndTime = closeMinutes
+      }
+    }
+    
     let maxDuration = 0
     
     // Find the next booking that would conflict
@@ -195,15 +225,68 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     return result
   }, [slotCalculationCache])
 
-  // Optimized dynamic time slots generation with batch processing
+  // Helper function to get day of week from date string
+  const getDayOfWeek = (dateString) => {
+    const date = new Date(dateString)
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    return days[date.getDay()]
+  }
+
+  // Helper function to get operating hours for a specific date
+  const getOperatingHoursForDate = (dateString) => {
+    if (!station?.operatingHours) {
+      // Default to 24/7 if no operating hours defined
+      return { is24Hours: true, open: '00:00', close: '23:59' }
+    }
+    
+    const dayOfWeek = getDayOfWeek(dateString)
+    const dayOperatingHours = station.operatingHours[dayOfWeek]
+    
+    if (!dayOperatingHours) {
+      // Default to 24/7 if specific day not defined
+      return { is24Hours: true, open: '00:00', close: '23:59' }
+    }
+    
+    return dayOperatingHours
+  }
+
+  // Optimized dynamic time slots generation with batch processing and operating hours consideration
   const generateDynamicTimeSlots = useCallback((existingBookings = [], selectedDate) => {
     const performanceStart = performance.now()
     
     const isToday = selectedDate === new Date().toISOString().split('T')[0]
     const currentTimeMinutes = getCurrentTimeMinutes()
     
-    // Start time: For today, start from next available time; for future dates, start from 00:00
-    const startTimeMinutes = isToday ? getNextAvailableTime(currentTimeMinutes) : 0
+    // Get operating hours for the selected date
+    const operatingHours = getOperatingHoursForDate(selectedDate)
+    
+    // Calculate station operating hours in minutes
+    let stationOpenMinutes = 0
+    let stationCloseMinutes = 24 * 60 // Default to end of day
+    
+    if (!operatingHours.is24Hours && operatingHours.open && operatingHours.close) {
+      stationOpenMinutes = timeToMinutes(operatingHours.open)
+      stationCloseMinutes = timeToMinutes(operatingHours.close)
+      
+      // Handle next-day closing (e.g., open 22:00, close 06:00)
+      if (stationCloseMinutes <= stationOpenMinutes) {
+        stationCloseMinutes += 24 * 60 // Add 24 hours
+      }
+    }
+    
+    // Calculate actual start time considering operating hours and current time
+    let startTimeMinutes
+    if (isToday) {
+      // For today: start from the later of (current time + buffer) or station opening
+      const nextAvailableTime = getNextAvailableTime(currentTimeMinutes)
+      startTimeMinutes = Math.max(nextAvailableTime, stationOpenMinutes)
+    } else {
+      // For future dates: start from station opening time
+      startTimeMinutes = stationOpenMinutes
+    }
+    
+    // End time is the station closing time (but don't exceed end of day for calculation purposes)
+    const endTimeMinutes = Math.min(stationCloseMinutes, 24 * 60)
     
     // Performance optimization: Pre-process bookings for faster lookups
     const bookingIntervals = existingBookings.map(booking => ({
@@ -212,25 +295,33 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
       booking
     })).sort((a, b) => a.start - b.start) // Sort for faster conflict detection
     
+    // If station is closed for the entire day, return empty slots
+    if (startTimeMinutes >= endTimeMinutes) {
+      console.log(`🚫 Station is closed on ${selectedDate} (${getDayOfWeek(selectedDate)})`)
+      return []
+    }
+    
     // Generate 5-minute interval slots with batch processing
     const slots = []
     const slotIntervalMinutes = 5
-    const totalSlots = Math.floor((24 * 60 - startTimeMinutes) / slotIntervalMinutes)
+    const totalSlots = Math.floor((endTimeMinutes - startTimeMinutes) / slotIntervalMinutes)
     
     // Batch process slots in chunks of 50 for better performance with large datasets
     const batchSize = 50
     const batches = Math.ceil(totalSlots / batchSize)
     
-    for (let batchIndex = 0; batchIndex < batches; batchIndex++) {
-      const batchStart = batchIndex * batchSize
-      const batchEnd = Math.min(batchStart + batchSize, totalSlots)
-      
-      for (let slotIndex = batchStart; slotIndex < batchEnd; slotIndex++) {
-        const minutes = startTimeMinutes + (slotIndex * slotIntervalMinutes)
-        if (minutes >= 24 * 60) break
+          for (let batchIndex = 0; batchIndex < batches; batchIndex++) {
+        const batchStart = batchIndex * batchSize
+        const batchEnd = Math.min(batchStart + batchSize, totalSlots)
         
-        const slotStartTime = minutesToTime(minutes)
-        const slotEndTime = minutesToTime(Math.min(minutes + slotIntervalMinutes, 24 * 60))
+        for (let slotIndex = batchStart; slotIndex < batchEnd; slotIndex++) {
+          const minutes = startTimeMinutes + (slotIndex * slotIntervalMinutes)
+          
+          // Skip slots that exceed station operating hours
+          if (minutes >= endTimeMinutes) break
+          
+          const slotStartTime = minutesToTime(minutes % (24 * 60)) // Handle next-day scenarios
+          const slotEndTime = minutesToTime(Math.min(minutes + slotIntervalMinutes, endTimeMinutes) % (24 * 60))
         
         // Optimized conflict detection using pre-sorted intervals
         let hasConflict = false
@@ -254,7 +345,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
           isAvailable: !hasConflict && availableDurations.length > 0,
           hasConflict: hasConflict,
           availableDurations: availableDurations,
-          maxContinuousDuration: getMaxContinuousDuration(minutes, existingBookings),
+          maxContinuousDuration: getMaxContinuousDuration(minutes, existingBookings, selectedDate),
           pricing: [{ duration: 120, totalPrice: 300 }] // Fallback pricing
         })
       }
@@ -262,9 +353,11 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     
     const performanceEnd = performance.now()
     console.log(`⚡ Generated ${slots.length} dynamic slots in ${Math.round(performanceEnd - performanceStart)}ms with ${existingBookings.length} existing bookings`)
+    console.log(`🕒 Operating hours for ${getDayOfWeek(selectedDate)}: ${operatingHours.is24Hours ? '24/7' : `${operatingHours.open} - ${operatingHours.close}`}`)
+    console.log(`📊 Slot range: ${minutesToTime(startTimeMinutes)} to ${minutesToTime(endTimeMinutes % (24 * 60))}`)
     
     return slots
-  }, [calculateAvailableDurations, getMaxContinuousDuration])
+  }, [calculateAvailableDurations, getMaxContinuousDuration, station?.operatingHours])
 
   // Load port availability
   const loadPortAvailability = async () => {
@@ -408,35 +501,60 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
             const portData = response.data.ports[0] // Since we're querying for a specific port
             const realTimeSlots = []
             
-            // Transform backend slots to frontend format
-                          portData.slots.forEach((slot, index) => {
-                // Calculate available durations for this slot
-                const availableDurations = calculateAvailableDurations(
-                  timeToMinutes(slot.time), 
-                  portData.conflicts || [], 
-                  selectedDate
-                )
-                
-                // Calculate max continuous duration
-                const maxContinuousDuration = getMaxContinuousDuration(
-                  timeToMinutes(slot.time), 
-                  portData.conflicts || []
-                )
-                
-                realTimeSlots.push({
-                  id: `realtime-${slot.time.replace(':', '-')}`,
-                  startTime: slot.time,
-                  endTime: minutesToTime(timeToMinutes(slot.time) + 5), // 5-minute slots
-                  display: slot.time,
-                  minutes: timeToMinutes(slot.time),
-                  isAvailable: slot.isAvailable,
-                  hasConflict: slot.conflicts && slot.conflicts.length > 0,
-                  conflicts: slot.conflicts || [],
-                  availableDurations: availableDurations,
-                  maxContinuousDuration: maxContinuousDuration,
-                  pricing: [{ duration: 120, totalPrice: calculatePrice(120) }]
-                })
+            // Get operating hours for filtering
+            const operatingHours = getOperatingHoursForDate(selectedDate)
+            let stationOpenMinutes = 0
+            let stationCloseMinutes = 24 * 60
+            
+            if (!operatingHours.is24Hours && operatingHours.open && operatingHours.close) {
+              stationOpenMinutes = timeToMinutes(operatingHours.open)
+              stationCloseMinutes = timeToMinutes(operatingHours.close)
+              
+              // Handle next-day closing
+              if (stationCloseMinutes <= stationOpenMinutes) {
+                stationCloseMinutes += 24 * 60
+              }
+            }
+            
+            // Transform backend slots to frontend format with operating hours filtering
+            portData.slots.forEach((slot, index) => {
+              const slotMinutes = timeToMinutes(slot.time)
+              
+              // Skip slots outside operating hours
+              if (!operatingHours.is24Hours) {
+                if (slotMinutes < stationOpenMinutes || slotMinutes >= stationCloseMinutes) {
+                  return // Skip this slot
+                }
+              }
+              
+              // Calculate available durations for this slot
+              const availableDurations = calculateAvailableDurations(
+                slotMinutes, 
+                portData.conflicts || [], 
+                selectedDate
+              )
+              
+              // Calculate max continuous duration
+              const maxContinuousDuration = getMaxContinuousDuration(
+                slotMinutes, 
+                portData.conflicts || [],
+                selectedDate
+              )
+              
+              realTimeSlots.push({
+                id: `realtime-${slot.time.replace(':', '-')}`,
+                startTime: slot.time,
+                endTime: minutesToTime(timeToMinutes(slot.time) + 5), // 5-minute slots
+                display: slot.time,
+                minutes: slotMinutes,
+                isAvailable: slot.isAvailable,
+                hasConflict: slot.conflicts && slot.conflicts.length > 0,
+                conflicts: slot.conflicts || [],
+                availableDurations: availableDurations,
+                maxContinuousDuration: maxContinuousDuration,
+                pricing: [{ duration: 120, totalPrice: calculatePrice(120) }]
               })
+            })
             
             console.log(`✅ Loaded ${realTimeSlots.length} real-time slots with ${response.data.totalExistingBookings} existing bookings`)
             setTimeSlots(realTimeSlots)
@@ -460,29 +578,57 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
           } catch (fallbackError) {
             console.error('Fallback booking fetch also failed:', fallbackError)
             
-            // Final fallback to static slots
+            // Final fallback to static slots with operating hours consideration
             const staticSlots = []
             const isToday = selectedDate === new Date().toISOString().split('T')[0]
             const currentTime = new Date()
             
-            for (let hour = 0; hour < 24; hour++) {
+            // Get operating hours for filtering
+            const operatingHours = getOperatingHoursForDate(selectedDate)
+            let stationOpenMinutes = 0
+            let stationCloseMinutes = 24 * 60
+            
+            if (!operatingHours.is24Hours && operatingHours.open && operatingHours.close) {
+              stationOpenMinutes = timeToMinutes(operatingHours.open)
+              stationCloseMinutes = timeToMinutes(operatingHours.close)
+              
+              // Handle next-day closing
+              if (stationCloseMinutes <= stationOpenMinutes) {
+                stationCloseMinutes += 24 * 60
+              }
+            }
+            
+            // Calculate start and end hours based on operating hours
+            const startHour = Math.floor(stationOpenMinutes / 60)
+            const endHour = Math.min(Math.ceil(stationCloseMinutes / 60), 24)
+            
+            for (let hour = startHour; hour < endHour; hour++) {
               for (let minute = 0; minute < 60; minute += 5) { // 5-minute intervals
+                const slotMinutes = hour * 60 + minute
+                
+                // Skip slots outside operating hours
+                if (!operatingHours.is24Hours) {
+                  if (slotMinutes < stationOpenMinutes || slotMinutes >= stationCloseMinutes) {
+                    continue
+                  }
+                }
+                
                 const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
                 
-                                  // For today, only show slots from current time onwards with buffer
-                  let isAvailable = true
-                  if (isToday) {
-                    const slotDateTime = new Date(currentTime)
-                    slotDateTime.setHours(hour, minute, 0, 0)
-                    const bufferTime = new Date(currentTime.getTime() + 5 * 60 * 1000) // 5-minute buffer
-                    isAvailable = slotDateTime >= bufferTime
-                  }
+                // For today, only show slots from current time onwards with buffer
+                let isAvailable = true
+                if (isToday) {
+                  const slotDateTime = new Date(currentTime)
+                  slotDateTime.setHours(hour, minute, 0, 0)
+                  const bufferTime = new Date(currentTime.getTime() + 5 * 60 * 1000) // 5-minute buffer
+                  isAvailable = slotDateTime >= bufferTime
+                }
                 
                 staticSlots.push({
                   id: `static-${hour}-${minute}`,
                   startTime,
                   display: startTime,
-                  minutes: hour * 60 + minute,
+                  minutes: slotMinutes,
                   isAvailable,
                   hasConflict: false,
                   availableDurations: [30, 60, 90, 120, 180, 240, 300, 360, 480],
@@ -492,7 +638,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
               }
             }
             
-            console.log(`🔄 Using static fallback: ${staticSlots.filter(s => s.isAvailable).length} available slots`)
+            console.log(`🔄 Using static fallback: ${staticSlots.filter(s => s.isAvailable).length} available slots (${operatingHours.is24Hours ? '24/7' : `${operatingHours.open}-${operatingHours.close}`})`)
             setTimeSlots(staticSlots)
           }
         } finally {
@@ -519,16 +665,41 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
               const portData = response.data.ports[0]
               const realTimeSlots = []
               
+              // Get operating hours for filtering
+              const operatingHours = getOperatingHoursForDate(selectedDate)
+              let stationOpenMinutes = 0
+              let stationCloseMinutes = 24 * 60
+              
+              if (!operatingHours.is24Hours && operatingHours.open && operatingHours.close) {
+                stationOpenMinutes = timeToMinutes(operatingHours.open)
+                stationCloseMinutes = timeToMinutes(operatingHours.close)
+                
+                // Handle next-day closing
+                if (stationCloseMinutes <= stationOpenMinutes) {
+                  stationCloseMinutes += 24 * 60
+                }
+              }
+              
               portData.slots.forEach((slot) => {
+                const slotMinutes = timeToMinutes(slot.time)
+                
+                // Skip slots outside operating hours
+                if (!operatingHours.is24Hours) {
+                  if (slotMinutes < stationOpenMinutes || slotMinutes >= stationCloseMinutes) {
+                    return // Skip this slot
+                  }
+                }
+                
                 const availableDurations = calculateAvailableDurations(
-                  timeToMinutes(slot.time), 
+                  slotMinutes, 
                   portData.conflicts || [], 
                   selectedDate
                 )
                 
                 const maxContinuousDuration = getMaxContinuousDuration(
-                  timeToMinutes(slot.time), 
-                  portData.conflicts || []
+                  slotMinutes, 
+                  portData.conflicts || [],
+                  selectedDate
                 )
                 
                 realTimeSlots.push({
@@ -536,7 +707,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                   startTime: slot.time,
                   endTime: minutesToTime(timeToMinutes(slot.time) + 5),
                   display: slot.time,
-                  minutes: timeToMinutes(slot.time),
+                  minutes: slotMinutes,
                   isAvailable: slot.isAvailable,
                   hasConflict: slot.conflicts && slot.conflicts.length > 0,
                   conflicts: slot.conflicts || [],
@@ -1017,22 +1188,42 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                   <div className="mb-6">
                     <h5 className="font-medium mb-3">Select Date</h5>
                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-                      {availableDays.map((day) => (
-                        <button
-                          key={day.date}
-                          onClick={() => setSelectedDate(day.date)}
-                          className={`p-3 rounded-lg border transition-all text-center ${
-                            selectedDate === day.date
-                              ? 'border-primary-500 bg-primary-50 text-primary-700'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="text-sm font-medium">{day.display}</div>
-                          {day.isToday && (
-                            <div className="text-xs text-primary-600">Today</div>
-                          )}
-                        </button>
-                      ))}
+                      {availableDays.map((day) => {
+                        const dayOperatingHours = getOperatingHoursForDate(day.date)
+                        const isClosed = !dayOperatingHours.is24Hours && (!dayOperatingHours.open || !dayOperatingHours.close)
+                        
+                        return (
+                          <button
+                            key={day.date}
+                            onClick={() => !isClosed && setSelectedDate(day.date)}
+                            disabled={isClosed}
+                            className={`p-3 rounded-lg border transition-all text-center ${
+                              isClosed
+                                ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed opacity-60'
+                                : selectedDate === day.date
+                                ? 'border-primary-500 bg-primary-50 text-primary-700'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="text-sm font-medium">{day.display}</div>
+                            {day.isToday && (
+                              <div className="text-xs text-primary-600">Today</div>
+                            )}
+                            {/* Operating hours indicator */}
+                            <div className="text-xs mt-1">
+                              {isClosed ? (
+                                <span className="text-red-500">Closed</span>
+                              ) : dayOperatingHours.is24Hours ? (
+                                <span className="text-green-600">24/7</span>
+                              ) : (
+                                <span className="text-blue-600">
+                                  {dayOperatingHours.open}-{dayOperatingHours.close}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
 
@@ -1047,10 +1238,21 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                           <div className="flex items-center">
                             <Timer className="h-4 w-4 text-blue-600 mr-2" />
                             <span className="text-blue-800 font-medium">
-                              {selectedDate === new Date().toISOString().split('T')[0] 
-                                ? `Showing slots from ${minutesToTime(getNextAvailableTime(getCurrentTimeMinutes()))} onwards (current time + 5min buffer)`
-                                : 'Showing all available slots for selected date'
-                              }
+                              {(() => {
+                                const operatingHours = getOperatingHoursForDate(selectedDate)
+                                const dayName = getDayOfWeek(selectedDate)
+                                const isToday = selectedDate === new Date().toISOString().split('T')[0]
+                                
+                                if (operatingHours.is24Hours) {
+                                  return isToday 
+                                    ? `24/7 Service - Showing slots from ${minutesToTime(getNextAvailableTime(getCurrentTimeMinutes()))} onwards`
+                                    : `24/7 Service - All slots available for ${dayName}`
+                                } else {
+                                  return isToday 
+                                    ? `Open ${operatingHours.open} - ${operatingHours.close} - Showing available slots`
+                                    : `${dayName}: ${operatingHours.open} - ${operatingHours.close}`
+                                }
+                              })()}
                             </span>
                           </div>
                           <div className="flex items-center space-x-3 text-xs">
@@ -1149,8 +1351,27 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                       {!loadingSlots && timeSlots.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                          <p>No slots available for this date</p>
-                          <p className="text-sm">Please select a different date or try a different port</p>
+                          {(() => {
+                            const operatingHours = getOperatingHoursForDate(selectedDate)
+                            const dayName = getDayOfWeek(selectedDate)
+                            
+                            if (!operatingHours.is24Hours && (!operatingHours.open || !operatingHours.close)) {
+                              return (
+                                <>
+                                  <p className="font-medium text-red-600">Station Closed on {dayName}s</p>
+                                  <p className="text-sm">This charging station is not operational on {dayName}s</p>
+                                  <p className="text-sm">Please select a different date when the station is open</p>
+                                </>
+                              )
+                            } else {
+                              return (
+                                <>
+                                  <p>No slots available for this date</p>
+                                  <p className="text-sm">Please select a different date or try a different port</p>
+                                </>
+                              )
+                            }
+                          })()}
                         </div>
                       )}
                       
