@@ -1,4 +1,5 @@
 import axios from 'axios';
+import optimizedUploadAPI from './optimizedUploadAPI';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -125,10 +126,54 @@ export const stationManagementService = {
   },
 
   // Update station details (for both vendors and employees with permission)
-  updateStation: (stationId, formData) => {
-    return stationManagementAPI.put(`/${stationId}/update`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+  updateStation: async (stationId, formData) => {
+    try {
+      // Similar to merchantAPI - process FormData and use optimized uploads
+      const files = {
+        images: [],
+        stationMasterPhoto: null
+      };
+      
+      const processedData = {};
+      
+      // Process FormData entries
+      for (let [key, value] of formData.entries()) {
+        if (key === 'images') {
+          files.images.push(value);
+        } else if (key === 'stationMasterPhoto') {
+          files.stationMasterPhoto = value;
+        } else {
+          processedData[key] = value;
+        }
+      }
+      
+      // Upload new images if any
+      let uploadedImages = [];
+      if (files.images.length > 0) {
+        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images);
+        uploadedImages = imageResult.images || [];
+      }
+      
+      // Upload new station master photo if provided
+      let stationMasterPhotoUrl = null;
+      if (files.stationMasterPhoto) {
+        const photoResult = await optimizedUploadAPI.smartUpload(files.stationMasterPhoto, 'Profiles');
+        stationMasterPhotoUrl = photoResult.file.url;
+      }
+      
+      // Prepare final data for backend
+      const finalData = {
+        ...processedData,
+        ...(uploadedImages.length > 0 && { newImages: uploadedImages }),
+        ...(stationMasterPhotoUrl && { stationMasterPhotoUrl })
+      };
+      
+      return stationManagementAPI.put(`/${stationId}/update`, finalData, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 };
 

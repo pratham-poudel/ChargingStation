@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getDeviceInfo } from '../utils/deviceManager'
+import optimizedUploadAPI from './optimizedUploadAPI'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -147,14 +148,13 @@ export const merchantAPI = {
   getPaymentHistory: (params = {}) => merchantApiClient.get('/subscription/payment-history', { params }),
     updateProfile: (data) => merchantApiClient.put('/dashboard/profile', data),
   
-  uploadProfilePicture: (file) => {
-    const formData = new FormData();
-    formData.append('profilePicture', file);
-    return merchantApiClient.post('/dashboard/upload-profile-picture', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+  uploadProfilePicture: async (file) => {
+    try {
+      const result = await optimizedUploadAPI.uploadProfilePicture(file);
+      return result;
+    } catch (error) {
+      throw error;
+    }
   },
   
   updateNotificationPreferences: (data) => merchantApiClient.put('/dashboard/notification-preferences', data),
@@ -172,19 +172,33 @@ export const merchantAPI = {
   cleanupDevices: () => merchantApiClient.post('/auth/cleanup-devices'),
 
   // Document Management
-  uploadDocument: (file, documentType, additionalDocumentType = null) => {
-    const formData = new FormData();
-    formData.append('document', file);
-    formData.append('documentType', documentType);
-    if (additionalDocumentType) {
-      formData.append('additionalDocumentType', additionalDocumentType);
+  uploadDocument: async (file, documentType, additionalDocumentType = null) => {
+    try {
+      console.log('🔄 merchantAPI: Starting upload document request');
+      
+      // Use the proper vendor document upload endpoint that handles both upload and DB update
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('documentType', documentType);
+      if (additionalDocumentType) {
+        formData.append('additionalDocumentType', additionalDocumentType);
+      }
+
+      console.log('📤 merchantAPI: Sending POST request to /dashboard/upload-document');
+      const response = await merchantApiClient.post('/dashboard/upload-document', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
+      
+      console.log('📋 merchantAPI: Received response:', response);
+      
+      // The axios interceptor already returns response.data, so we return it directly
+      return response;
+    } catch (error) {
+      console.error('🚨 merchantAPI: Upload document error:', error);
+      throw error;
     }
-    
-    return merchantApiClient.post('/dashboard/upload-document', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
   },
 
   deleteDocument: (documentType, documentId = null) => 
@@ -220,14 +234,104 @@ export const merchantAPI = {
   getStation: (stationId) => 
     merchantApiClient.get(`/stations/${stationId}`),
     
-  createStation: (formData) => 
-    merchantApiClient.post('/stations', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
-      updateStation: (stationId, formData) => 
-    merchantApiClient.put(`/stations/${stationId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
+  createStation: async (formData) => {
+    try {
+      // Extract files from FormData
+      const files = {
+        images: [],
+        stationMasterPhoto: null
+      };
+      
+      const processedData = {};
+      
+      // Process FormData entries
+      for (let [key, value] of formData.entries()) {
+        if (key === 'images') {
+          files.images.push(value);
+        } else if (key === 'stationMasterPhoto') {
+          files.stationMasterPhoto = value;
+        } else {
+          processedData[key] = value;
+        }
+      }
+      
+      // Upload images using optimized service
+      let uploadedImages = [];
+      if (files.images.length > 0) {
+        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images);
+        uploadedImages = imageResult.images || [];
+      }
+      
+      // Upload station master photo
+      let stationMasterPhotoUrl = null;
+      if (files.stationMasterPhoto) {
+        const photoResult = await optimizedUploadAPI.smartUpload(files.stationMasterPhoto, 'Profiles');
+        stationMasterPhotoUrl = photoResult.file.url;
+      }
+      
+      // Prepare final data for backend
+      const finalData = {
+        ...processedData,
+        images: uploadedImages,
+        stationMasterPhotoUrl
+      };
+      
+      return merchantApiClient.post('/stations', finalData, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      throw error;
+    }
+  },
+      updateStation: async (stationId, formData) => {
+    try {
+      // Similar logic to createStation but for updates
+      const files = {
+        images: [],
+        stationMasterPhoto: null
+      };
+      
+      const processedData = {};
+      
+      // Process FormData entries
+      for (let [key, value] of formData.entries()) {
+        if (key === 'images') {
+          files.images.push(value);
+        } else if (key === 'stationMasterPhoto') {
+          files.stationMasterPhoto = value;
+        } else {
+          processedData[key] = value;
+        }
+      }
+      
+      // Upload new images if any
+      let uploadedImages = [];
+      if (files.images.length > 0) {
+        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images);
+        uploadedImages = imageResult.images || [];
+      }
+      
+      // Upload new station master photo if provided
+      let stationMasterPhotoUrl = null;
+      if (files.stationMasterPhoto) {
+        const photoResult = await optimizedUploadAPI.smartUpload(files.stationMasterPhoto, 'Profiles');
+        stationMasterPhotoUrl = photoResult.file.url;
+      }
+      
+      // Prepare final data for backend
+      const finalData = {
+        ...processedData,
+        ...(uploadedImages.length > 0 && { newImages: uploadedImages }),
+        ...(stationMasterPhotoUrl && { stationMasterPhotoUrl })
+      };
+      
+      return merchantApiClient.put(`/stations/${stationId}`, finalData, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      throw error;
+    }
+  },
     
   deleteStation: (stationId) => 
     merchantApiClient.delete(`/stations/${stationId}`),

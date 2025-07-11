@@ -24,7 +24,7 @@ const adminManagementRoutes = require('./routes/admin-management');
 // const testRoutes = require('./routes/test-notifications');
 const paymentRoutes = require('./routes/payments');
 const locationRoutes = require('./routes/location');
-const uploadRoutes = require('./routes/uploads');
+const optimizedUploadRoutes = require('./routes/uploads-optimized');
 const sitemapRoutes = require('./routes/sitemap');
 const notificationRoutes = require('./routes/notifications');
 const ratingsRoutes = require('./routes/ratings');
@@ -118,7 +118,7 @@ app.use('/api/admin', adminManagementRoutes);
 // app.use('/api/test', testRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/location', locationRoutes);
-app.use('/api/uploads', uploadRoutes);
+app.use('/api/uploads-optimized', optimizedUploadRoutes); // Optimized RAM-efficient uploads
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ratings', ratingsRoutes);
 app.use('/api/files', fileRoutes); // File serving with fresh URLs

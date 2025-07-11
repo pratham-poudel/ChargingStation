@@ -403,9 +403,13 @@ export const MerchantProvider = ({ children }) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true })
       
+      console.log('🔄 MerchantContext: Starting upload document call');
       const response = await merchantAPI.uploadDocument(file, documentType, additionalDocumentType)
+      console.log('📋 MerchantContext: Received response from merchantAPI:', response);
       
-      if (response.success) {
+      if (response && response.success) {
+        console.log('✅ MerchantContext: Upload successful, updating merchant data');
+        
         // Update merchant data with new document
         dispatch({
           type: 'UPDATE_MERCHANT',
@@ -414,11 +418,14 @@ export const MerchantProvider = ({ children }) => {
         
         // Refresh onboarding status to update progress
         await getOnboardingStatus()
+      } else {
+        console.log('❌ MerchantContext: Upload failed or no success flag');
       }
       
       dispatch({ type: 'SET_LOADING', payload: false })
       return response
     } catch (error) {
+      console.error('🚨 MerchantContext: Upload document error:', error);
       const message = error.response?.data?.message || 'Failed to upload document'
       dispatch({ type: 'SET_ERROR', payload: message })
       return { success: false, message }

@@ -50,6 +50,29 @@ const protect = async (req, res, next) => {
       }
 
       req.user.type = 'vendor';
+    } else if (decoded.type === 'admin') {
+      // Handle admin tokens
+      req.user = await Admin.findById(decoded.id).select('-deviceSessions');
+      
+      if (!req.user) {
+        console.log('Admin not found for ID:', decoded.id);
+        return res.status(401).json({
+          success: false,
+          message: 'Admin not found',
+          code: 'ADMIN_NOT_FOUND'
+        });
+      }
+
+      if (!req.user.isActive) {
+        console.log('Admin account deactivated:', decoded.id);
+        return res.status(401).json({
+          success: false,
+          message: 'Admin account is deactivated',
+          code: 'ADMIN_DEACTIVATED'
+        });
+      }
+
+      req.user.type = 'admin';
     } else {
       // Default to user
       req.user = await User.findById(decoded.id).select('-__v');

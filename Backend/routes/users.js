@@ -4,7 +4,6 @@ const User = require('../models/User');
 const Booking = require('../models/Booking');
 const Refund = require('../models/Refund');
 const RefundService = require('../services/RefundService');
-const upload = require('../middleware/upload');
 
 const router = express.Router();
 

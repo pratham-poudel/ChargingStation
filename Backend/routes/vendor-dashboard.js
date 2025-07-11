@@ -6,8 +6,16 @@ const Booking = require('../models/Booking');
 const Settlement = require('../models/Settlement');
 const { protect } = require('../middleware/auth');
 const { checkVendorSubscription } = require('../middleware/subscriptionCheck');
-const { upload, handleMulterError } = require('../middleware/upload');
-const { uploadFile } = require('../config/minio');
+// Remove old upload middleware and use optimized one
+// const { upload, handleMulterError } = require('../middleware/upload');
+// const { uploadFile } = require('../config/minio');
+
+// Import optimized upload service
+const { optimizedUploadService } = require('../config/optimized-upload');
+
+// Get optimized upload middleware
+const upload = optimizedUploadService.getOptimizedMulterConfig();
+const { optimizedUploadSingleToS3 } = require('../middleware/optimized-upload');
 
 const router = express.Router();
 
@@ -680,10 +688,9 @@ const uploadDocument = async (req, res) => {
       });
     }
 
-    const file = req.file;
     const { documentType } = req.body;
 
-    if (!file) {
+    if (!req.uploadedFile) {
       return res.status(400).json({
         success: false,
         message: 'No file uploaded'
@@ -706,13 +713,8 @@ const uploadDocument = async (req, res) => {
       });
     }
 
-    // Upload to MinIO Documents folder
-    const fileInfo = await uploadFile(
-      file.buffer,
-      file.originalname,
-      'Documents',
-      file.mimetype
-    );
+    // Use the already uploaded file info from middleware
+    const fileInfo = req.uploadedFile;
 
     // Prepare document object
     const documentData = {
@@ -964,12 +966,20 @@ const uploadProfilePicture = async (req, res) => {
         success: false,
         message: 'Vendor not found'
       });
-    }    // Upload to MinIO Profiles folder
-    const fileInfo = await uploadFile(
-      req.file.buffer,
+    }    // Upload to MinIO Profiles folder using optimized streaming
+    let fileStream;
+    if (req.file.buffer) {
+      fileStream = optimizedUploadService.bufferToStream(req.file.buffer);
+    } else if (req.file.path) {
+      fileStream = require('fs').createReadStream(req.file.path);
+    }
+
+    const fileInfo = await optimizedUploadService.uploadFileStream(
+      fileStream,
       `${vendorId}_${Date.now()}_${req.file.originalname}`,
       'Profiles',
-      req.file.mimetype
+      req.file.mimetype,
+      req.file.size
     );    // Update vendor profile picture
     vendor.profilePicture = {
       filename: req.file.originalname,
@@ -1724,7 +1734,7 @@ router.use(isVendor);
 router.get('/stats', getDashboardStats);
 router.get('/onboarding', getOnboardingStatus);
 router.put('/profile', updateProfile);
-router.post('/upload-profile-picture', upload.single('profilePicture'), handleMulterError, uploadProfilePicture);
+router.post('/upload-profile-picture', upload.single('profilePicture'), optimizedUploadSingleToS3, uploadProfilePicture);
 router.put('/notification-preferences', updateNotificationPreferences);
 router.get('/transactions', getTransactions);
 router.get('/document-url/:documentType', getDocumentUrl);
@@ -1736,7 +1746,10 @@ router.post('/request-settlement', checkVendorSubscription, requestUrgentSettlem
 router.get('/settlement-history', checkVendorSubscription, getSettlementHistory);
 router.get('/slot-monitoring', checkVendorSubscription, getSlotMonitoring);
 router.get('/stations', checkVendorSubscription, getStations);
-router.post('/upload-document', checkVendorSubscription, upload.single('document'), handleMulterError, uploadDocument);
+router.post('/upload-document', checkVendorSubscription, upload.single('document'), (req, res, next) => {
+  req.body.folder = 'Documents'; // Ensure documents go to Documents folder
+  next();
+}, optimizedUploadSingleToS3, uploadDocument);
 router.delete('/delete-document', checkVendorSubscription, deleteDocument);
 
 module.exports = router;

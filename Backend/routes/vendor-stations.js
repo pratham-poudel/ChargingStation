@@ -3,27 +3,18 @@ const ChargingStation = require('../models/ChargingStation');
 const { authorizeVendor } = require('../middleware/auth');
 const { checkVendorSubscription, checkStationLimit } = require('../middleware/subscriptionCheck');
 const { body, param, validationResult } = require('express-validator');
-const multer = require('multer');
-const path = require('path');
-const { uploadFile } = require('../config/minio');
+// Remove old multer and uploadFile imports
+// const multer = require('multer');
+// const path = require('path');
+// const { uploadFile } = require('../config/minio');
+
+// Import optimized upload service
+const { optimizedUploadService } = require('../config/optimized-upload');
 
 const router = express.Router();
 
-// Configure multer for memory storage
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  },
-});
+// Use optimized multer configuration
+const upload = optimizedUploadService.getOptimizedMulterConfig();
 
 // Middleware to parse JSON fields from FormData
 const parseFormDataJSON = (req, res, next) => {
@@ -277,11 +268,20 @@ router.post('/',
         for (let i = 0; i < req.files.images.length; i++) {
           const file = req.files.images[i];
           try {
-            const uploadResult = await uploadFile(
-              file.buffer,
+            // Use optimized streaming upload
+            let fileStream;
+            if (file.buffer) {
+              fileStream = optimizedUploadService.bufferToStream(file.buffer);
+            } else if (file.path) {
+              fileStream = require('fs').createReadStream(file.path);
+            }
+
+            const uploadResult = await optimizedUploadService.uploadFileStream(
+              fileStream,
               file.originalname,
-              'Images', // Use Images folder from MinIO config
-              file.mimetype
+              'Images',
+              file.mimetype,
+              file.size
             );
             
             images.push({
@@ -293,7 +293,7 @@ router.post('/',
               uploadedAt: new Date()
             });
             
-            console.log(`✅ Uploaded station image ${i + 1}:`, uploadResult.objectName);
+            console.log(`✅ Uploaded station image ${i + 1} via streaming:`, uploadResult.objectName);
           } catch (uploadError) {
             console.error(`❌ Error uploading station image ${i + 1}:`, uploadError);
             // Continue with other images
@@ -311,11 +311,20 @@ router.post('/',
         const photoFile = req.files.stationMasterPhoto[0];
         
         try {
-          const uploadResult = await uploadFile(
-            photoFile.buffer,
+          // Use optimized streaming upload for station master photo
+          let fileStream;
+          if (photoFile.buffer) {
+            fileStream = optimizedUploadService.bufferToStream(photoFile.buffer);
+          } else if (photoFile.path) {
+            fileStream = require('fs').createReadStream(photoFile.path);
+          }
+
+          const uploadResult = await optimizedUploadService.uploadFileStream(
+            fileStream,
             photoFile.originalname,
-            'Profiles', // Use Profiles folder for station master photos
-            photoFile.mimetype
+            'Profiles',
+            photoFile.mimetype,
+            photoFile.size
           );
           
           if (!stationData.stationMaster) {
@@ -333,6 +342,28 @@ router.post('/',
           console.error('❌ Error uploading station master photo:', uploadError);
           // Continue without photo
         }
+      }
+
+      // Handle station master photo URL (when photo is uploaded separately)
+      if (req.body.stationMasterPhotoUrl && !req.files?.stationMasterPhoto) {
+        console.log('Setting station master photo URL:', req.body.stationMasterPhotoUrl);
+        
+        if (!stationData.stationMaster) {
+          stationData.stationMaster = {};
+        }
+        
+        // Extract object name from URL for consistency
+        const urlParts = req.body.stationMasterPhotoUrl.split('/');
+        const objectName = urlParts.slice(-2).join('/'); // Get "Profiles/filename"
+        
+        stationData.stationMaster.photo = {
+          url: req.body.stationMasterPhotoUrl,
+          objectName: objectName,
+          originalName: objectName.split('/').pop(), // Get just the filename
+          uploadedAt: new Date()
+        };
+        
+        console.log('✅ Set station master photo URL in station data');
       }
 
       // Create station
@@ -431,11 +462,20 @@ router.put('/:id',
         for (let i = 0; i < req.files.images.length; i++) {
           const file = req.files.images[i];
           try {
-            const uploadResult = await uploadFile(
-              file.buffer,
+            // Use optimized streaming upload
+            let fileStream;
+            if (file.buffer) {
+              fileStream = optimizedUploadService.bufferToStream(file.buffer);
+            } else if (file.path) {
+              fileStream = require('fs').createReadStream(file.path);
+            }
+
+            const uploadResult = await optimizedUploadService.uploadFileStream(
+              fileStream,
               file.originalname,
-              'Images', // Use Images folder from MinIO config
-              file.mimetype
+              'Images',
+              file.mimetype,
+              file.size
             );
             
             newImages.push({
@@ -447,7 +487,7 @@ router.put('/:id',
               uploadedAt: new Date()
             });
             
-            console.log(`✅ Uploaded station image ${i + 1}:`, uploadResult.objectName);
+            console.log(`✅ Uploaded station image ${i + 1} via streaming:`, uploadResult.objectName);
           } catch (uploadError) {
             console.error(`❌ Error uploading station image ${i + 1}:`, uploadError);
             // Continue with other images
@@ -465,11 +505,20 @@ router.put('/:id',
         const photoFile = req.files.stationMasterPhoto[0];
         
         try {
-          const uploadResult = await uploadFile(
-            photoFile.buffer,
+          // Use optimized streaming upload for station master photo
+          let fileStream;
+          if (photoFile.buffer) {
+            fileStream = optimizedUploadService.bufferToStream(photoFile.buffer);
+          } else if (photoFile.path) {
+            fileStream = require('fs').createReadStream(photoFile.path);
+          }
+
+          const uploadResult = await optimizedUploadService.uploadFileStream(
+            fileStream,
             photoFile.originalname,
-            'Profiles', // Use Profiles folder for station master photos
-            photoFile.mimetype
+            'Profiles',
+            photoFile.mimetype,
+            photoFile.size
           );
           
           if (!station.stationMaster) {
@@ -487,6 +536,28 @@ router.put('/:id',
           console.error('❌ Error uploading station master photo:', uploadError);
           // Continue without photo update
         }
+      }
+
+      // Handle station master photo URL update (when photo is uploaded separately)
+      if (req.body.stationMasterPhotoUrl && !req.files?.stationMasterPhoto) {
+        console.log('Updating station master photo URL:', req.body.stationMasterPhotoUrl);
+        
+        if (!station.stationMaster) {
+          station.stationMaster = {};
+        }
+        
+        // Extract object name from URL for consistency
+        const urlParts = req.body.stationMasterPhotoUrl.split('/');
+        const objectName = urlParts.slice(-2).join('/'); // Get "Profiles/filename"
+        
+        station.stationMaster.photo = {
+          url: req.body.stationMasterPhotoUrl,
+          objectName: objectName,
+          originalName: objectName.split('/').pop(), // Get just the filename
+          uploadedAt: new Date()
+        };
+        
+        console.log('✅ Updated station master photo URL in database');
       }
 
       await station.save();

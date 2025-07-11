@@ -7,27 +7,19 @@ const { authorizeVendor } = require('../middleware/auth');
 const { body, param, validationResult } = require('express-validator');
 const smsService = require('../services/smsService');
 const emailService = require('../services/emailService');
-const multer = require('multer');
-const { uploadFile } = require('../config/minio');
+// Remove old multer and uploadFile imports
+// const multer = require('multer');
+// const { uploadFile } = require('../config/minio');
+
+// Import optimized upload service
+const { optimizedUploadService } = require('../config/optimized-upload');
+
 const { storeOTP, getOTP, deleteOTP, checkOTPRateLimit } = require('../config/redis');
 
 const router = express.Router();
 
-// Configure multer for memory storage
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  },
-});
+// Configure optimized multer
+const upload = optimizedUploadService.getOptimizedMulterConfig();
 
 // Middleware to parse JSON fields from FormData
 const parseFormDataJSON = (req, res, next) => {
@@ -1577,11 +1569,20 @@ router.put('/:stationId/update',
         for (let i = 0; i < req.files.images.length; i++) {
           const file = req.files.images[i];
           try {
-            const uploadResult = await uploadFile(
-              file.buffer,
+            // Use optimized streaming upload
+            let fileStream;
+            if (file.buffer) {
+              fileStream = optimizedUploadService.bufferToStream(file.buffer);
+            } else if (file.path) {
+              fileStream = require('fs').createReadStream(file.path);
+            }
+
+            const uploadResult = await optimizedUploadService.uploadFileStream(
+              fileStream,
               file.originalname,
-              'Images', // Use Images folder from MinIO config
-              file.mimetype
+              'Images',
+              file.mimetype,
+              file.size
             );
             
             newImages.push({
@@ -1611,11 +1612,20 @@ router.put('/:stationId/update',
         const photoFile = req.files.stationMasterPhoto[0];
         
         try {
-          const uploadResult = await uploadFile(
-            photoFile.buffer,
+          // Use optimized streaming upload
+          let fileStream;
+          if (photoFile.buffer) {
+            fileStream = optimizedUploadService.bufferToStream(photoFile.buffer);
+          } else if (photoFile.path) {
+            fileStream = require('fs').createReadStream(photoFile.path);
+          }
+
+          const uploadResult = await optimizedUploadService.uploadFileStream(
+            fileStream,
             photoFile.originalname,
-            'Profiles', // Use Profiles folder for station master photos
-            photoFile.mimetype
+            'Profiles',
+            photoFile.mimetype,
+            photoFile.size
           );
           
           if (!station.stationMaster) {

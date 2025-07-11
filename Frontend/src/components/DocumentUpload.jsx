@@ -12,6 +12,7 @@ import {
   Download
 } from 'lucide-react'
 import { useMerchant } from '../context/MerchantContext'
+import optimizedUploadAPI from '../services/optimizedUploadAPI'
 
 const DocumentUpload = ({ 
   documentType, 
@@ -53,15 +54,36 @@ const DocumentUpload = ({
     setError('')
 
     try {
-      const response = await uploadDocument(file, documentType)
+      console.log('🔄 Starting document upload:', { file: file.name, documentType });
       
-      if (response.success) {
-        onUploadSuccess(response.data.document)
+      // Use merchant context uploadDocument which handles both upload and database update
+      const uploadResult = await uploadDocument(file, documentType);
+      
+      console.log('📋 Upload result received:', uploadResult);
+      
+      if (uploadResult && uploadResult.success) {
+        console.log('✅ Upload successful, calling onUploadSuccess with:', uploadResult.data.document);
+        
+        // File uploaded successfully and database updated
+        onUploadSuccess({
+          url: uploadResult.data.document.url,
+          objectName: uploadResult.data.document.objectName,
+          originalName: uploadResult.data.document.originalName,
+          uploadedAt: uploadResult.data.document.uploadedAt,
+          documentType: documentType
+        });
       } else {
-        setError(response.message || 'Upload failed')
+        console.log('❌ Upload failed with result:', uploadResult);
+        setError(uploadResult?.message || 'Upload failed - unknown error');
       }
     } catch (error) {
-      setError('Upload failed. Please try again.')
+      console.error('🚨 Document upload error:', error);
+      console.error('🚨 Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setError(error.response?.data?.message || error.message || 'Upload failed');
     } finally {
       setUploading(false)
     }

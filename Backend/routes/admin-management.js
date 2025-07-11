@@ -9,7 +9,9 @@ const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const { protectAdmin, requirePermission } = require('../middleware/auth');
 const { body, param, validationResult } = require('express-validator');
-const { uploadSingleToMinIO, upload, handleMulterError } = require('../middleware/upload');
+const { optimizedUploadSingleToS3 } = require('../middleware/optimized-upload');
+const { optimizedUploadService } = require('../config/optimized-upload');
+const upload = optimizedUploadService.getOptimizedMulterConfig();
 const smsService = require('../services/smsService');
 const emailService = require('../services/emailService');
 const { getRedisClient, storeOTP, getOTP, deleteOTP } = require('../config/redis');
@@ -3546,8 +3548,7 @@ router.post('/vendors/:vendorId/subscription/upgrade-to-yearly', protectAdmin, r
 router.post('/upload-profile/:userType/:userId',
   protectAdmin,
   upload.single('profile'),
-  handleMulterError,
-  uploadSingleToMinIO,
+  optimizedUploadSingleToS3,
   uploadProfilePicture
 );
 
