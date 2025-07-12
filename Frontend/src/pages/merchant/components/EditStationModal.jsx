@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { directUploadAPI } from '../../../services/directS3Upload';
 import { merchantAPI } from '../../../services/merchantAPI';
 import { stationManagementService } from '../../../services/stationManagementAPI';
+import UploadProgress from '../../../components/UploadProgress';
+import uploadService from '../../../services/uploadService';
 
 // Helper function to safely get station master photo URL
 const getStationMasterPhotoUrl = (photo) => {
@@ -60,6 +62,16 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [errors, setErrors] = useState({});
+  
+  // Upload progress states
+  const [uploadProgress, setUploadProgress] = useState({
+    isVisible: false,
+    files: [],
+    currentStep: 'preparing',
+    progress: { overall: 0, completed: 0, files: [], currentFile: null },
+    error: null,
+    batchId: null
+  });
   
   const amenityOptions = [
     'parking', 'restroom', 'cafe', 'wifi', 'restaurant', 
@@ -363,7 +375,51 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
 
     console.log('Validation passed, starting submission...');
     setLoading(true);
+    
     try {
+      let uploadedImageUrls = [];
+      
+      // Upload new images if any with progress tracking
+      if (images.length > 0) {
+        setUploadProgress({
+          isVisible: true,
+          files: Array.from(images),
+          currentStep: 'preparing',
+          progress: { overall: 0, completed: 0, files: images.map(() => ({ status: 'pending', progress: 0 })), currentFile: null },
+          error: null
+        });
+
+        try {
+          const uploadResult = await uploadService.uploadFiles(images, {
+            onProgress: (progress) => {
+              setUploadProgress(prev => ({
+                ...prev,
+                progress
+              }));
+            },
+            onStepChange: (step) => {
+              setUploadProgress(prev => ({
+                ...prev,
+                currentStep: step
+              }));
+            }
+          });
+
+          uploadedImageUrls = uploadResult.urls;
+          setUploadProgress(prev => ({ ...prev, batchId: uploadResult.batchId }));
+          console.log('✅ Images uploaded successfully:', uploadedImageUrls);
+
+        } catch (uploadError) {
+          console.error('❌ Image upload failed:', uploadError);
+          setUploadProgress(prev => ({
+            ...prev,
+            error: uploadError.message,
+            currentStep: 'error'
+          }));
+          return;
+        }
+      }
+
       const submitData = new FormData();
         // Add basic fields
       submitData.append('name', formData.name);
@@ -393,10 +449,10 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
         submitData.append('existingImages', JSON.stringify(existingImages));
       }
 
-      // Add new images
-      images.forEach(image => {
-        submitData.append('images', image);
-      });
+      // Add uploaded image URLs instead of files
+      if (uploadedImageUrls.length > 0) {
+        submitData.append('uploadedImages', JSON.stringify(uploadedImageUrls));
+      }
 
       // Prepare station master photo URL if uploaded
       let stationMasterPhotoUrl = null;
@@ -449,6 +505,9 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
         }
         
         onUpdate(response.data);
+        
+        // Hide upload progress after successful submission
+        setUploadProgress(prev => ({ ...prev, isVisible: false }));
         onClose();
       } else {
         console.log('Update failed:', response.message);
@@ -457,6 +516,11 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
     } catch (error) {
       console.error('Error updating station:', error);
       setErrors({ submit: error.message || 'Failed to update station' });
+      setUploadProgress(prev => ({
+        ...prev,
+        error: error.message,
+        currentStep: 'error'
+      }));
     } finally {
       setLoading(false);
     }
@@ -1113,6 +1177,21 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
           </form>
         </div>
       </div>
+      
+      {/* Upload Progress Modal */}
+      <UploadProgress
+        isVisible={uploadProgress.isVisible}
+        files={uploadProgress.files}
+        currentStep={uploadProgress.currentStep}
+        progress={uploadProgress.progress}
+        error={uploadProgress.error}
+        onCancel={() => {
+          const currentBatchId = uploadProgress.batchId;
+          setUploadProgress(prev => ({ ...prev, isVisible: false }));
+          // Cancel any ongoing uploads
+          uploadService.cancelUpload(currentBatchId);
+        }}
+      />
     </div>
   );
 };

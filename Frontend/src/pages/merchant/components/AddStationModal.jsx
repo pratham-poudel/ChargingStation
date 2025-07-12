@@ -14,12 +14,24 @@ import {
 import { merchantAPI } from '../../../services/merchantAPI'
 import toast from 'react-hot-toast'
 import LocationPicker from '../../../components/LocationPicker'
+import UploadProgress from '../../../components/UploadProgress'
+import uploadService from '../../../services/uploadService'
 
 const AddStationModal = ({ onClose, onStationCreated }) => {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [showLocationPicker, setShowLocationPicker] = useState(false)
+  
+  // Upload progress states
+  const [detailedUploadProgress, setDetailedUploadProgress] = useState({
+    isVisible: false,
+    files: [],
+    currentStep: 'preparing',
+    progress: { overall: 0, completed: 0, files: [], currentFile: null },
+    error: null,
+    batchId: null
+  })
   
   // Form data state
   const [formData, setFormData] = useState({
@@ -373,7 +385,70 @@ const AddStationModal = ({ onClose, onStationCreated }) => {
       setIsSubmitting(true)
       setUploadProgress(10)
 
-      // Create FormData
+      let uploadedImageUrls = []
+      let uploadedMasterPhotoUrl = null
+
+      // Prepare all files for upload
+      const allFiles = [...stationImages]
+      if (stationMasterPhoto) {
+        allFiles.push(stationMasterPhoto)
+      }
+
+      // Upload files if any with detailed progress tracking
+      if (allFiles.length > 0) {
+        setDetailedUploadProgress({
+          isVisible: true,
+          files: allFiles,
+          currentStep: 'preparing',
+          progress: { overall: 0, completed: 0, files: allFiles.map(() => ({ status: 'pending', progress: 0 })), currentFile: null },
+          error: null
+        });
+
+        try {
+          const uploadResult = await uploadService.uploadFiles(allFiles, {
+            onProgress: (progress) => {
+              setDetailedUploadProgress(prev => ({
+                ...prev,
+                progress
+              }));
+              // Update simple progress for backward compatibility
+              setUploadProgress(30 + (progress.overall * 0.5)); // 30-80% range
+            },
+            onStepChange: (step) => {
+              setDetailedUploadProgress(prev => ({
+                ...prev,
+                currentStep: step
+              }));
+            }
+          });
+
+          // Separate station images from master photo
+          uploadedImageUrls = uploadResult.urls.slice(0, stationImages.length);
+          if (stationMasterPhoto) {
+            uploadedMasterPhotoUrl = uploadResult.urls[stationImages.length];
+          }
+
+          setDetailedUploadProgress(prev => ({ ...prev, batchId: uploadResult.batchId }));
+          console.log('✅ Files uploaded successfully:', { 
+            images: uploadedImageUrls, 
+            masterPhoto: uploadedMasterPhotoUrl 
+          });
+
+        } catch (uploadError) {
+          console.error('❌ File upload failed:', uploadError);
+          setDetailedUploadProgress(prev => ({
+            ...prev,
+            error: uploadError.message,
+            currentStep: 'error'
+          }));
+          toast.error(`Upload failed: ${uploadError.message}`);
+          return;
+        }
+      }
+
+      setUploadProgress(80)
+
+      // Create FormData with uploaded URLs
       const submitData = new FormData()
       
       // Add form fields as JSON strings
@@ -386,23 +461,15 @@ const AddStationModal = ({ onClose, onStationCreated }) => {
       submitData.append('operatingHours', JSON.stringify(formData.operatingHours))
       submitData.append('chargingPorts', JSON.stringify(formData.chargingPorts))
 
-      setUploadProgress(30)
-
-      // Add station images
-      stationImages.forEach((image, index) => {
-        submitData.append('images', image)
-        console.log(`Added station image ${index + 1}:`, image.name)
-      })
-
-      setUploadProgress(60)
-
-      // Add station master photo
-      if (stationMasterPhoto) {
-        submitData.append('stationMasterPhoto', stationMasterPhoto)
-        console.log('Added station master photo:', stationMasterPhoto.name)
+      // Add uploaded image URLs instead of files
+      if (uploadedImageUrls.length > 0) {
+        submitData.append('uploadedImages', JSON.stringify(uploadedImageUrls))
       }
 
-      setUploadProgress(80)
+      // Add uploaded master photo URL
+      if (uploadedMasterPhotoUrl) {
+        submitData.append('uploadedMasterPhoto', uploadedMasterPhotoUrl)
+      }
 
       // Log FormData contents
       console.log('=== SUBMITTING TO BACKEND ===')
@@ -416,6 +483,7 @@ const AddStationModal = ({ onClose, onStationCreated }) => {
 
       if (response.success) {
         toast.success('Station created successfully!')
+        setDetailedUploadProgress(prev => ({ ...prev, isVisible: false }));
         onStationCreated(response.data)
         onClose()
       } else {
@@ -425,6 +493,11 @@ const AddStationModal = ({ onClose, onStationCreated }) => {
     } catch (error) {
       console.error('Station creation error:', error)
       toast.error(error.message || 'Failed to create station')
+      setDetailedUploadProgress(prev => ({
+        ...prev,
+        error: error.message,
+        currentStep: 'error'
+      }));
     } finally {
       setIsSubmitting(false)
       setUploadProgress(0)
@@ -1155,6 +1228,23 @@ const AddStationModal = ({ onClose, onStationCreated }) => {
         onClose={() => setShowLocationPicker(false)}
         onLocationConfirm={handleLocationPickerConfirm}
         initialCoordinates={formData.location.coordinates}
+      />
+      
+      {/* Upload Progress Modal */}
+      <UploadProgress
+        isVisible={detailedUploadProgress.isVisible}
+        files={detailedUploadProgress.files}
+        currentStep={detailedUploadProgress.currentStep}
+        progress={detailedUploadProgress.progress}
+        error={detailedUploadProgress.error}
+        onCancel={() => {
+          const currentBatchId = detailedUploadProgress.batchId;
+          setDetailedUploadProgress(prev => ({ ...prev, isVisible: false }));
+          // Cancel any ongoing uploads
+          uploadService.cancelUpload(currentBatchId);
+          setIsSubmitting(false);
+          setUploadProgress(0);
+        }}
       />
     </div>
   )

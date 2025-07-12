@@ -51,6 +51,20 @@ const parseFormDataJSON = (req, res, next) => {
       console.log('Parsed amenities:', req.body.amenities);
     }
     
+    // Parse uploaded images from new upload service
+    if (req.body.uploadedImages && typeof req.body.uploadedImages === 'string') {
+      console.log('Parsing uploadedImages:', req.body.uploadedImages);
+      req.body.uploadedImages = JSON.parse(req.body.uploadedImages);
+      console.log('Parsed uploadedImages:', req.body.uploadedImages);
+    }
+    
+    // Parse existing images (for edit operations)
+    if (req.body.existingImages && typeof req.body.existingImages === 'string') {
+      console.log('Parsing existingImages:', req.body.existingImages);
+      req.body.existingImages = JSON.parse(req.body.existingImages);
+      console.log('Parsed existingImages:', req.body.existingImages);
+    }
+    
     console.log('Final parsed body:', JSON.stringify(req.body, null, 2));
     next();
   } catch (error) {
@@ -257,8 +271,31 @@ router.post('/',
       const stationData = {
         ...req.body,
         vendor: req.vendor.id
-      };      // Handle station images - Check for pre-uploaded images first
-      if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
+      };      // Handle station images - Check for uploaded images from new service first
+      if (req.body.uploadedImages && Array.isArray(req.body.uploadedImages) && req.body.uploadedImages.length > 0) {
+        console.log('📤 Using new upload service images:', req.body.uploadedImages.length, 'images');
+        console.log('📋 Uploaded images URLs:', req.body.uploadedImages);
+        
+        // Images are already uploaded via new upload service, format them properly
+        const images = req.body.uploadedImages.map((url, index) => {
+          // Extract object name from URL for consistency
+          const urlParts = url.split('/');
+          const objectName = urlParts.slice(-2).join('/'); // Get "Images/filename"
+          
+          return {
+            url: url,
+            objectName: objectName,
+            originalName: objectName.split('/').pop(), // Get just the filename
+            isPrimary: index === 0, // First image as primary
+            isThumbnail: index === 0, // First image as thumbnail  
+            uploadedAt: new Date()
+          };
+        });
+        
+        stationData.images = images;
+        console.log('✅ Set uploaded station images in station data:', images.length, 'images');
+        
+      } else if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
         console.log('📤 Using pre-uploaded station images:', req.body.images.length, 'images');
         console.log('📋 Pre-uploaded images data:', req.body.images.map(img => ({ 
           url: img?.url, 
@@ -324,8 +361,28 @@ router.post('/',
         }
       }
 
-      // Handle station master photo
-      if (req.files && req.files.stationMasterPhoto && req.files.stationMasterPhoto.length > 0) {
+      // Handle station master photo - Check for uploaded photo from new service first
+      if (req.body.uploadedMasterPhoto && typeof req.body.uploadedMasterPhoto === 'string') {
+        console.log('📸 Using new upload service master photo:', req.body.uploadedMasterPhoto);
+        
+        if (!stationData.stationMaster) {
+          stationData.stationMaster = {};
+        }
+        
+        // Extract object name from URL for consistency
+        const urlParts = req.body.uploadedMasterPhoto.split('/');
+        const objectName = urlParts.slice(-2).join('/'); // Get "Profiles/filename"
+        
+        stationData.stationMaster.photo = {
+          url: req.body.uploadedMasterPhoto,
+          objectName: objectName,
+          originalName: objectName.split('/').pop(), // Get just the filename
+          uploadedAt: new Date()
+        };
+        
+        console.log('✅ Set uploaded master photo in station data');
+        
+      } else if (req.files && req.files.stationMasterPhoto && req.files.stationMasterPhoto.length > 0) {
         console.log('Uploading station master photo to MinIO...');
         const photoFile = req.files.stationMasterPhoto[0];
         
@@ -388,7 +445,16 @@ router.post('/',
       // Create station using concurrency-safe service
       let station;
       
-      if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
+      if (req.body.uploadedImages && Array.isArray(req.body.uploadedImages) && req.body.uploadedImages.length > 0) {
+        // Use new upload service images with atomic transaction
+        console.log('🔄 Creating station with new upload service images using atomic transaction...');
+        const images = stationData.images || [];
+        station = await ConcurrencySafeStationService.createStationWithImages(
+          stationData, 
+          images, 
+          req.vendor.id
+        );
+      } else if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
         // Use pre-uploaded images with atomic transaction
         console.log('🔄 Creating station with pre-uploaded images using atomic transaction...');
         station = await ConcurrencySafeStationService.handlePreUploadedImages(
@@ -491,8 +557,31 @@ router.put('/:id',
         );
       }
 
-      // Handle new images - Check for pre-uploaded images first
-      if (updateData.newImages && Array.isArray(updateData.newImages) && updateData.newImages.length > 0) {
+      // Handle new images - Check for uploaded images from new service first
+      if (updateData.uploadedImages && Array.isArray(updateData.uploadedImages) && updateData.uploadedImages.length > 0) {
+        console.log('📤 Using new upload service images for update:', updateData.uploadedImages.length, 'images');
+        console.log('📋 Uploaded images URLs:', updateData.uploadedImages);
+        
+        // Images are already uploaded via new upload service, format them properly
+        const newImages = updateData.uploadedImages.map((url, index) => {
+          // Extract object name from URL for consistency
+          const urlParts = url.split('/');
+          const objectName = urlParts.slice(-2).join('/'); // Get "Images/filename"
+          
+          return {
+            url: url,
+            objectName: objectName,
+            originalName: objectName.split('/').pop(), // Get just the filename
+            isPrimary: station.images.length === 0 && index === 0, // First image as primary if no existing images
+            isThumbnail: station.images.length === 0 && index === 0, // First image as thumbnail if no existing images
+            uploadedAt: new Date()
+          };
+        });
+        
+        station.images.push(...newImages);
+        console.log('✅ Added uploaded station images in station data:', newImages.length, 'images');
+        
+      } else if (updateData.newImages && Array.isArray(updateData.newImages) && updateData.newImages.length > 0) {
         console.log('Using pre-uploaded new station images:', updateData.newImages.length, 'images');
         
         // New images are already uploaded via optimized API, just add them to station
@@ -553,8 +642,28 @@ router.put('/:id',
         }
       }
 
-      // Handle station master photo update with actual MinIO upload
-      if (req.files && req.files.stationMasterPhoto && req.files.stationMasterPhoto.length > 0) {
+      // Handle station master photo update - Check for uploaded photo from new service first
+      if (req.body.uploadedMasterPhoto && typeof req.body.uploadedMasterPhoto === 'string') {
+        console.log('📸 Using new upload service master photo for update:', req.body.uploadedMasterPhoto);
+        
+        if (!station.stationMaster) {
+          station.stationMaster = {};
+        }
+        
+        // Extract object name from URL for consistency
+        const urlParts = req.body.uploadedMasterPhoto.split('/');
+        const objectName = urlParts.slice(-2).join('/'); // Get "Profiles/filename"
+        
+        station.stationMaster.photo = {
+          url: req.body.uploadedMasterPhoto,
+          objectName: objectName,
+          originalName: objectName.split('/').pop(), // Get just the filename
+          uploadedAt: new Date()
+        };
+        
+        console.log('✅ Updated station master photo with uploaded URL');
+        
+      } else if (req.files && req.files.stationMasterPhoto && req.files.stationMasterPhoto.length > 0) {
         console.log('Uploading station master photo to MinIO...');
         const photoFile = req.files.stationMasterPhoto[0];
         
