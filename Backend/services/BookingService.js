@@ -266,14 +266,26 @@ class BookingService {// Generate time slots for a given date respecting station
         }
       }
 
-      // Calculate start and end times
-      const bookingDate = new Date(bookingData.date)
+      // Calculate start and end times - Convert Nepal time to UTC for database storage
       const [hours, minutes] = bookingData.startTime.split(':').map(Number)
-      const startTime = new Date(bookingDate)
-      startTime.setHours(hours, minutes, 0, 0)
+      
+      // Create a proper Nepal timezone date
+      // Parse the date and time components
+      const [year, month, day] = bookingData.date.split('-').map(Number)
+      
+      // Create the date in UTC first, then adjust for Nepal timezone
+      const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0))
+      
+      // Nepal is UTC+5:45, so we need to subtract 5 hours 45 minutes to get UTC
+      const startTime = new Date(utcDate.getTime() - (5 * 60 + 45) * 60 * 1000)
       
       const endTime = new Date(startTime)
-      endTime.setMinutes(endTime.getMinutes() + bookingData.duration)      // Check for conflicts using correct schema fields with 5-minute buffer
+      endTime.setMinutes(endTime.getMinutes() + bookingData.duration)
+      
+      console.log(`🕒 Booking Time Conversion Debug:`)
+      console.log(`📅 Input: ${bookingData.date} ${bookingData.startTime} (Nepal Time)`)
+      console.log(`⏰ UTC Storage: ${startTime.toISOString()} - ${endTime.toISOString()}`)
+      console.log(`✅ Display Check: ${startTime.toLocaleString('en-US', { timeZone: 'Asia/Kathmandu' })} - ${endTime.toLocaleString('en-US', { timeZone: 'Asia/Kathmandu' })}`)      // Check for conflicts using correct schema fields with 5-minute buffer
       const bufferMinutes = 5
       const bufferedStartTime = new Date(startTime.getTime() - bufferMinutes * 60 * 1000)
       const bufferedEndTime = new Date(endTime.getTime() + bufferMinutes * 60 * 1000)
@@ -291,8 +303,18 @@ class BookingService {// Generate time slots for a given date respecting station
       })
 
       if (conflictingBooking) {
-        const conflictStart = new Date(conflictingBooking.timeSlot.startTime).toTimeString().substring(0, 5)
-        const conflictEnd = new Date(conflictingBooking.timeSlot.endTime).toTimeString().substring(0, 5)
+        const conflictStart = new Date(conflictingBooking.timeSlot.startTime).toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Asia/Kathmandu'
+        })
+        const conflictEnd = new Date(conflictingBooking.timeSlot.endTime).toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Asia/Kathmandu'
+        })
         throw new Error(`Time slot conflicts with existing booking (${conflictStart} - ${conflictEnd}). Please select a different time.`)
       }
       
