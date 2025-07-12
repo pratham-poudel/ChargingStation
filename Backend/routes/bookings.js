@@ -3,6 +3,13 @@ const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const ChargingStation = require('../models/ChargingStation');
 const BookingService = require('../services/BookingService');
+
+// Helper function to get Nepal time consistently
+const getNepalTime = () => {
+  const now = new Date();
+  // Convert to Nepal timezone (UTC+5:45)
+  return new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}));
+};
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 
@@ -21,14 +28,14 @@ router.post('/quick', async (req, res) => {
       bookingId,
       station: 'Demo Station',
       address: 'Demo Address',
-      date: req.body.date || new Date().toISOString().split('T')[0],
+      date: req.body.date || getNepalTime().toISOString().split('T')[0],
       timeSlot: req.body.timeSlot || { display: '14:30', startTime: '14:30', endTime: '16:30' },
       port: { portNumber: 1, connectorType: 'CCS2', powerOutput: '50kW' },
       customerDetails: req.body.customerDetails || {},
       vehicleDetails: req.body.vehicleDetails || {},
       amount: 300,
       status: 'confirmed',
-      createdAt: new Date().toISOString(),
+      createdAt: getNepalTime().toISOString(),
       isFlexible: false
     };
 
@@ -89,14 +96,14 @@ router.get('/bulk-slot-counts/:stationId', async (req, res) => {
           
           if (result.success) {
             // Filter available slots based on current time for today
-            const today = new Date().toISOString().split('T')[0];
+            const today = getNepalTime().toISOString().split('T')[0];
             const isToday = date === today;
             
             let availableSlots = result.data.slots.filter(slot => slot.isAvailable);
             
             // For today, filter out past time slots
             if (isToday) {
-              const currentTime = new Date();
+              const currentTime = getNepalTime();
               availableSlots = availableSlots.filter(slot => {
                 const [hours, minutes] = slot.startTime.split(':').map(Number);
                 const slotDateTime = new Date(currentTime);
@@ -113,9 +120,9 @@ router.get('/bulk-slot-counts/:stationId', async (req, res) => {
           console.error(`Error loading slots for port ${port.portNumber} on ${date}:`, error);
           
           // Calculate fallback slot count
-          if (date === new Date().toISOString().split('T')[0]) {
+          if (date === getNepalTime().toISOString().split('T')[0]) {
             // For today, calculate remaining slots from current time
-            const currentTime = new Date();
+            const currentTime = getNepalTime();
             const currentHour = currentTime.getHours();
             const currentMinute = currentTime.getMinutes();
             const totalMinutesPassedToday = currentHour * 60 + currentMinute;
@@ -143,7 +150,7 @@ router.get('/bulk-slot-counts/:stationId', async (req, res) => {
         stationId,
         dates: dateList,
         totalPorts: station.chargingPorts.length,
-        generatedAt: new Date().toISOString(),
+        generatedAt: getNepalTime().toISOString(),
         performance: {
           durationMs: duration,
           totalSlotChecks,
@@ -343,7 +350,7 @@ router.post('/check-slot-availability', protect, async (req, res) => {
     }
 
     // Check if the time is in the past
-    if (startDateTime < new Date()) {
+    if (startDateTime < getNepalTime()) {
       return res.status(400).json({
         success: false,
         message: 'Cannot book time slots in the past'
@@ -682,12 +689,15 @@ router.get('/realtime-availability/:stationId', async (req, res) => {
       
       // Generate 5-minute slots for the day
       const slots = [];
-      const isToday = date === new Date().toISOString().split('T')[0];
-      const currentTime = new Date();
       
-      console.log(`🔍 Generating slots for ${date}, isToday: ${isToday}, currentTime: ${currentTime.toLocaleTimeString()}`);
+      const nepalTime = getNepalTime();
+      const isToday = date === nepalTime.toISOString().split('T')[0];
+      const currentTime = nepalTime;
       
-      // Calculate the buffer time for today
+      console.log(`🔍 Generating slots for ${date}, isToday: ${isToday}, Nepal currentTime: ${currentTime.toLocaleTimeString()}`);
+      console.log(`🇳🇵 Nepal Time Debug: Server time: ${new Date().toLocaleString()}, Nepal time: ${currentTime.toLocaleString()}`);
+      
+      // Calculate the buffer time for today (in Nepal time)
       const bufferTime = isToday ? new Date(currentTime.getTime() + 5 * 60 * 1000) : null;
       if (bufferTime) {
         console.log(`⏰ Buffer time: ${bufferTime.toLocaleTimeString()}`);
@@ -775,7 +785,7 @@ router.get('/realtime-availability/:stationId', async (req, res) => {
         date,
         totalExistingBookings: existingBookings.length,
         ports: portsWithAvailability,
-        generatedAt: new Date().toISOString(),
+        generatedAt: nepalTime.toISOString(),
         realTimeData: true
       }
     });
@@ -927,7 +937,7 @@ router.get('/existing/:stationId', async (req, res) => {
         portId: portId || 'all_ports',
         bookings: existingBookings,
         totalBookings: existingBookings.length,
-        generatedAt: new Date().toISOString()
+        generatedAt: getNepalTime().toISOString()
       }
     });
 

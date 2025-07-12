@@ -56,11 +56,31 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     autoValidate: false
   })
 
+  // Get Nepal time (Asia/Kathmandu timezone)
+  const getNepalTime = () => {
+    const now = new Date()
+    
+    // Convert to Nepal timezone (UTC+5:45)
+    const nepalTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}))
+    
+    // Debug logging for timezone comparison
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🕒 Nepal Time Debug:`, {
+        clientTime: now.toLocaleString(),
+        nepalTime: nepalTime.toLocaleString(),
+        clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        nepalTimezone: 'Asia/Kathmandu (UTC+5:45)'
+      })
+    }
+    
+    return nepalTime
+  }
+
   // Generate next 7 days for date selection
   const getNext7Days = () => {
     const days = []
     for (let i = 0; i < 7; i++) {
-      const date = new Date()
+      const date = getNepalTime()
       date.setDate(date.getDate() + i)
       days.push({
         date: date.toISOString().split('T')[0],
@@ -88,13 +108,13 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
   }
 
-  // Get current time in minutes for today's slot calculation
+  // Get current time in minutes for today's slot calculation (using Nepal time)
   const getCurrentTimeMinutes = () => {
-    const now = new Date()
+    const now = getNepalTime()
     return now.getHours() * 60 + now.getMinutes()
   }
 
-  // Calculate next available slot time with buffer
+  // Calculate next available slot time with buffer (using Nepal time)
   const getNextAvailableTime = (currentTimeMinutes, bufferMinutes = 5) => {
     // Round up to next 5-minute interval and add buffer
     const nextSlotMinutes = Math.ceil((currentTimeMinutes + bufferMinutes) / 5) * 5
@@ -254,7 +274,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
   const generateDynamicTimeSlots = useCallback((existingBookings = [], selectedDate) => {
     const performanceStart = performance.now()
     
-    const isToday = selectedDate === new Date().toISOString().split('T')[0]
+    const isToday = selectedDate === getNepalTime().toISOString().split('T')[0]
     const currentTimeMinutes = getCurrentTimeMinutes()
     
     // Get operating hours for the selected date
@@ -416,7 +436,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
         fallbackSlotCounts[day.date] = {}
         ;(station?.chargingPorts || []).forEach(port => {
           if (day.isToday) {
-            const currentTime = new Date()
+            const currentTime = getNepalTime()
             const currentHour = currentTime.getHours()
             const currentMinute = currentTime.getMinutes()
             const totalMinutesPassedToday = currentHour * 60 + currentMinute
@@ -557,6 +577,12 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
             })
             
             console.log(`✅ Loaded ${realTimeSlots.length} real-time slots with ${response.data.totalExistingBookings} existing bookings`)
+            
+            // Log Nepal time for debugging
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`🇳🇵 Nepal Time: ${getNepalTime().toLocaleString('en-US', { timeZone: 'Asia/Kathmandu' })}`)
+            }
+            
             setTimeSlots(realTimeSlots)
           } else {
             throw new Error(response.message || 'No port data received')
@@ -580,8 +606,8 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
             
             // Final fallback to static slots with operating hours consideration
             const staticSlots = []
-            const isToday = selectedDate === new Date().toISOString().split('T')[0]
-            const currentTime = new Date()
+            const isToday = selectedDate === getNepalTime().toISOString().split('T')[0]
+            const currentTime = getNepalTime()
             
             // Get operating hours for filtering
             const operatingHours = getOperatingHoursForDate(selectedDate)
@@ -716,6 +742,11 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                   pricing: [{ duration: 120, totalPrice: calculatePrice(120) }]
                 })
               })
+              
+              // Log Nepal time for debugging during auto-refresh
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`🇳🇵 Auto-refresh Nepal Time: ${getNepalTime().toLocaleString('en-US', { timeZone: 'Asia/Kathmandu' })}`)
+              }
               
               // Only update if there are changes to avoid unnecessary re-renders
               setTimeSlots(prev => {
@@ -900,7 +931,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
   // Helper function to check if a time slot has passed (for today only)
   const isTimeSlotPassed = (slotTime, date) => {
     const selectedDate = new Date(date);
-    const today = new Date();
+    const today = getNepalTime();
     
     // Only check for past time slots if the selected date is today
     if (selectedDate.toDateString() !== today.toDateString()) {
@@ -1241,16 +1272,16 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                               {(() => {
                                 const operatingHours = getOperatingHoursForDate(selectedDate)
                                 const dayName = getDayOfWeek(selectedDate)
-                                const isToday = selectedDate === new Date().toISOString().split('T')[0]
+                                const isToday = selectedDate === getNepalTime().toISOString().split('T')[0]
                                 
                                 if (operatingHours.is24Hours) {
                                   return isToday 
-                                    ? `24/7 Service - Showing slots from ${minutesToTime(getNextAvailableTime(getCurrentTimeMinutes()))} onwards`
-                                    : `24/7 Service - All slots available for ${dayName}`
+                                    ? `24/7 Service - Showing slots from ${minutesToTime(getNextAvailableTime(getCurrentTimeMinutes()))} onwards (Nepal Time)`
+                                    : `24/7 Service - All slots available for ${dayName} (Nepal Time)`
                                 } else {
                                   return isToday 
-                                    ? `Open ${operatingHours.open} - ${operatingHours.close} - Showing available slots`
-                                    : `${dayName}: ${operatingHours.open} - ${operatingHours.close}`
+                                    ? `Open ${operatingHours.open} - ${operatingHours.close} - Showing available slots (Nepal Time)`
+                                    : `${dayName}: ${operatingHours.open} - ${operatingHours.close} (Nepal Time)`
                                 }
                               })()}
                             </span>
@@ -1282,6 +1313,13 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                               <span className="text-blue-600 text-xs">
                                 • Last updated: {lastRefreshed.toLocaleTimeString()}
                               </span>
+                            )}
+                            {process.env.NODE_ENV === 'development' && (
+                              <div className="flex items-center space-x-2">
+                                <span className="text-green-600 text-xs">
+                                  🇳🇵 Nepal Time: {getNepalTime().toLocaleTimeString('en-US', { timeZone: 'Asia/Kathmandu' })}
+                                </span>
+                              </div>
                             )}
                           </div>
                           <button
