@@ -37,7 +37,7 @@ router.post('/presigned',
 router.post('/:folder/single-stream', 
   protect,
   memoryMonitor,
-  userUploadRateLimit(5, 60000), // 5 uploads per minute
+  userUploadRateLimit(5, 60000), // 5 uploads per minute per user
   upload.single('file'),
   optimizedUploadSingleToS3,
   (req, res) => {
@@ -66,7 +66,7 @@ router.post('/:folder/single-stream',
 router.post('/:folder/multiple-stream',
   protect,
   memoryMonitor,
-  userUploadRateLimit(3, 60000), // 3 multi-uploads per minute
+  userUploadRateLimit(3, 60000), // 3 multi-uploads per minute per user
   upload.array('files', 10), // Maximum 10 files
   optimizedUploadToS3,
   (req, res) => {
@@ -95,7 +95,7 @@ router.post('/:folder/multiple-stream',
 router.post('/profile-stream',
   protect,
   memoryMonitor,
-  userUploadRateLimit(5, 60000),
+  userUploadRateLimit(5, 60000), // 5 profile uploads per minute per user
   upload.single('profile'),
   async (req, res) => {
     try {
@@ -220,7 +220,7 @@ router.post('/station-image-single',
 router.post('/station-images-stream',
   protect,
   memoryMonitor,
-  userUploadRateLimit(2, 60000), // 2 station image uploads per minute
+  userUploadRateLimit(2, 60000), // 2 station image uploads per minute per user
   upload.array('images', 15), // Maximum 15 images with streaming
   async (req, res) => {
     try {
@@ -335,7 +335,7 @@ router.get('/memory-status',
 router.post('/documents-stream',
   protect,
   memoryMonitor,
-  userUploadRateLimit(3, 60000),
+  userUploadRateLimit(3, 60000), // 3 document uploads per minute per user
   upload.array('documents', 8), // Maximum 8 documents
   async (req, res) => {
     try {
@@ -414,7 +414,7 @@ router.post('/documents-stream',
 router.post('/document-stream',
   protect,
   memoryMonitor,
-  userUploadRateLimit(1, 30000), // 1 document upload per 30 seconds
+  userUploadRateLimit(10, 60000), // 10 document uploads per minute per user
   upload.single('document'), // Single document upload
   async (req, res) => {
     try {

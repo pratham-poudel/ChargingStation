@@ -7,9 +7,7 @@ const { authorizeVendor } = require('../middleware/auth');
 const { body, param, validationResult } = require('express-validator');
 const smsService = require('../services/smsService');
 const emailService = require('../services/emailService');
-// Remove old multer and uploadFile imports
-// const multer = require('multer');
-// const { uploadFile } = require('../config/minio');
+// Using optimized upload service for RAM-efficient uploads
 
 // Import optimized upload service
 const { optimizedUploadService } = require('../config/optimized-upload');

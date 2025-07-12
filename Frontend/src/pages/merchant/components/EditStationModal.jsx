@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { directUploadAPI } from '../../../services/directS3Upload';
 import { merchantAPI } from '../../../services/merchantAPI';
 import { stationManagementService } from '../../../services/stationManagementAPI';
+
+// Helper function to safely get station master photo URL
+const getStationMasterPhotoUrl = (photo) => {
+  if (!photo) return null;
+  
+  if (typeof photo === 'string') {
+    return photo;
+  }
+  
+  if (typeof photo === 'object' && photo.url) {
+    return photo.url;
+  }
+  
+  return null;
+};
 
 const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
   const [formData, setFormData] = useState({
@@ -42,6 +58,7 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
   const [stationMasterPhoto, setStationMasterPhoto] = useState(null);
   const [existingImages, setExistingImages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [errors, setErrors] = useState({});
   
   const amenityOptions = [
@@ -54,6 +71,8 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
       console.log('Station address:', station.address);
       console.log('Station location:', station.location);
       console.log('Station stationMaster:', station.stationMaster);
+      console.log('Station stationMaster photo:', station.stationMaster?.photo);
+      console.log('Station stationMaster photo type:', typeof station.stationMaster?.photo);
       
       setFormData({
         name: station.name || '',
@@ -72,7 +91,9 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
         stationMaster: {
           name: station.stationMaster?.name || '',
           phoneNumber: station.stationMaster?.phoneNumber || '',
-          photo: station.stationMaster?.photo || null
+          photo: (station.stationMaster?.photo && typeof station.stationMaster.photo === 'object' && station.stationMaster.photo?.url) 
+                 ? station.stationMaster.photo 
+                 : (typeof station.stationMaster?.photo === 'string' ? station.stationMaster.photo : null)
         },        amenities: station.amenities || [],
         operatingHours: (() => {
           // Handle both operatingHours object and timing array formats
@@ -140,7 +161,7 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
         isActive: station.isActive !== false
       });
       
-      setExistingImages(station.images?.map(img => typeof img === 'string' ? img : img.url) || []);
+      setExistingImages(station.images?.map(img => typeof img === 'string' ? img : (img?.url || '')) || []);
       setImages([]);
       setStationMasterPhoto(null);
       setErrors({});
@@ -240,16 +261,58 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
     }
   };
 
-  const handleStationMasterPhotoChange = (e) => {
+  const handleStationMasterPhotoChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         setErrors(prev => ({ ...prev, stationMasterPhoto: 'File size must be less than 5MB' }));
         return;
       }
-      setStationMasterPhoto(file);
-      if (errors.stationMasterPhoto) {
-        setErrors(prev => ({ ...prev, stationMasterPhoto: null }));
+      
+      try {
+        console.log('🔄 Starting presigned upload for station master photo:', file.name);
+        setUploadingPhoto(true);
+        
+        // Upload directly to S3 using presigned URL
+        const uploadResult = await directUploadAPI.uploadProfilePicture(file);
+        
+        console.log('✅ Station master photo uploaded successfully:', uploadResult);
+        
+        if (uploadResult && uploadResult.url) {
+          // Update form data with the uploaded photo URL
+          setFormData(prev => ({
+            ...prev,
+            stationMaster: {
+              ...prev.stationMaster,
+              photo: {
+                url: uploadResult.url,
+                objectName: uploadResult.objectName,
+                originalName: uploadResult.originalName,
+                uploadedAt: uploadResult.uploadedAt || new Date().toISOString()
+              }
+            }
+          }));
+          
+          // Clear any previous file state since we now have the uploaded URL
+          setStationMasterPhoto(null);
+          
+          // Clear any errors
+          if (errors.stationMasterPhoto) {
+            setErrors(prev => ({ ...prev, stationMasterPhoto: null }));
+          }
+          
+          console.log('📸 Station master photo URL set in form data:', uploadResult.url);
+        } else {
+          throw new Error('Upload failed - no URL returned');
+        }
+      } catch (error) {
+        console.error('❌ Station master photo upload failed:', error);
+        setErrors(prev => ({ 
+          ...prev, 
+          stationMasterPhoto: `Upload failed: ${error.message}` 
+        }));
+      } finally {
+        setUploadingPhoto(false);
       }
     }
   };
@@ -335,7 +398,19 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
         submitData.append('images', image);
       });
 
-      // Add station master photo if provided
+      // Prepare station master photo URL if uploaded
+      let stationMasterPhotoUrl = null;
+      if (formData.stationMaster.photo && typeof formData.stationMaster.photo === 'object' && formData.stationMaster.photo.url) {
+        stationMasterPhotoUrl = formData.stationMaster.photo.url;
+        console.log('📸 Including station master photo URL:', stationMasterPhotoUrl);
+      }
+
+      // Add station master photo URL to FormData if available
+      if (stationMasterPhotoUrl) {
+        submitData.append('stationMasterPhotoUrl', stationMasterPhotoUrl);
+      }
+
+      // Add station master photo file if provided (fallback)
       if (stationMasterPhoto) {
         submitData.append('stationMasterPhoto', stationMasterPhoto);
       }
@@ -361,6 +436,18 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
         console.log('Update successful, calling onUpdate and onClose');
         console.log('Response station data:', response.data);
         console.log('Response station _id:', response.data?._id);
+        
+        // Update the local form data to reflect the new photo immediately
+        if (stationMasterPhoto && response.data?.stationMaster?.photo) {
+          setFormData(prev => ({
+            ...prev,
+            stationMaster: {
+              ...prev.stationMaster,
+              photo: response.data.stationMaster.photo
+            }
+          }));
+        }
+        
         onUpdate(response.data);
         onClose();
       } else {
@@ -925,24 +1012,62 @@ const EditStationModal = ({ station, isOpen, onClose, onUpdate }) => {
             {/* Station Master Photo */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Update Station Master Photo
+                Station Master Photo
               </label>
+              
+              {/* Show current photo if exists */}
+              {formData.stationMaster.photo && !stationMasterPhoto && getStationMasterPhotoUrl(formData.stationMaster.photo) ? (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">Current Photo:</p>
+                  <img
+                    src={getStationMasterPhotoUrl(formData.stationMaster.photo)}
+                    alt="Current Station Master"
+                    className="w-32 h-32 object-cover rounded-lg border"
+                    onError={(e) => {
+                      console.log('Error loading station master photo');
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              ) : !stationMasterPhoto ? (
+                <div className="mb-4 p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                  <p className="text-sm text-gray-500">No current photo available</p>
+                </div>
+              ) : null}
+              
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleStationMasterPhotoChange}
+                disabled={uploadingPhoto}
                 className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.stationMasterPhoto ? 'border-red-500' : 'border-gray-300'
-                }`}
+                } ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
+              <p className="text-sm text-gray-500 mt-1">
+                {uploadingPhoto 
+                  ? 'Uploading photo...' 
+                  : formData.stationMaster.photo 
+                    ? 'Upload a new photo to replace the current one' 
+                    : 'Upload station master photo'
+                }
+              </p>
               {errors.stationMasterPhoto && <p className="text-red-500 text-sm mt-1">{errors.stationMasterPhoto}</p>}
-              {stationMasterPhoto && (
-                <div className="mt-2">
-                  <img
-                    src={URL.createObjectURL(stationMasterPhoto)}
-                    alt="Station Master Preview"
-                    className="w-32 h-32 object-cover rounded-lg border"
-                  />
+              
+              {/* Show upload progress */}
+              {uploadingPhoto && (
+                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <p className="text-sm text-blue-700">Uploading photo...</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Show upload success message if photo was just uploaded */}
+              {!uploadingPhoto && formData.stationMaster.photo && typeof formData.stationMaster.photo === 'object' && formData.stationMaster.photo.url && !getStationMasterPhotoUrl(station?.stationMaster?.photo) && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-700">✅ Photo uploaded successfully! Changes will be saved when you submit the form.</p>
                 </div>
               )}
             </div>

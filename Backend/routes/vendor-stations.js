@@ -261,19 +261,19 @@ router.post('/',
       if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
         console.log('📤 Using pre-uploaded station images:', req.body.images.length, 'images');
         console.log('📋 Pre-uploaded images data:', req.body.images.map(img => ({ 
-          url: img.url, 
-          objectName: img.objectName, 
-          originalName: img.originalName 
+          url: img?.url, 
+          objectName: img?.objectName, 
+          originalName: img?.originalName 
         })));
         
         // Images are already uploaded via optimized API, just use the URLs
         const images = req.body.images.map((img, index) => ({
-          url: img.url,
-          objectName: img.objectName,
-          originalName: img.originalName || img.fileName,
+          url: img?.url,
+          objectName: img?.objectName,
+          originalName: img?.originalName || img?.fileName,
           isPrimary: index === 0, // First image as primary
           isThumbnail: index === 0, // First image as thumbnail  
-          uploadedAt: img.uploadedAt ? new Date(img.uploadedAt) : new Date()
+          uploadedAt: img?.uploadedAt ? new Date(img.uploadedAt) : new Date()
         }));
         
         stationData.images = images;
@@ -487,7 +487,7 @@ router.put('/:id',
       if (updateData.existingImages && Array.isArray(updateData.existingImages)) {
         // Filter existing images to keep only those in the existingImages array
         station.images = station.images.filter(img => 
-          updateData.existingImages.includes(img.url)
+          updateData.existingImages.includes(img?.url)
         );
       }
 
@@ -497,12 +497,12 @@ router.put('/:id',
         
         // New images are already uploaded via optimized API, just add them to station
         const newImages = updateData.newImages.map((img, index) => ({
-          url: img.url,
-          objectName: img.objectName,
-          originalName: img.originalName || img.fileName,
+          url: img?.url,
+          objectName: img?.objectName,
+          originalName: img?.originalName || img?.fileName,
           isPrimary: station.images.length === 0 && index === 0, // First image as primary if no existing images
           isThumbnail: station.images.length === 0 && index === 0, // First image as thumbnail if no existing images
-          uploadedAt: img.uploadedAt ? new Date(img.uploadedAt) : new Date()
+          uploadedAt: img?.uploadedAt ? new Date(img.uploadedAt) : new Date()
         }));
         
         station.images.push(...newImages);

@@ -456,18 +456,34 @@ export default function Auth() {
 
         {/* Merchant Registration Link */}
         <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-2">
-              Are you a business owner?
-            </p>
-            <Link
-              to="/merchant/register"
-              className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors font-medium"
-            >
-              <Building2 className="w-4 h-4 mr-2" />
-              Register as Merchant
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
+          <div className="text-center space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-2">
+                Are you a business owner?
+              </p>
+              <Link
+                to="/merchant/register"
+                className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors font-medium"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                Register as Merchant
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
+            </div>
+            
+            <div className="border-t pt-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Are you a station employee?
+              </p>
+              <Link
+                to="/station-login"
+                className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors font-medium"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Station Employee Login
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
+            </div>
           </div>
         </div>
       </motion.div>

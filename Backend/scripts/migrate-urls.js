@@ -37,8 +37,8 @@ async function migrateUrls() {
 
         // Update station master photo URL
         if (station.stationMaster && station.stationMaster.photo && 
-            station.stationMaster.photo.objectName && 
-            station.stationMaster.photo.url && 
+            station.stationMaster?.photo?.objectName && 
+            station.stationMaster?.photo?.url && 
             (station.stationMaster.photo.url.includes('X-Amz-Signature') || 
              station.stationMaster.photo.url.includes('9000/mybucket'))) {
           const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`;

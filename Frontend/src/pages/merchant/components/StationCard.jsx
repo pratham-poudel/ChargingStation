@@ -167,11 +167,16 @@ const StationCard = ({ station, onEdit, onDelete, onToggleStatus, onViewAnalytic
         {station.stationMaster && (
           <div className="flex items-center mb-4 p-3 bg-gray-50 rounded-lg">
             <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-              {station.stationMaster.photo?.url ? (
+              {station.stationMaster.photo && (
+                typeof station.stationMaster.photo === 'object' ? station.stationMaster.photo?.url : station.stationMaster.photo
+              ) ? (
                 <img
-                  src={station.stationMaster.photo.url}
+                  src={typeof station.stationMaster.photo === 'object' ? station.stationMaster.photo?.url : station.stationMaster.photo}
                   alt={station.stationMaster.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
                 />
               ) : (
                 <Users size={16} className="text-gray-500" />

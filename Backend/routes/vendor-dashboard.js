@@ -6,9 +6,7 @@ const Booking = require('../models/Booking');
 const Settlement = require('../models/Settlement');
 const { protect } = require('../middleware/auth');
 const { checkVendorSubscription } = require('../middleware/subscriptionCheck');
-// Remove old upload middleware and use optimized one
-// const { upload, handleMulterError } = require('../middleware/upload');
-// const { uploadFile } = require('../config/minio');
+// Using optimized upload service for RAM-efficient uploads
 
 // Import optimized upload service
 const { optimizedUploadService } = require('../config/optimized-upload');
@@ -763,6 +761,98 @@ const uploadDocument = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to upload document',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// @desc    Update vendor document after presigned upload
+// @route   POST /api/vendor/dashboard/update-document-after-upload
+// @access  Private (Vendor)
+const updateDocumentAfterUpload = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const vendor = await Vendor.findById(vendorId);
+
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found'
+      });
+    }
+
+    const { uploadResult, documentType, additionalDocumentType } = req.body;
+
+    if (!uploadResult || !uploadResult.url) {
+      return res.status(400).json({
+        success: false,
+        message: 'Upload result with URL is required'
+      });
+    }
+
+    if (!documentType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Document type is required'
+      });
+    }
+
+    // Validate document type
+    const allowedTypes = ['businessRegistrationCertificate', 'ownerCitizenshipCertificate', 'additionalDocument'];
+    if (!allowedTypes.includes(documentType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document type'
+      });
+    }
+
+    // Prepare document object from presigned upload result
+    const documentData = {
+      url: uploadResult.url,
+      objectName: uploadResult.objectName,
+      originalName: uploadResult.originalName,
+      uploadedAt: uploadResult.uploadedAt || new Date(),
+      status: 'pending'
+    };
+
+    // Update vendor documents based on type
+    if (documentType === 'additionalDocument') {
+      if (!vendor.documents.additionalDocuments) {
+        vendor.documents.additionalDocuments = [];
+      }
+      vendor.documents.additionalDocuments.push({
+        ...documentData,
+        documentType: additionalDocumentType || 'Other'
+      });
+    } else {
+      vendor.documents[documentType] = documentData;
+    }
+
+    // Check if all required documents are uploaded
+    const hasBusinessCert = vendor.documents.businessRegistrationCertificate?.url;
+    const hasCitizenshipCert = vendor.documents.ownerCitizenshipCertificate?.url;
+
+    if (hasBusinessCert && hasCitizenshipCert && vendor.onboardingStep === 'documents') {
+      vendor.onboardingStep = 'under_review';
+      vendor.verificationStatus = 'under_review';
+    }
+
+    await vendor.save();
+
+    res.json({
+      success: true,
+      message: 'Document updated in database successfully',
+      data: {
+        document: documentData,
+        vendor: vendor
+      }
+    });
+
+  } catch (error) {
+    console.error('Update document after upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update document in database',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
@@ -1750,6 +1840,7 @@ router.post('/upload-document', checkVendorSubscription, upload.single('document
   req.body.folder = 'Documents'; // Ensure documents go to Documents folder
   next();
 }, optimizedUploadSingleToS3, uploadDocument);
+router.post('/update-document-after-upload', checkVendorSubscription, updateDocumentAfterUpload);
 router.delete('/delete-document', checkVendorSubscription, deleteDocument);
 
 module.exports = router;

@@ -25,6 +25,7 @@ const adminManagementRoutes = require('./routes/admin-management');
 const paymentRoutes = require('./routes/payments');
 const locationRoutes = require('./routes/location');
 const optimizedUploadRoutes = require('./routes/uploads-optimized');
+const presignedUploadRoutes = require('./routes/presigned-upload');
 const sitemapRoutes = require('./routes/sitemap');
 const notificationRoutes = require('./routes/notifications');
 const ratingsRoutes = require('./routes/ratings');
@@ -119,6 +120,7 @@ app.use('/api/admin', adminManagementRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/uploads-optimized', optimizedUploadRoutes); // Optimized RAM-efficient uploads
+app.use('/api/presigned-upload', presignedUploadRoutes); // Presigned URL uploads
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ratings', ratingsRoutes);
 app.use('/api/files', fileRoutes); // File serving with fresh URLs

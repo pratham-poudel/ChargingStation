@@ -9,8 +9,7 @@
     "test": "jest",
     "seed": "node scripts/seedStations.js",
     "seed:stations": "node scripts/seedStations.js",
-    "test:minio": "node scripts/testMinIO.js",
-    "test:optimized-uploads": "node test-optimized-uploads.js"
+    "test:minio": "node scripts/testMinIO.js"
   },
   "keywords": [
     "charging-station",

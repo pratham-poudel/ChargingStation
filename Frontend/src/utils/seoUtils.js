@@ -20,9 +20,9 @@ export const generateSitemap = (pages, lastModified = new Date()) => {
 
     const imageXml = images.map(img => `
     <image:image>
-      <image:loc>${baseUrl}${img.url}</image:loc>
-      <image:title>${img.title || ''}</image:title>
-      <image:caption>${img.caption || ''}</image:caption>
+      <image:loc>${baseUrl}${img?.url}</image:loc>
+      <image:title>${img?.title || ''}</image:title>
+      <image:caption>${img?.caption || ''}</image:caption>
     </image:image>`).join('')
 
     return `

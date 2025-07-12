@@ -21,9 +21,9 @@ class ConcurrencySafeStationService {
       const result = await session.withTransaction(async () => {
         // Prepare image data
         const imageData = images.map((img, index) => ({
-          url: img.url,
-          objectName: img.objectName || img.key,
-          originalName: img.originalName || img.filename,
+          url: img?.url,
+          objectName: img?.objectName || img?.key,
+          originalName: img?.originalName || img?.filename,
           isPrimary: index === 0,
           isThumbnail: index === 0,
           uploadedAt: new Date(),
@@ -94,20 +94,20 @@ class ConcurrencySafeStationService {
         
         // Remove specified images
         let currentImages = station.images.filter(img => 
-          !imagesToRemove.includes(img.url)
+          !imagesToRemove.includes(img?.url)
         );
         
         // Add new images
         const newImageData = newImages.map((img, index) => ({
-          url: img.url,
-          objectName: img.objectName || img.key,
-          originalName: img.originalName || img.filename,
+          url: img?.url,
+          objectName: img?.objectName || img?.key,
+          originalName: img?.originalName || img?.filename,
           isPrimary: currentImages.length === 0 && index === 0, // First image is primary if no existing images
           isThumbnail: currentImages.length === 0 && index === 0,
           uploadedAt: new Date(),
           uploadStatus: 'completed',
-          size: img.size,
-          mimetype: img.mimetype || 'image/jpeg'
+          size: img?.size,
+          mimetype: img?.mimetype || 'image/jpeg'
         }));
         
         currentImages = [...currentImages, ...newImageData];
@@ -174,15 +174,15 @@ class ConcurrencySafeStationService {
             originalName: img.split('/').pop(),
             uploadStatus: 'completed'
           };
-        } else if (img.url) {
+        } else if (img?.url) {
           // Handle object format
           return {
             url: img.url,
-            objectName: img.objectName || img.url.split('/').pop(),
-            originalName: img.originalName || img.url.split('/').pop(),
+            objectName: img?.objectName || img.url.split('/').pop(),
+            originalName: img?.originalName || img.url.split('/').pop(),
             uploadStatus: 'completed',
-            size: img.size,
-            mimetype: img.mimetype
+            size: img?.size,
+            mimetype: img?.mimetype
           };
         } else {
           throw new Error('Invalid image format in pre-uploaded images');

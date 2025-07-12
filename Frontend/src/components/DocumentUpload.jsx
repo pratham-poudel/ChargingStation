@@ -12,7 +12,7 @@ import {
   Download
 } from 'lucide-react'
 import { useMerchant } from '../context/MerchantContext'
-import optimizedUploadAPI from '../services/optimizedUploadAPI'
+import { directUploadAPI } from '../services/directS3Upload'
 
 const DocumentUpload = ({ 
   documentType, 
@@ -33,16 +33,32 @@ const DocumentUpload = ({
     const file = files[0]
     if (!file) return
 
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
-    if (!allowedTypes.includes(file.type)) {
-      setError('Please upload a PDF, JPEG, or PNG file')
+    // Validate file type (all except video)
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml',
+      'text/plain', 'text/csv',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/rtf',
+      'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+    ]
+    
+    // Block video files
+    if (file.type.startsWith('video/')) {
+      setError('Video files are not allowed')
+      return
+    }
+    
+    if (!allowedTypes.includes(file.type) && !file.type.startsWith('image/') && !file.type.startsWith('text/')) {
+      setError('Please upload a valid document file (PDF, images, documents, archives, etc. - no videos)')
       return
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB')
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB')
       return
     }
 
@@ -54,27 +70,32 @@ const DocumentUpload = ({
     setError('')
 
     try {
-      console.log('🔄 Starting document upload:', { file: file.name, documentType });
+      console.log('🔄 Starting presigned document upload:', { file: file.name, documentType });
       
-      // Use merchant context uploadDocument which handles both upload and database update
-      const uploadResult = await uploadDocument(file, documentType);
+      // Upload directly to S3/R2 using presigned URL
+      const uploadResult = await directUploadAPI.uploadProfilePicture(file, 'vendor');
+      console.log('📋 Presigned upload result:', uploadResult);
       
-      console.log('📋 Upload result received:', uploadResult);
-      
-      if (uploadResult && uploadResult.success) {
-        console.log('✅ Upload successful, calling onUploadSuccess with:', uploadResult.data.document);
+      if (uploadResult && uploadResult.url) {
+        // Now update the database with the uploaded document info
+        console.log('💾 Updating database with document info...');
+        const dbResult = await uploadDocument(uploadResult, documentType);
         
-        // File uploaded successfully and database updated
-        onUploadSuccess({
-          url: uploadResult.data.document.url,
-          objectName: uploadResult.data.document.objectName,
-          originalName: uploadResult.data.document.originalName,
-          uploadedAt: uploadResult.data.document.uploadedAt,
-          documentType: documentType
-        });
+        console.log('✅ Database update result:', dbResult);
+        
+        if (dbResult && dbResult.success) {
+          onUploadSuccess({
+            url: uploadResult.url,
+            objectName: uploadResult.objectName,
+            originalName: uploadResult.originalName,
+            uploadedAt: uploadResult.uploadedAt || new Date().toISOString(),
+            documentType: documentType
+          });
+        } else {
+          setError(dbResult?.message || 'Failed to update database after upload');
+        }
       } else {
-        console.log('❌ Upload failed with result:', uploadResult);
-        setError(uploadResult?.message || 'Upload failed - unknown error');
+        setError('Upload failed - no URL returned');
       }
     } catch (error) {
       console.error('🚨 Document upload error:', error);
@@ -259,7 +280,7 @@ const DocumentUpload = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
+                accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.zip,.rar,.7z"
                 onChange={(e) => handleFileSelect(e.target.files)}
                 className="hidden"
               />
@@ -282,7 +303,7 @@ const DocumentUpload = ({
                     </button>
                   </p>
                   <p className="text-xs text-gray-500">
-                    PDF, JPEG, PNG files up to 5MB
+                    All file types except videos, up to 10MB
                   </p>
                 </div>
               )}

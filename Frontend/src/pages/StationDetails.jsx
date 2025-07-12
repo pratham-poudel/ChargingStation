@@ -203,9 +203,9 @@ function StationDetails() {
     
     // Return all images with fallbacks
     const images = station.images.map(img => ({
-      url: img.url || img,
-      caption: img.caption || '',
-      isPrimary: img.isPrimary || false
+      url: img?.url || img,
+      caption: img?.caption || '',
+      isPrimary: img?.isPrimary || false
     }))
 
     // Sort primary image first
@@ -510,7 +510,7 @@ function StationDetails() {
                     }}
                   >
                     <img
-                      src={image.url}
+                      src={image?.url}
                       alt={`${station.name} - Image ${index + 2}`}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       onError={(e) => {
@@ -749,15 +749,18 @@ function StationDetails() {
                     <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200">
                       {station.stationMaster.photo ? (
                         <img
-                          src={typeof station.stationMaster.photo === 'object' ? station.stationMaster.photo.url : station.stationMaster.photo}
+                          src={typeof station.stationMaster.photo === 'object' ? (station.stationMaster.photo?.url || '') : station.stationMaster.photo}
                           alt={station.stationMaster.name}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextElementSibling.style.display = 'flex';
+                          }}
                         />
-                      ) : (
-                        <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-600 text-xl font-semibold">
-                          {station.stationMaster.name ? station.stationMaster.name.charAt(0).toUpperCase() : 'SM'}
-                        </div>
-                      )}
+                      ) : null}
+                      <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-600 text-xl font-semibold" style={{ display: station.stationMaster.photo ? 'none' : 'flex' }}>
+                        {station.stationMaster.name ? station.stationMaster.name.charAt(0).toUpperCase() : 'SM'}
+                      </div>
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold text-gray-900">

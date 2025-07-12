@@ -1,5 +1,5 @@
 import axios from 'axios';
-import optimizedUploadAPI from './optimizedUploadAPI';
+import { directUploadAPI } from './directS3Upload';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -150,15 +150,15 @@ export const stationManagementService = {
       // Upload new images if any
       let uploadedImages = [];
       if (files.images.length > 0) {
-        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images);
+        const imageResult = await directUploadAPI.uploadStationImages(files.images);
         uploadedImages = imageResult.images || [];
       }
       
       // Upload new station master photo if provided
       let stationMasterPhotoUrl = null;
       if (files.stationMasterPhoto) {
-        const photoResult = await optimizedUploadAPI.smartUpload(files.stationMasterPhoto, 'Profiles');
-        stationMasterPhotoUrl = photoResult.file.url;
+        const photoResult = await directUploadAPI.uploadProfilePicture(files.stationMasterPhoto);
+        stationMasterPhotoUrl = photoResult.url;
       }
       
       // Prepare final data for backend

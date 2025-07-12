@@ -20,7 +20,12 @@ import {
   Navigation,
   Mountain,
   Route,
-  Brain
+  Brain,
+  Play,
+  Quote,
+  Award,
+  Timer,
+  Globe
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { stationsAPI } from '../services/api'
@@ -32,6 +37,47 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState(null)
   const [selectedUser, setSelectedUser] = useState(null)
   const navigate = useNavigate()
+
+  // Check if running in an app/webview
+  const [isInApp, setIsInApp] = useState(false)
+
+  useEffect(() => {
+    // Detect if we're running inside an app (webview)
+    const detectWebView = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera
+      
+      // Check for common webview indicators
+      const isWebView = 
+        // Android WebView
+        /wv|WebView/i.test(userAgent) ||
+        // iOS WKWebView or UIWebView  
+        /iPhone|iPad|iPod/i.test(userAgent) && window.navigator.standalone === false ||
+        // Custom app user agents (you can customize this for your app)
+        /MyApp|ChargEase|ChargingStation/i.test(userAgent) ||
+        // Check for missing features that browsers have but webviews might not
+        typeof window.chrome === 'undefined' && typeof window.safari === 'undefined' ||
+        // Check window.ReactNativeWebView (React Native specific)
+        typeof window.ReactNativeWebView !== 'undefined' ||
+        // Check for cordova/phonegap
+        typeof window.cordova !== 'undefined' || typeof window.PhoneGap !== 'undefined' ||
+        // Check for custom app indicators (add your own)
+        window.location.hostname === 'localhost' && window.innerHeight > window.innerWidth * 1.5 // Example: Tall mobile viewport
+      
+      setIsInApp(isWebView)
+      
+      // Optional: Log for debugging (remove in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 App Detection:', {
+          isInApp: isWebView,
+          userAgent: userAgent,
+          standalone: window.navigator.standalone,
+          hostname: window.location.hostname
+        })
+      }
+    }
+    
+    detectWebView()
+  }, [])
 
   // Testimonial users data
   const testimonialUsers = [
@@ -232,15 +278,18 @@ export default function Home() {
       icon: Brain,
       title: 'Trip AI',
       description: 'Terrain-aware route planning',
-      action: () => navigate('/trip-ai')
+      action: () => navigate('/trip-ai'),
+      isPrimary: true // Mark as primary action
     },
     {
       icon: Smartphone,
       title: 'Mobile App',
       description: 'Download our app',
-      action: () => window.open('#', '_blank')
+      action: () => window.open('#', '_blank'),
+      hideInApp: true, // This button will be hidden when running in app
+      isPrimary: false
     }
-  ]
+  ].filter(action => !(isInApp && action.hideInApp)) // Filter out mobile app button when in app
 
   return (
     <>
@@ -250,466 +299,682 @@ export default function Home() {
         structuredData={SEO_DATA.HOME.structuredData}
       />
       
-      <div className="min-h-screen bg-gray-50">
-        {/* Hero Section - Keep exactly as user likes it */}
-        <section className="relative bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white overflow-hidden">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            }} />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+        
+        {/* Enhanced Hero Section - Award-Winning Design */}
+        <section className="relative bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 text-white overflow-hidden min-h-screen flex items-center">
+          {/* Sophisticated Background Pattern */}
+          <div className="absolute inset-0">
+            {/* Primary Pattern Layer */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M30 30m-16 0a16 16 0 1 1 32 0a16 16 0 1 1-32 0'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              }} />
+            </div>
+            
+            {/* Animated Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-transparent to-purple-600/10 animate-pulse"></div>
+            
+            {/* Floating Geometric Elements */}
+            <div className="absolute top-20 left-20 w-2 h-2 bg-blue-400 rounded-full opacity-60 animate-bounce"></div>
+            <div className="absolute top-40 right-32 w-1 h-1 bg-green-400 rounded-full opacity-40 animate-pulse"></div>
+            <div className="absolute bottom-32 left-16 w-3 h-3 bg-purple-400 rounded-full opacity-50 animate-bounce delay-300"></div>
+            <div className="absolute bottom-20 right-20 w-1.5 h-1.5 bg-yellow-400 rounded-full opacity-60 animate-pulse delay-700"></div>
           </div>
 
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Mobile-optimized hero content */}
-            <div className="pt-16 pb-20 sm:pt-20 sm:pb-24">
-              <div className="max-w-4xl mx-auto">
-                {/* Centered content */}
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div className="max-w-5xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="text-center"
+              >
+                {/* Premium Badge */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/20 rounded-full px-6 py-3 mb-8"
+                >
+                  <Award className="w-5 h-5 text-yellow-400" />
+                  <span className="text-sm font-semibold tracking-wide text-blue-100">
+                    NEPAL'S #1 EV CHARGING PLATFORM
+                  </span>
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                </motion.div>
+
+                {/* Revolutionary Headline - Award-winning Typography */}
+                <motion.h1 
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1, delay: 0.3 }}
+                  className="text-5xl sm:text-6xl lg:text-8xl font-black leading-[0.95] mb-8 tracking-tight font-display"
+                >
+                  <span className="block">
+                    <span className="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+                      Say Goodbye to
+                    </span>
+                  </span>
+                  <span className="block relative">
+                    <span className="bg-gradient-to-r from-blue-300 via-purple-300 to-green-300 bg-clip-text text-transparent">
+                      Charge Anxiety
+                    </span>
+                    {/* Underline decoration */}
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-blue-400 to-green-400 rounded-full"></div>
+                  </span>
+                  <span className="block text-lg sm:text-xl lg:text-2xl font-normal text-blue-100 mt-6 tracking-normal">
+                    <span className="font-light">Forever.</span>
+                  </span>
+                </motion.h1>
+
+                {/* Enhanced Subtitle */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.5 }}
+                  className="max-w-4xl mx-auto mb-12"
+                >
+                  <p className="text-xl sm:text-2xl lg:text-3xl text-blue-100 mb-6 leading-relaxed font-light">
+                    Nepal's largest EV charging network with 
+                    <span className="font-semibold text-white"> 100% slot guarantee</span>.
+                  </p>
+                  <p className="text-lg sm:text-xl text-blue-200 leading-relaxed">
+                    Find, book, and charge with complete confidence across 
+                    <span className="font-semibold text-green-300"> 200+ verified stations</span>.
+                  </p>
+                </motion.div>
+
+                {/* Premium Search Interface */}
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8 }}
-                  className="text-center"
+                  transition={{ duration: 0.8, delay: 0.7 }}
+                  className="max-w-2xl mx-auto mb-12"
                 >
-                {/* Main headline - mobile-optimized */}
-                <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold leading-tight mb-6">
-                  <span className="block bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
-                    Say Goodbye to
-                  </span>
-                  <span className="block bg-gradient-to-r from-blue-300 to-green-300 bg-clip-text text-transparent">
-                    Charge Anxiety
-                  </span>
-                </h1>
-
-                <p className="text-lg sm:text-xl lg:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed px-4 lg:px-0">
-                  Nepal's largest EV charging network with 100% slot guarantee. Find, book, and charge with complete confidence across 200+ verified stations.
-                </p>
-
-                {/* Search Section - Mobile-First */}
-                <div className="max-w-md mx-auto mb-8">
-                  <form onSubmit={handleSearch} className="space-y-4">
-                    <div className="relative">
-                      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Where are you going?"
-                        value={searchLocation}
-                        onChange={(e) => setSearchLocation(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-300/50 shadow-lg text-lg"
-                      />
+                  <form onSubmit={handleSearch} className="relative">
+                    <div className="relative group">
+                      {/* Search Input Container with Glass Effect */}
+                      <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-2 transition-all duration-300 group-hover:bg-white/15 group-focus-within:bg-white/15 group-focus-within:border-white/30">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-6 h-6 text-white" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Where are you going?"
+                            value={searchLocation}
+                            onChange={(e) => setSearchLocation(e.target.value)}
+                            className="flex-1 bg-transparent text-white placeholder-blue-200 text-lg focus:outline-none"
+                          />
+                          <button
+                            type="submit"
+                            className="w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center hover:from-green-600 hover:to-green-700 transition-all duration-200 group"
+                          >
+                            <Search className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-200" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Subtle glow effect */}
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-500/20 to-green-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-xl"></div>
                     </div>
-                    <button
-                      type="submit"
-                      className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl text-lg"
-                    >
-                      <Search className="h-5 w-5" />
-                      <span>Find Charging Stations</span>
-                    </button>
                   </form>
-                </div>
+                </motion.div>
 
-                {/* Quick Actions - Mobile-optimized grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto mb-12">
+                {/* Enhanced Quick Actions - Clean & Symmetric */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.9 }}
+                  className={`grid gap-8 max-w-2xl mx-auto mb-16 ${quickActions.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-1 sm:grid-cols-2'}`}
+                >
                   {quickActions.map((action, index) => {
                     const Icon = action.icon
+                    const isPrimary = action.isPrimary
                     const designs = [
                       { 
-                        gradient: 'from-green-500 to-green-600',
-                        hover: 'hover:from-green-600 hover:to-green-700',
-                        icon: 'text-white',
-                        accent: 'bg-white/20'
+                        gradient: 'from-blue-600 to-purple-600',
+                        hover: 'hover:from-blue-700 hover:to-purple-700',
+                        glow: 'group-hover:shadow-blue-500/25'
                       },
                       { 
-                        gradient: 'from-purple-500 to-purple-600',
-                        hover: 'hover:from-purple-600 hover:to-purple-700',
-                        icon: 'text-white',
-                        accent: 'bg-white/20'
+                        gradient: 'from-emerald-500 to-green-600',
+                        hover: 'hover:from-emerald-600 hover:to-green-700',
+                        glow: 'group-hover:shadow-emerald-500/25'
                       }
                     ]
+                    const design = designs[index] || designs[0]
+                    
                     return (
                       <motion.button
                         key={index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.2 + index * 0.1 }}
+                        transition={{ duration: 0.6, delay: 1 + index * 0.15 }}
                         onClick={action.action}
-                        className={`group bg-gradient-to-r ${designs[index].gradient} ${designs[index].hover} p-6 rounded-2xl text-white hover:scale-105 hover:shadow-xl transition-all duration-300 relative overflow-hidden`}
+                        className={`group relative bg-gradient-to-r ${design.gradient} ${design.hover} p-6 rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl ${design.glow} focus:outline-none focus:ring-4 focus:ring-white/30 ${isPrimary ? 'ring-2 ring-blue-300/30' : ''}`}
                       >
-                        {/* Background pattern */}
-                        <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
-                          <div className={`w-full h-full ${designs[index].accent} rounded-full transform translate-x-6 -translate-y-6`}></div>
+                        {/* Background Pattern */}
+                        <div className="absolute inset-0 rounded-2xl opacity-10">
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent"></div>
                         </div>
+                        
+                        {/* Primary action indicator */}
+                        {isPrimary && (
+                          <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-yellow-600 rounded-full animate-pulse"></div>
+                          </div>
+                        )}
                         
                         {/* Content */}
-                        <div className="relative flex items-center gap-4">
-                          <div className={`w-12 h-12 ${designs[index].accent} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
-                            <Icon className={`h-6 w-6 ${designs[index].icon}`} />
+                        <div className="relative flex items-center gap-5">
+                          <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            <Icon className="w-7 h-7 text-white" />
                           </div>
                           <div className="text-left flex-1">
-                            <div className="font-semibold text-white mb-1">{action.title}</div>
-                            <div className="text-sm text-white/80">{action.description}</div>
+                            <div className="font-bold text-lg text-white mb-1">
+                              {action.title}
+                              {isPrimary && <span className="ml-2 text-sm font-normal text-white/80">★</span>}
+                            </div>
+                            <div className="text-white/90 text-sm leading-relaxed">{action.description}</div>
                           </div>
+                          <ArrowRight className="w-5 h-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
                         </div>
-                        
-                        {/* Shine effect on hover */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                       </motion.button>
                     )
                   })}
-                </div>
+                </motion.div>
 
-                {/* Stats Section - Mobile-optimized */}
+                {/* Premium Stats Section */}
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                  className="bg-white/10 backdrop-blur-md rounded-3xl p-6 mx-4 sm:mx-0 border border-white/20"
+                  transition={{ duration: 0.8, delay: 1.2 }}
+                  className="relative bg-white/5 backdrop-blur-2xl rounded-4xl p-8 mx-4 sm:mx-0 border border-white/10 shadow-2xl"
                 >
-                  <h3 className="text-lg font-semibold mb-6 text-center">Trusted by Thousands</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                    {stats.map((stat, index) => {
-                      const Icon = stat.icon
-                      return (
-                        <div key={index} className="text-center">
-                          <Icon className={`h-8 w-8 mx-auto mb-2 ${stat.color.replace('text-', 'text-white')}`} />
-                          <div className="text-2xl sm:text-3xl font-bold text-white">{stat.value}</div>
-                          <div className="text-sm text-blue-100">{stat.label}</div>
+                  {/* Background decoration */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
+                  
+                  <div className="relative">
+                    <h3 className="text-2xl font-bold mb-8 text-center bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                      Trusted by Thousands Across Nepal
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
+                      {stats.map((stat, index) => {
+                        const Icon = stat.icon
+                        return (
+                          <motion.div 
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.6, delay: 1.3 + index * 0.1 }}
+                            className="text-center group"
+                          >
+                            <div className="w-16 h-16 bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 border border-white/10">
+                              <Icon className="w-8 h-8 text-white" />
+                            </div>
+                            <div className="text-3xl sm:text-4xl font-black text-white mb-2">{stat.value}</div>
+                            <div className="text-blue-200 font-medium tracking-wide">{stat.label}</div>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Trust Indicators */}
+                    <div className="mt-8 pt-6 border-t border-white/10">
+                      <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-blue-200">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-5 h-5 text-green-400" />
+                          <span className="font-medium">Verified Network</span>
                         </div>
-                      )
-                    })}
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-5 h-5 text-blue-400" />
+                          <span className="font-medium">100% Secure</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Timer className="w-5 h-5 text-purple-400" />
+                          <span className="font-medium">24/7 Available</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                                </motion.div>
                 </motion.div>
-              </div>
+              </motion.div>
             </div>
           </div>
+
+          {/* Scroll Indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 2 }}
+            className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+          >
+            <div className="flex flex-col items-center gap-2 text-blue-200">
+              <span className="text-sm font-medium tracking-wide">Discover More</span>
+              <motion.div
+                animate={{ y: [0, 8, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-6 h-10 border-2 border-blue-300 rounded-full flex justify-center"
+              >
+                <div className="w-1 h-3 bg-blue-300 rounded-full mt-2"></div>
+              </motion.div>
+            </div>
+          </motion.div>
         </section>
 
-        {/* Trip AI Algorithm Highlight - New Section */}
-        <section className="py-16 bg-gradient-to-r from-green-50 to-blue-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Revolutionary Trip AI Section - World-Class Design */}
+        <section className="py-32 bg-gradient-to-br from-slate-50 via-white to-indigo-50 relative overflow-hidden">
+          {/* Sophisticated Background Elements */}
+          <div className="absolute inset-0">
+            {/* Geometric Pattern */}
+            <div className="absolute inset-0 opacity-[0.02]">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpolygon points='50 0 60 40 100 50 60 60 50 100 40 60 0 50 40 40'/%3E%3C/g%3E%3C/svg%3E")`,
+              }} />
+            </div>
+            
+            {/* Floating Elements */}
+            <div className="absolute top-32 left-12 w-4 h-4 bg-blue-400 rounded-full opacity-20 animate-pulse"></div>
+            <div className="absolute top-64 right-16 w-2 h-2 bg-green-400 rounded-full opacity-30 animate-bounce"></div>
+            <div className="absolute bottom-32 left-1/4 w-3 h-3 bg-purple-400 rounded-full opacity-25 animate-pulse delay-300"></div>
+            <div className="absolute bottom-48 right-1/3 w-1.5 h-1.5 bg-indigo-400 rounded-full opacity-20 animate-bounce delay-700"></div>
+          </div>
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Header Section - Award-Winning Typography */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 1, ease: "easeOut" }}
               viewport={{ once: true }}
-              className="text-center mb-12"
+              className="text-center mb-20"
             >
-              <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold mb-6">
-                <Brain className="h-4 w-4" />
-                <span>Groundbreaking Technology</span>
-              </div>
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight text-gray-900 mb-6">
-                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 bg-clip-text text-transparent">
-                  World's First
+              {/* Premium Badge */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-100 to-blue-100 border border-emerald-200 rounded-full px-8 py-4 mb-8 shadow-lg"
+              >
+                <Brain className="w-6 h-6 text-emerald-600" />
+                <span className="text-lg font-bold text-emerald-800 tracking-wide">
+                  BREAKTHROUGH TECHNOLOGY
                 </span>
-                <br />
-                <span className="text-gray-900">Terrain-Aware</span>
-                <br />
-                <span className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
-                  EV Route Planning
+                <Zap className="w-5 h-5 text-blue-600" />
+              </motion.div>
+
+              {/* Revolutionary Headline */}
+              <h2 className="text-5xl sm:text-6xl lg:text-8xl font-black leading-[0.9] text-gray-900 mb-8 tracking-tight font-display">
+                <span className="block">
+                  <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent">
+                    World's First
+                  </span>
+                </span>
+                <span className="block text-gray-900 relative">
+                  Terrain-Aware
+                  {/* Decorative underline */}
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-20"></div>
+                </span>
+                <span className="block">
+                  <span className="bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+                    EV Route Planning
+                  </span>
                 </span>
               </h2>
-              
-              {/* DallyTech Credit - Prominent */}
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <div className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full shadow-lg">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                  <span className="font-bold">Powered by DallyTech</span>
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-              </div>
-              
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                Our revolutionary Trip AI analyzes Nepal's mountainous terrain, elevation changes, and road conditions to provide the most accurate EV journey planning in the world.
-              </p>
-            </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              {/* DallyTech Credit - Premium Presentation */}
               <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
                 viewport={{ once: true }}
+                className="flex items-center justify-center gap-4 mb-8"
               >
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Mountain className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900 mb-2">Elevation-Aware Routing</h3>
-                      <p className="text-gray-600">Calculates energy consumption based on altitude changes, steep slopes, and mountain passes.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Route className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900 mb-2">Nepal Road Optimization</h3>
-                      <p className="text-gray-600">Specialized algorithms for unpaved roads, seasonal conditions, and local driving patterns.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Zap className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900 mb-2">Smart Charging Strategy</h3>
-                      <p className="text-gray-600">Intelligent charging recommendations with multi-level fallback station search.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  <Link
-                    to="/trip-ai"
-                    className="inline-flex items-center gap-3 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-                  >
-                    <Brain className="h-5 w-5" />
-                    <span>Experience Trip AI</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+                <div className="flex items-center gap-3 bg-gradient-to-r from-gray-900 to-blue-900 text-white px-8 py-4 rounded-2xl shadow-2xl border border-gray-700">
+                  <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-green-400 rounded-full animate-pulse"></div>
+                  <span className="font-black text-lg tracking-wide">POWERED BY DALLYTECH</span>
+                  <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-pulse delay-300"></div>
                 </div>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8 }}
+              {/* Sophisticated Description */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
                 viewport={{ once: true }}
-                className="bg-white rounded-2xl p-8 shadow-lg"
+                className="text-xl sm:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-light"
               >
-                <div className="text-center mb-8">
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">Algorithm Accuracy</h4>
-                  <p className="text-sm text-gray-600">Compared to standard EV routing</p>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-8">
-                  {/* Circular Progress Indicators */}
-                  <div className="flex justify-center items-center gap-8">
-                    {/* Timing Accuracy */}
-                    <div className="text-center">
-                      <div className="relative w-24 h-24 mx-auto mb-3">
-                        <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
-                          {/* Background circle */}
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="40"
-                            stroke="#e5e7eb"
-                            strokeWidth="8"
-                            fill="transparent"
-                          />
-                          {/* Progress circle */}
-                          <motion.circle
-                            cx="50"
-                            cy="50"
-                            r="40"
-                            stroke="url(#greenGradient)"
-                            strokeWidth="8"
-                            fill="transparent"
-                            strokeLinecap="round"
-                            initial={{ strokeDasharray: "0 251.2" }}
-                            whileInView={{ strokeDasharray: "213.52 251.2" }}
-                            transition={{ duration: 2, delay: 0.5 }}
-                          />
-                          <defs>
-                            <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#10b981" />
-                              <stop offset="100%" stopColor="#059669" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-lg font-bold text-green-600">85%</span>
-                        </div>
-                      </div>
-                      <p className="text-sm font-medium text-gray-700">Timing</p>
-                      <p className="text-xs text-green-600 font-semibold">+85% Better</p>
-                    </div>
+                Our revolutionary Trip AI analyzes <span className="font-semibold text-gray-800">Nepal's complex mountainous terrain</span>, 
+                elevation changes, and road conditions to provide the <span className="font-semibold text-emerald-600">most accurate 
+                EV journey planning</span> in the world.
+              </motion.p>
+            </motion.div>
 
-                    {/* Energy Prediction */}
-                    <div className="text-center">
-                      <div className="relative w-24 h-24 mx-auto mb-3">
-                        <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
-                          {/* Background circle */}
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="40"
-                            stroke="#e5e7eb"
-                            strokeWidth="8"
-                            fill="transparent"
-                          />
-                          {/* Progress circle */}
-                          <motion.circle
-                            cx="50"
-                            cy="50"
-                            r="40"
-                            stroke="url(#blueGradient)"
-                            strokeWidth="8"
-                            fill="transparent"
-                            strokeLinecap="round"
-                            initial={{ strokeDasharray: "0 251.2" }}
-                            whileInView={{ strokeDasharray: "175.84 251.2" }}
-                            transition={{ duration: 2, delay: 0.7 }}
-                          />
-                          <defs>
-                            <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#3b82f6" />
-                              <stop offset="100%" stopColor="#1d4ed8" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-lg font-bold text-blue-600">70%</span>
+            {/* Main Content Grid - Premium Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+              
+              {/* Left Side - Feature List */}
+              <motion.div
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                viewport={{ once: true }}
+                className="space-y-10"
+              >
+                {[
+                  {
+                    icon: Mountain,
+                    title: "Elevation-Aware Routing",
+                    description: "Advanced algorithms calculate precise energy consumption based on altitude changes, steep mountain passes, and Nepal's unique topography.",
+                    color: "from-blue-500 to-cyan-500",
+                    bgColor: "bg-blue-50",
+                    borderColor: "border-blue-200"
+                  },
+                  {
+                    icon: Route,
+                    title: "Nepal Road Optimization",
+                    description: "Specialized intelligence for unpaved roads, seasonal weather conditions, monsoon impacts, and local driving patterns across all terrains.",
+                    color: "from-emerald-500 to-green-500",
+                    bgColor: "bg-emerald-50",
+                    borderColor: "border-emerald-200"
+                  },
+                  {
+                    icon: Zap,
+                    title: "Intelligent Charging Strategy",
+                    description: "Smart charging recommendations with multi-level fallback station search, ensuring you never run out of power on any journey.",
+                    color: "from-purple-500 to-indigo-500",
+                    bgColor: "bg-purple-50",
+                    borderColor: "border-purple-200"
+                  }
+                ].map((feature, index) => {
+                  const Icon = feature.icon
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.8, delay: 0.2 + index * 0.2 }}
+                      viewport={{ once: true }}
+                      className={`group ${feature.bgColor} ${feature.borderColor} border-2 rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 relative overflow-hidden`}
+                    >
+                      {/* Background decoration */}
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/50 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
+                      
+                      <div className="relative flex items-start gap-6">
+                        <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                          <Icon className="w-8 h-8 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-2xl font-bold text-gray-900 mb-4">{feature.title}</h3>
+                          <p className="text-gray-600 leading-relaxed text-lg">{feature.description}</p>
                         </div>
                       </div>
-                      <p className="text-sm font-medium text-gray-700">Energy</p>
-                      <p className="text-xs text-blue-600 font-semibold">+70% Better</p>
-                    </div>
+                      
+                      {/* Hover accent line */}
+                      <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.color} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
+                    </motion.div>
+                  )
+                })}
 
-                    {/* Route Optimization */}
-                    <div className="text-center">
-                      <div className="relative w-24 h-24 mx-auto mb-3">
-                        <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
-                          {/* Background circle */}
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="40"
-                            stroke="#e5e7eb"
-                            strokeWidth="8"
-                            fill="transparent"
-                          />
-                          {/* Progress circle */}
-                          <motion.circle
-                            cx="50"
-                            cy="50"
-                            r="40"
-                            stroke="url(#purpleGradient)"
-                            strokeWidth="8"
-                            fill="transparent"
-                            strokeLinecap="round"
-                            initial={{ strokeDasharray: "0 251.2" }}
-                            whileInView={{ strokeDasharray: "150.72 251.2" }}
-                            transition={{ duration: 2, delay: 0.9 }}
-                          />
-                          <defs>
-                            <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#8b5cf6" />
-                              <stop offset="100%" stopColor="#7c3aed" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-lg font-bold text-purple-600">60%</span>
-                        </div>
-                      </div>
-                      <p className="text-sm font-medium text-gray-700">Routes</p>
-                      <p className="text-xs text-purple-600 font-semibold">+60% Better</p>
-                    </div>
-                  </div>
-
-                  {/* Comparison Chart */}
-                  <div className="mt-8 pt-6 border-t border-gray-100">
-                    <h5 className="text-sm font-semibold text-gray-900 mb-4 text-center">Performance Comparison</h5>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Standard EV Routing</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-gray-200 rounded-full"></div>
-                          <span className="text-xs text-gray-500 w-8">40%</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900">ChargEase Trip AI</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-full"></div>
-                          <span className="text-xs font-semibold text-blue-600 w-8">92%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
+                {/* CTA Button */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 1.2 }}
+                  transition={{ duration: 0.8, delay: 0.8 }}
                   viewport={{ once: true }}
-                  className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-100"
+                  className="pt-8"
                 >
-                  <div className="text-sm text-gray-800">
-                    <div className="flex items-start gap-2">
-                      <Mountain className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <strong className="text-blue-900">Real Example:</strong> Kathmandu to Pokhara route timing improved from 6h estimate to accurate 8.5h prediction accounting for mountain terrain.
+                  <Link
+                    to="/trip-ai"
+                    className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-base rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
+                  >
+                    <Brain className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                    <span>Experience Trip AI</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  </Link>
+                </motion.div>
+              </motion.div>
+
+              {/* Right Side - Performance Dashboard */}
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                viewport={{ once: true }}
+                className="relative"
+              >
+                {/* Main Dashboard Card */}
+                <div className="bg-white rounded-4xl p-10 shadow-3xl border border-gray-100 relative overflow-hidden">
+                  {/* Background decoration */}
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-50 to-transparent rounded-full transform translate-x-20 -translate-y-20"></div>
+                  
+                  <div className="relative">
+                    {/* Header */}
+                    <div className="text-center mb-12">
+                      <div className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full px-6 py-3 mb-6">
+                        <Globe className="w-5 h-5 text-blue-600" />
+                        <span className="font-bold text-gray-800">Global Benchmark</span>
+                      </div>
+                      <h4 className="text-2xl font-bold text-gray-900 mb-3">Algorithm Performance</h4>
+                      <p className="text-gray-600">Compared to standard EV routing systems worldwide</p>
+                    </div>
+                    
+                    {/* Performance Circles */}
+                    <div className="grid grid-cols-3 gap-8 mb-12">
+                      {[
+                        { label: "Timing", value: 85, color: "from-emerald-500 to-green-500", delay: 0.5 },
+                        { label: "Energy", value: 70, color: "from-blue-500 to-cyan-500", delay: 0.7 },
+                        { label: "Routes", value: 60, color: "from-purple-500 to-indigo-500", delay: 0.9 }
+                      ].map((metric, index) => (
+                        <div key={index} className="text-center">
+                          <div className="relative w-24 h-24 mx-auto mb-4">
+                            <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                              {/* Background circle */}
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="35"
+                                stroke="#f3f4f6"
+                                strokeWidth="8"
+                                fill="transparent"
+                              />
+                              {/* Progress circle */}
+                              <motion.circle
+                                cx="50"
+                                cy="50"
+                                r="35"
+                                stroke={`url(#gradient-${index})`}
+                                strokeWidth="8"
+                                fill="transparent"
+                                strokeLinecap="round"
+                                initial={{ strokeDasharray: "0 220" }}
+                                whileInView={{ strokeDasharray: `${(metric.value / 100) * 220} 220` }}
+                                transition={{ duration: 2, delay: metric.delay }}
+                                viewport={{ once: true }}
+                              />
+                              <defs>
+                                <linearGradient id={`gradient-${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                  <stop offset="0%" stopColor={metric.color.includes('emerald') ? '#10b981' : metric.color.includes('blue') ? '#3b82f6' : '#8b5cf6'} />
+                                  <stop offset="100%" stopColor={metric.color.includes('emerald') ? '#059669' : metric.color.includes('blue') ? '#1d4ed8' : '#7c3aed'} />
+                                </linearGradient>
+                              </defs>
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-xl font-black text-gray-900">{metric.value}%</span>
+                            </div>
+                          </div>
+                          <p className="text-sm font-bold text-gray-700">{metric.label}</p>
+                          <p className="text-xs text-green-600 font-semibold">+{metric.value}% Better</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Comparison Chart */}
+                    <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-8 border border-gray-100">
+                      <h5 className="text-lg font-bold text-gray-900 mb-6 text-center">Performance Comparison</h5>
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600 font-medium">Standard EV Routing</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <div className="w-2/5 h-full bg-gray-400 rounded-full"></div>
+                            </div>
+                            <span className="text-sm text-gray-500 font-semibold w-10">40%</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-900 font-bold">ChargEase Trip AI</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <motion.div 
+                                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full"
+                                initial={{ width: "0%" }}
+                                whileInView={{ width: "92%" }}
+                                transition={{ duration: 2, delay: 1 }}
+                                viewport={{ once: true }}
+                              />
+                            </div>
+                            <span className="text-sm font-black text-blue-600 w-10">92%</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Real Example */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 1.2 }}
+                      viewport={{ once: true }}
+                      className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-emerald-50 rounded-2xl border-2 border-blue-100"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <Mountain className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-blue-900 mb-2">Real-World Impact:</p>
+                          <p className="text-gray-800 leading-relaxed">
+                            <strong>Kathmandu to Pokhara</strong> route timing improved from standard 6h estimate to our 
+                            accurate <strong>8.5h prediction</strong>, accounting for mountain terrain and elevation changes.
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
                   </div>
-                </motion.div>
+                </div>
+
+                {/* Floating Achievement Badge */}
+                <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center shadow-2xl border-4 border-white">
+                  <Award className="w-12 h-12 text-white" />
+                </div>
               </motion.div>
             </div>
           </div>
         </section>
 
-        {/* Charge Anxiety Solution Section - New */}
-        <section className="py-20 bg-gradient-to-br from-red-50 via-white to-blue-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Revolutionary Charge Anxiety Solution - Award-Winning Design */}
+        <section className="py-32 bg-gradient-to-br from-red-50 via-white to-orange-50 relative overflow-hidden">
+          {/* Sophisticated Background Elements */}
+          <div className="absolute inset-0">
+            {/* Geometric Patterns */}
+            <div className="absolute inset-0 opacity-[0.02]">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M40 40c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm20 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z'/%3E%3C/g%3E%3C/svg%3E")`,
+              }} />
+            </div>
+            
+            {/* Floating Elements */}
+            <div className="absolute top-24 left-16 w-6 h-6 bg-red-300 rounded-full opacity-20 animate-pulse"></div>
+            <div className="absolute top-48 right-20 w-3 h-3 bg-orange-400 rounded-full opacity-30 animate-bounce"></div>
+            <div className="absolute bottom-32 left-1/4 w-4 h-4 bg-yellow-400 rounded-full opacity-25 animate-pulse delay-300"></div>
+            <div className="absolute bottom-20 right-1/3 w-2 h-2 bg-red-500 rounded-full opacity-20 animate-bounce delay-700"></div>
+          </div>
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Premium Header */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 1, ease: "easeOut" }}
               viewport={{ once: true }}
-              className="text-center mb-16"
+              className="text-center mb-20"
             >
-              <div className="inline-flex items-center gap-2 bg-red-100 text-red-800 px-4 py-2 rounded-full text-sm font-semibold mb-6">
-                <Shield className="h-4 w-4" />
-                <span>Charge Anxiety Solution</span>
-              </div>
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight text-gray-900 mb-6">
-                <span className="text-red-600">No More</span> Range Anxiety
-                <br />
-                <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-                  100% Guaranteed
+              {/* Problem Indicator Badge */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-red-100 to-orange-100 border border-red-200 rounded-full px-8 py-4 mb-8 shadow-lg"
+              >
+                <Shield className="w-6 h-6 text-red-600" />
+                <span className="text-lg font-bold text-red-800 tracking-wide">
+                  CHARGE ANXIETY SOLUTION
+                </span>
+                <Zap className="w-5 h-5 text-orange-600" />
+              </motion.div>
+
+              {/* Revolutionary Headline */}
+              <h2 className="text-5xl sm:text-6xl lg:text-8xl font-black leading-[0.9] text-gray-900 mb-8 tracking-tight font-display">
+                <span className="block">
+                  <span className="text-red-600">No More</span>
+                  <span className="text-gray-900"> Range</span>
+                </span>
+                <span className="block text-gray-900 relative">
+                  Anxiety
+                  {/* Strikethrough effect */}
+                  <div className="absolute top-1/2 left-0 right-0 h-2 bg-gradient-to-r from-red-400 to-orange-400 transform -rotate-2 opacity-80"></div>
+                </span>
+                <span className="block mt-4">
+                  <span className="bg-gradient-to-r from-blue-600 via-green-500 to-emerald-600 bg-clip-text text-transparent">
+                    100% Guaranteed
+                  </span>
                 </span>
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                We've solved the biggest problem facing EV owners in Nepal. Our revolutionary approach ensures you never have to worry about finding a charging station again.
+
+              <p className="text-xl sm:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-light">
+                We've solved the <span className="font-semibold text-red-600">biggest problem</span> facing EV owners in Nepal. 
+                Our revolutionary approach ensures you <span className="font-semibold text-green-600">never have to worry</span> about 
+                finding a charging station again.
               </p>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            {/* Revolutionary Features Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
               {[
                 {
                   icon: CheckCircle,
                   title: "100% Slot Guarantee",
-                  description: "If we show it's available, it's yours. No exceptions.",
-                  color: "from-green-500 to-green-600",
-                  bgColor: "bg-green-50",
-                  iconColor: "text-green-600"
+                  description: "If we show it's available, it's yours. No exceptions, no disappointments, no stress.",
+                  color: "from-emerald-500 to-green-600",
+                  bgColor: "bg-gradient-to-br from-emerald-50 to-green-50",
+                  borderColor: "border-emerald-200",
+                  shadowColor: "group-hover:shadow-emerald-500/25"
                 },
                 {
                   icon: Clock,
                   title: "Free 6-Hour Cancellation",
-                  description: "Plans change? Cancel up to 6 hours before with instant refund.",
-                  color: "from-blue-500 to-blue-600",
-                  bgColor: "bg-blue-50",
-                  iconColor: "text-blue-600"
+                  description: "Plans change? Cancel up to 6 hours before with instant refund. Zero penalty, maximum flexibility.",
+                  color: "from-blue-500 to-cyan-600",
+                  bgColor: "bg-gradient-to-br from-blue-50 to-cyan-50",
+                  borderColor: "border-blue-200",
+                  shadowColor: "group-hover:shadow-blue-500/25"
                 },
-                                 {
-                   icon: Users,
-                   title: "No More Queues",
-                   description: "Smart slot management eliminates waiting in long queues at charging stations.",
-                   color: "from-purple-500 to-purple-600",
-                   bgColor: "bg-purple-50",
-                   iconColor: "text-purple-600"
-                 }
+                {
+                  icon: Users,
+                  title: "No More Queues",
+                  description: "Smart slot management eliminates waiting. Skip the line, start charging immediately.",
+                  color: "from-purple-500 to-indigo-600",
+                  bgColor: "bg-gradient-to-br from-purple-50 to-indigo-50",
+                  borderColor: "border-purple-200",
+                  shadowColor: "group-hover:shadow-purple-500/25"
+                }
               ].map((feature, index) => {
                 const Icon = feature.icon
                 return (
@@ -717,21 +982,156 @@ export default function Home() {
                     key={index}
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.2 }}
+                    transition={{ duration: 0.8, delay: index * 0.2 }}
                     viewport={{ once: true }}
-                    className={`group ${feature.bgColor} rounded-2xl p-8 text-center relative overflow-hidden`}
+                    className={`group ${feature.bgColor} ${feature.borderColor} border-2 rounded-4xl p-10 text-center relative overflow-hidden hover:shadow-3xl ${feature.shadowColor} transition-all duration-500`}
                   >
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full transform translate-x-6 -translate-y-6"></div>
-                    <Icon className={`h-12 w-12 ${feature.iconColor} mx-auto mb-4`} />
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                    <p className="text-gray-600 text-center leading-relaxed">{feature.description}</p>
+                    {/* Background decoration */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/30 rounded-full transform translate-x-16 -translate-y-16"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/20 rounded-full transform -translate-x-12 translate-y-12"></div>
                     
-                    {/* Hover accent */}
-                    <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.color} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300`}></div>
+                    <div className="relative">
+                      {/* Premium Icon */}
+                      <div className={`w-20 h-20 bg-gradient-to-r ${feature.color} rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-300`}>
+                        <Icon className="w-10 h-10 text-white" />
+                      </div>
+                      
+                      <h3 className="text-2xl font-black text-gray-900 mb-4 tracking-tight">{feature.title}</h3>
+                      <p className="text-gray-600 leading-relaxed text-lg font-light">{feature.description}</p>
+                    </div>
+                    
+                    {/* Hover accent line */}
+                    <div className={`absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r ${feature.color} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 rounded-b-4xl`}></div>
                   </motion.div>
                 )
               })}
             </div>
+
+            {/* Problem vs Solution Comparison */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1 }}
+              viewport={{ once: true }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+            >
+              {/* Problem Side */}
+              <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-4xl p-12 border-2 border-red-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-red-100/50 rounded-full transform translate-x-20 -translate-y-20"></div>
+                
+                <div className="relative">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 rounded-2xl flex items-center justify-center">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                    <h3 className="text-3xl font-black text-gray-900">Before ChargEase</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {[
+                      "Constant range anxiety and stress",
+                      "Wasted time in long charging queues",
+                      "Unreliable station availability",
+                      "Emergency charging situations",
+                      "Trip planning nightmares"
+                    ].map((problem, index) => (
+                      <div key={index} className="flex items-center gap-4">
+                        <div className="w-8 h-8 bg-red-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                        <span className="text-gray-700 font-medium">{problem}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Solution Side */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-4xl p-12 border-2 border-green-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-green-100/50 rounded-full transform translate-x-20 -translate-y-20"></div>
+                
+                <div className="relative">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center">
+                      <CheckCircle className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-3xl font-black text-gray-900">With ChargEase</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {[
+                      "Complete peace of mind & confidence",
+                      "Skip queues with guaranteed slots",
+                      "100% reliable station network",
+                      "Proactive charging planning",
+                      "Stress-free EV ownership"
+                    ].map((solution, index) => (
+                      <div key={index} className="flex items-center gap-4">
+                        <div className="w-8 h-8 bg-green-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">{solution}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Premium CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.5 }}
+              viewport={{ once: true }}
+              className="text-center mt-20"
+            >
+              <div className="bg-gradient-to-r from-white via-gray-50 to-white rounded-4xl p-12 shadow-3xl border border-gray-100 max-w-4xl mx-auto">
+                <h3 className="text-4xl font-black text-gray-900 mb-6">
+                  Ready to Eliminate Range Anxiety Forever?
+                </h3>
+                <p className="text-xl text-gray-600 mb-10 leading-relaxed">
+                  Join 15,000+ EV owners who sleep peacefully knowing their charging is guaranteed.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-6 justify-center">
+                  <Link
+                    to="/auth"
+                    className="group px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-black text-lg rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center justify-center gap-4"
+                  >
+                    <span>Start Your Journey</span>
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" />
+                  </Link>
+                  
+                  <Link
+                    to="/search"
+                    className="group px-12 py-5 border-2 border-gray-300 text-gray-700 font-black text-lg rounded-2xl hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-300 flex items-center justify-center gap-4"
+                  >
+                    <Search className="w-6 h-6 group-hover:scale-110 transition-transform duration-300" />
+                    <span>Find Stations</span>
+                  </Link>
+                </div>
+
+                <div className="mt-8 flex flex-wrap justify-center gap-8 text-sm text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Free to join</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-blue-500" />
+                    <span>100% guaranteed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-purple-500" />
+                    <span>Instant setup</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </section>
 
@@ -826,274 +1226,421 @@ export default function Home() {
           </div>
         </section>
 
-                {/* What Our Users Say Section - Award-winning Design */}
-        <section className="py-24 bg-gradient-to-br from-gray-50 via-white to-blue-50 relative overflow-hidden">
-          {/* Background decoration */}
-          <div className="absolute inset-0 opacity-5">
-            <div className="absolute top-10 left-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl"></div>
-            <div className="absolute top-20 right-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl"></div>
-            <div className="absolute bottom-10 left-1/2 w-72 h-72 bg-green-500 rounded-full mix-blend-multiply filter blur-xl"></div>
+        {/* Premium Testimonials Section - Luxury Design */}
+        <section className="py-32 bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 relative overflow-hidden">
+          {/* Sophisticated Background Elements */}
+          <div className="absolute inset-0">
+            {/* Luxury gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 via-transparent to-purple-900/20"></div>
+            
+            {/* Floating orbs */}
+            <div className="absolute top-20 left-20 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-green-500/5 rounded-full blur-3xl"></div>
+            
+            {/* Subtle pattern */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M20 20c0-5.5-4.5-10-10-10s-10 4.5-10 10 4.5 10 10 10 10-4.5 10-10zm10 0c0-5.5-4.5-10-10-10s-10 4.5-10 10 4.5 10 10 10 10-4.5 10-10z'/%3E%3C/g%3E%3C/svg%3E")`,
+              }} />
+            </div>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Premium Header */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 1, ease: "easeOut" }}
               viewport={{ once: true }}
-              className="text-center mb-12"
+              className="text-center mb-20"
             >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-gray-900 mb-4">
-                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 bg-clip-text text-transparent">
-                  What Our Users Say
+              {/* Luxury Badge */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-white/10 to-blue-500/20 backdrop-blur-xl border border-white/20 rounded-full px-8 py-4 mb-8"
+              >
+                <Star className="w-6 h-6 text-yellow-400" />
+                <span className="text-lg font-bold text-white tracking-wide">
+                  CUSTOMER TESTIMONIALS
+                </span>
+                <Quote className="w-5 h-5 text-blue-300" />
+              </motion.div>
+
+              {/* Elegant Title */}
+              <h2 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[0.9] mb-8 tracking-tight font-display">
+                <span className="block">
+                  <span className="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+                    What Our Users
+                  </span>
+                </span>
+                <span className="block">
+                  <span className="bg-gradient-to-r from-blue-300 via-purple-300 to-green-300 bg-clip-text text-transparent">
+                    Are Saying
+                  </span>
                 </span>
               </h2>
-              <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
+
+              <p className="text-xl sm:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed font-light">
                 Real stories from EV owners who've conquered charge anxiety with ChargEase
               </p>
             </motion.div>
 
-            {/* User Testimonials - Premium Design */}
+            {/* Premium User Testimonials Grid */}
             <div className="relative">
-              {/* User avatars row - Enhanced Design */}
-              <div className="relative">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8 }}
-                  viewport={{ once: true }}
-                  className="flex flex-wrap justify-center items-center gap-4 pb-12 px-4"
-                >
-                  {testimonialUsers.map((user, index) => (
-                    <motion.div
-                      key={user.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                      viewport={{ once: true }}
-                      className="relative flex-shrink-0 group cursor-pointer"
-                      onClick={() => setSelectedUser(user)}
-                    >
-                      {/* User avatar frame - Much Larger size */}
-                      <div className="relative w-40 h-52 lg:w-48 lg:h-64 rounded-2xl overflow-hidden border-4 border-white shadow-lg hover:shadow-xl transition-all duration-500 group-hover:border-blue-300">
-                        {/* Default image */}
+              {/* Interactive User Cards */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1 }}
+                viewport={{ once: true }}
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-16"
+              >
+                {testimonialUsers.map((user, index) => (
+                  <motion.div
+                    key={user.id}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    viewport={{ once: true }}
+                    className="group cursor-pointer"
+                    onClick={() => setSelectedUser(user)}
+                  >
+                    {/* Luxury Card Frame */}
+                    <div className="relative">
+                      {/* Main Image Container */}
+                      <div className="relative w-full aspect-[3/4] rounded-3xl overflow-hidden border-4 border-white/20 group-hover:border-white/40 transition-all duration-500 bg-gradient-to-br from-gray-800 to-gray-900 shadow-2xl group-hover:shadow-3xl">
+                        {/* User Image */}
                         <img 
                           src={user.image} 
                           alt={user.name}
-                          className="w-full h-full object-cover transition-opacity duration-500 group-hover:opacity-0"
+                          className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
                         />
                         
-                        {/* Video preview - plays directly on the frame */}
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                          <video 
-                            src={user.videoUrl}
-                            poster={user.videoPreview}
-                            className="w-full h-full object-cover"
-                            muted
-                            loop
-                            onMouseEnter={(e) => e.target.play().catch(() => {})}
-                            onMouseLeave={(e) => { e.target.pause(); e.target.currentTime = 0; }}
-                          />
-                          
-                          {/* Play button overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-center justify-center">
-                            <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-blue-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                              </svg>
-                            </div>
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500"></div>
+                        
+                        {/* Play Button Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500">
+                          <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform duration-300">
+                            <Play className="w-8 h-8 text-white ml-1" />
                           </div>
-                          
-                          {/* User info overlay */}
-                          <div className="absolute bottom-2 left-2 right-2">
-                            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                              <div className="text-sm font-bold text-gray-900">{user.name}</div>
-                              <div className="text-xs text-gray-600">{user.role}</div>
+                        </div>
+                        
+                        {/* User Info - Always Visible */}
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20">
+                            <h4 className="font-bold text-white text-sm mb-1">{user.name}</h4>
+                            <p className="text-white/80 text-xs leading-relaxed">{user.role}</p>
+                            <div className="flex items-center gap-1 mt-2">
+                              <MapPin className="w-3 h-3 text-blue-300" />
+                              <span className="text-blue-200 text-xs">{user.location}</span>
                             </div>
                           </div>
                         </div>
+
+                        {/* Hover Glow Effect */}
+                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
                       </div>
 
-                      {/* Name tooltip */}
-                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="bg-gray-900 text-white text-sm rounded-lg px-3 py-2 whitespace-nowrap">
-                          {user.name}
-                        </div>
+                      {/* Floating Rating Stars */}
+                      <div className="absolute -top-2 -right-2 flex gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-3 h-3 text-yellow-400 fill-current" />
+                        ))}
                       </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
 
-                {/* Enhanced Navigation dots */}
-                <div className="flex justify-center mt-8 gap-3">
-                  {testimonialUsers.map((user, index) => (
-                    <button
-                      key={user.id}
-                      onClick={() => setSelectedUser(user)}
-                      className={`transition-all duration-500 ${
-                        index === 0 
-                          ? 'w-12 h-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg' 
-                          : 'w-3 h-3 bg-gray-300 hover:bg-gray-400 rounded-full hover:scale-125'
-                      }`}
-                    />
-                  ))}
-                </div>
+              {/* Elegant Navigation */}
+              <div className="flex justify-center gap-4 mb-12">
+                {testimonialUsers.map((user, index) => (
+                  <button
+                    key={user.id}
+                    onClick={() => setSelectedUser(user)}
+                    className={`transition-all duration-500 ${
+                      index === 0 
+                        ? 'w-16 h-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full shadow-lg' 
+                        : 'w-2 h-2 bg-white/30 hover:bg-white/50 rounded-full hover:scale-150'
+                    }`}
+                  />
+                ))}
               </div>
+
+              {/* Premium Call to Action */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                viewport={{ once: true }}
+                className="text-center"
+              >
+                <div className="bg-white/5 backdrop-blur-2xl rounded-4xl p-12 border border-white/10 shadow-2xl">
+                  <h3 className="text-3xl font-bold text-white mb-6">
+                    Join 15,000+ Satisfied Users
+                  </h3>
+                  <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto leading-relaxed">
+                    Experience the peace of mind that comes with guaranteed charging slots and Nepal's most reliable EV network.
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
+                    <Link
+                      to="/search"
+                      className="group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center justify-center gap-3"
+                    >
+                      <Search className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                      <span>Find Stations</span>
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                    </Link>
+                    
+                    <Link
+                      to="/auth"
+                      className="group w-full sm:w-auto px-8 py-4 border-2 border-white/30 text-white font-bold rounded-2xl hover:bg-white hover:text-gray-900 transition-all duration-300 backdrop-blur-xl flex items-center justify-center gap-3"
+                    >
+                      <User className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                      <span>Join Free</span>
+                    </Link>
+                  </div>
+
+                  <div className="mt-8 flex flex-wrap justify-center gap-8 text-sm text-gray-400">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      <span>Free to join</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-blue-400" />
+                      <span>100% secure</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Timer className="w-4 h-4 text-purple-400" />
+                      <span>24/7 support</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
         </section>
 
-                {/* User Testimonial Modal - Professional Design */}
+        {/* Luxury Testimonial Modal - Premium Design */}
         {selectedUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-hidden relative shadow-2xl"
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="bg-gradient-to-br from-white via-gray-50 to-white rounded-4xl max-w-7xl w-full max-h-[95vh] overflow-hidden relative shadow-3xl border border-gray-100"
             >
-              {/* Close Button */}
+              {/* Close Button - Premium Design */}
               <button
                 onClick={() => setSelectedUser(null)}
-                className="absolute top-6 right-6 z-10 w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all duration-200"
+                className="absolute top-8 right-8 z-20 w-12 h-12 bg-white/90 backdrop-blur-xl hover:bg-white rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl border border-gray-200"
               >
                 <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
-              {/* Previous Button */}
+              {/* Navigation Buttons - Enhanced Design */}
               <button
                 onClick={() => handleUserNavigation('prev')}
-                className="absolute left-6 top-1/2 transform -translate-y-1/2 z-10 w-12 h-12 bg-white hover:bg-gray-50 rounded-full flex items-center justify-center shadow-lg transition-all duration-200"
+                className="absolute left-8 top-1/2 transform -translate-y-1/2 z-20 w-16 h-16 bg-white/90 backdrop-blur-xl hover:bg-white rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 border border-gray-200"
               >
-                <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
 
-              {/* Next Button */}
               <button
                 onClick={() => handleUserNavigation('next')}
-                className="absolute right-6 top-1/2 transform -translate-y-1/2 z-10 w-12 h-12 bg-white hover:bg-gray-50 rounded-full flex items-center justify-center shadow-lg transition-all duration-200"
+                className="absolute right-8 top-1/2 transform -translate-y-1/2 z-20 w-16 h-16 bg-white/90 backdrop-blur-xl hover:bg-white rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 border border-gray-200"
               >
-                <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[70vh]">
-                {/* Video Side */}
-                <div className="bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col justify-center p-8 lg:p-12">
-                  <div className="w-full max-w-lg mx-auto">
-                    <div className="aspect-video bg-gray-800 rounded-2xl overflow-hidden shadow-2xl mb-6">
-                      <video 
-                        src={selectedUser.videoUrl}
-                        poster={selectedUser.videoPreview}
-                        controls
-                        className="w-full h-full object-cover"
-                        autoPlay
-                        muted
-                      />
-                    </div>
-                    
-                    <div className="text-center mb-8">
-                      <div className="inline-flex items-center gap-2 bg-white bg-opacity-10 text-white px-4 py-2 rounded-full text-sm">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        <span>Live Testimonial</span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[80vh]">
+                {/* Video Side - Dark Theme */}
+                <div className="bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 flex flex-col justify-center p-8 lg:p-16 relative overflow-hidden">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 opacity-5">
+                    <div className="absolute inset-0" style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                    }} />
+                  </div>
+
+                  <div className="relative w-full max-w-2xl mx-auto">
+                    {/* Video Container - Premium Frame */}
+                    <div className="relative mb-8">
+                      <div className="aspect-video bg-gray-800 rounded-3xl overflow-hidden shadow-3xl border-4 border-white/10 relative">
+                        <video 
+                          src={selectedUser.videoUrl}
+                          poster={selectedUser.videoPreview}
+                          controls
+                          className="w-full h-full object-cover"
+                          autoPlay
+                          muted
+                        />
+                        
+                        {/* Decorative corner elements */}
+                        <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-white/30 rounded-tl-lg"></div>
+                        <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-white/30 rounded-tr-lg"></div>
+                        <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-white/30 rounded-bl-lg"></div>
+                        <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-white/30 rounded-br-lg"></div>
+                      </div>
+                      
+                      {/* Floating Live Badge */}
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                        <div className="inline-flex items-center gap-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-2xl border border-red-400">
+                          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                          <span>LIVE TESTIMONIAL</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* Premium Action Buttons */}
                     <div className="space-y-4">
-                      <h4 className="text-white font-bold text-lg text-center mb-6">Start Your Journey</h4>
+                      <h4 className="text-white font-black text-2xl text-center mb-8 tracking-wide">
+                        Start Your Journey Today
+                      </h4>
                       
                       <Link
                         to="/search"
                         onClick={() => setSelectedUser(null)}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                        className="group w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-5 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center gap-4 shadow-2xl hover:shadow-3xl hover:scale-105"
                       >
-                        <Search className="h-5 w-5" />
-                        <span>Find Charging Stations</span>
+                        <Search className="w-6 h-6 group-hover:scale-110 transition-transform duration-300" />
+                        <span className="text-lg">Find Charging Stations</span>
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
                       </Link>
                       
                       <Link
                         to="/trip-ai"
                         onClick={() => setSelectedUser(null)}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                        className="group w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold py-5 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center gap-4 shadow-2xl hover:shadow-3xl hover:scale-105"
                       >
-                        <Brain className="h-5 w-5" />
-                        <span>Try Trip AI</span>
+                        <Brain className="w-6 h-6 group-hover:scale-110 transition-transform duration-300" />
+                        <span className="text-lg">Try Trip AI</span>
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
                       </Link>
+
+                      {/* Trust Indicators */}
+                      <div className="flex flex-wrap justify-center gap-6 pt-6 text-sm text-gray-400">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                          <span>Free to join</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-blue-400" />
+                          <span>100% secure</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Timer className="w-4 h-4 text-purple-400" />
+                          <span>24/7 support</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* User Details Side */}
-                <div className="p-8 lg:p-12 flex flex-col justify-center bg-gradient-to-br from-blue-50 to-white">
-                  <div className="flex items-center gap-6 mb-8">
-                    <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-lg">
-                      <img 
-                        src={selectedUser.image} 
-                        alt={selectedUser.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-3xl font-bold text-gray-900 mb-2">{selectedUser.name}</h3>
-                      <p className="text-blue-600 font-semibold text-lg">{selectedUser.role}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-500">{selectedUser.location}</span>
+                {/* User Details Side - Light Theme */}
+                <div className="p-8 lg:p-16 flex flex-col justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
+                  {/* Background decoration */}
+                  <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-100/50 to-transparent rounded-full transform translate-x-48 -translate-y-48"></div>
+                  <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-100/50 to-transparent rounded-full transform -translate-x-48 translate-y-48"></div>
+
+                  <div className="relative">
+                    {/* User Header - Premium Layout */}
+                    <div className="flex items-center gap-8 mb-12">
+                      <div className="relative">
+                        <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white shadow-2xl">
+                          <img 
+                            src={selectedUser.image} 
+                            alt={selectedUser.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        {/* Verified badge */}
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <blockquote className="text-2xl font-medium text-gray-800 mb-8 leading-relaxed">
-                    "{selectedUser.quote}"
-                  </blockquote>
-
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="font-bold text-gray-900 mb-3 text-lg">Their Story</h4>
-                      <p className="text-gray-600 leading-relaxed text-lg">
-                        {selectedUser.story}
-                      </p>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                      <div className="flex items-center justify-between mb-4">
+                      
+                      <div className="flex-1">
+                        <h3 className="text-4xl font-black text-gray-900 mb-3 tracking-tight">{selectedUser.name}</h3>
+                        <p className="text-blue-600 font-bold text-xl mb-2">{selectedUser.role}</p>
                         <div className="flex items-center gap-2">
-                          <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                          <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                          <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                          <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                          <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                          <span className="text-sm text-gray-600 ml-2">5.0 Rating</span>
-                        </div>
-                        <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Verified User</span>
+                          <MapPin className="w-5 h-5 text-gray-400" />
+                          <span className="text-gray-600 font-medium">{selectedUser.location}</span>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        Member since 2023 • 47 charging sessions completed
+                    </div>
+
+                    {/* Quote Section - Elegant Typography */}
+                    <div className="relative mb-12">
+                      <Quote className="absolute -top-4 -left-4 w-12 h-12 text-blue-200" />
+                      <blockquote className="text-2xl sm:text-3xl font-medium text-gray-800 leading-relaxed pl-8 relative">
+                        "{selectedUser.quote}"
+                      </blockquote>
+                    </div>
+
+                    {/* Story Section */}
+                    <div className="space-y-8 mb-12">
+                      <div>
+                        <h4 className="font-black text-gray-900 mb-4 text-2xl tracking-wide">Their Story</h4>
+                        <p className="text-gray-600 leading-relaxed text-lg font-light">
+                          {selectedUser.story}
+                        </p>
+                      </div>
+
+                      {/* Premium Rating Card */}
+                      <div className="bg-gradient-to-r from-white to-blue-50 rounded-3xl p-8 shadow-xl border border-blue-100">
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-3">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} className="w-6 h-6 text-yellow-400 fill-current" />
+                            ))}
+                            <span className="text-gray-600 ml-3 font-semibold">5.0 Rating</span>
+                          </div>
+                          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-4 py-2 rounded-full text-sm font-bold border border-green-200">
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Verified User</span>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="text-center">
+                            <div className="text-3xl font-black text-blue-600 mb-1">2023</div>
+                            <div className="text-sm text-gray-600 font-medium">Member Since</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-3xl font-black text-green-600 mb-1">47</div>
+                            <div className="text-sm text-gray-600 font-medium">Sessions</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Navigation Dots */}
-              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3">
+              {/* Premium Navigation Dots */}
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
                 {testimonialUsers.map((user) => (
                   <button
                     key={user.id}
                     onClick={() => setSelectedUser(user)}
-                    className={`transition-all duration-300 ${
+                    className={`transition-all duration-500 ${
                       selectedUser.id === user.id 
-                        ? 'w-8 h-3 bg-blue-600 rounded-full' 
-                        : 'w-3 h-3 bg-gray-300 hover:bg-gray-400 rounded-full'
+                        ? 'w-12 h-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg' 
+                        : 'w-3 h-3 bg-gray-300 hover:bg-gray-400 rounded-full hover:scale-150'
                     }`}
                   />
                 ))}

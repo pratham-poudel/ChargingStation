@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { getDeviceInfo } from '../utils/deviceManager'
-import optimizedUploadAPI from './optimizedUploadAPI'
+import { directUploadAPI } from './directS3Upload'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -150,9 +150,12 @@ export const merchantAPI = {
   
   uploadProfilePicture: async (file) => {
     try {
-      const result = await optimizedUploadAPI.uploadProfilePicture(file);
+      console.log('📤 Uploading profile picture via direct S3...');
+      const result = await directUploadAPI.uploadProfilePicture(file);
+      console.log('✅ Profile picture uploaded successfully:', result);
       return result;
     } catch (error) {
+      console.error('❌ Profile picture upload failed:', error);
       throw error;
     }
   },
@@ -172,6 +175,31 @@ export const merchantAPI = {
   cleanupDevices: () => merchantApiClient.post('/auth/cleanup-devices'),
 
   // Document Management
+  updateDocumentAfterUpload: async (uploadResult, documentType, additionalDocumentType = null) => {
+    try {
+      console.log('🔄 merchantAPI: Updating database with presigned upload result');
+      
+      const requestData = {
+        uploadResult,
+        documentType
+      };
+      
+      if (additionalDocumentType) {
+        requestData.additionalDocumentType = additionalDocumentType;
+      }
+
+      console.log('📤 merchantAPI: Sending POST request to /dashboard/update-document-after-upload');
+      const response = await merchantApiClient.post('/dashboard/update-document-after-upload', requestData);
+      
+      console.log('📋 merchantAPI: Received response:', response);
+      
+      return response;
+    } catch (error) {
+      console.error('🚨 merchantAPI: Update document after upload error:', error);
+      throw error;
+    }
+  },
+
   uploadDocument: async (file, documentType, additionalDocumentType = null) => {
     try {
       console.log('🔄 merchantAPI: Starting upload document request');
@@ -255,20 +283,20 @@ export const merchantAPI = {
         }
       }
       
-      // Upload images using optimized service (SEQUENTIAL FOR DISTRIBUTED SYSTEMS)
+      // Upload images using direct S3 upload (FAST & SCALABLE)
       let uploadedImages = [];
       if (files.images.length > 0) {
-        console.log(`🔄 Starting sequential upload of ${files.images.length} station images...`);
+        console.log(`� Starting direct S3 upload of ${files.images.length} station images...`);
         
-        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images, (progress) => {
-          console.log(`📤 Upload progress: ${progress.current}/${progress.total} - ${progress.filename} (${progress.status})`);
+        const imageResult = await directUploadAPI.uploadStationImages(files.images, (progress) => {
+          console.log(`📤 Upload progress: ${progress.overallProgress}% - ${progress.currentFile} (${progress.status})`);
         });
         
         if (imageResult.success) {
           uploadedImages = imageResult.images || [];
-          console.log(`✅ Successfully uploaded ${imageResult.uploaded}/${imageResult.total} images`);
+          console.log(`✅ Successfully uploaded ${imageResult.uploaded}/${imageResult.total} images via direct S3`);
         } else {
-          console.error(`❌ Image upload failed: ${imageResult.failed}/${imageResult.total} failed`);
+          console.error(`❌ Direct S3 upload failed: ${imageResult.failed}/${imageResult.total} failed`);
           console.error('Upload errors:', imageResult.errors);
           
           // If some images failed, you might want to throw an error or handle partial success
@@ -281,11 +309,11 @@ export const merchantAPI = {
         }
       }
       
-      // Upload station master photo
+      // Upload station master photo via direct S3
       let stationMasterPhotoUrl = null;
       if (files.stationMasterPhoto) {
-        const photoResult = await optimizedUploadAPI.smartUpload(files.stationMasterPhoto, 'Profiles');
-        stationMasterPhotoUrl = photoResult.file.url;
+        const photoResult = await directUploadAPI.uploadProfilePicture(files.stationMasterPhoto);
+        stationMasterPhotoUrl = photoResult.url;
       }
       
       // Prepare final data for backend
@@ -323,20 +351,20 @@ export const merchantAPI = {
         }
       }
       
-      // Upload new images if any (SEQUENTIAL FOR DISTRIBUTED SYSTEMS)
+      // Upload new images if any via direct S3 (FAST & SCALABLE)
       let uploadedImages = [];
       if (files.images.length > 0) {
-        console.log(`🔄 Starting sequential upload of ${files.images.length} new station images...`);
+        console.log(`� Starting direct S3 upload of ${files.images.length} new station images...`);
         
-        const imageResult = await optimizedUploadAPI.uploadStationImages(files.images, (progress) => {
-          console.log(`📤 Update upload progress: ${progress.current}/${progress.total} - ${progress.filename} (${progress.status})`);
+        const imageResult = await directUploadAPI.uploadStationImages(files.images, (progress) => {
+          console.log(`📤 Update upload progress: ${progress.overallProgress}% - ${progress.currentFile} (${progress.status})`);
         });
         
         if (imageResult.success) {
           uploadedImages = imageResult.images || [];
-          console.log(`✅ Successfully uploaded ${imageResult.uploaded}/${imageResult.total} new images`);
+          console.log(`✅ Successfully uploaded ${imageResult.uploaded}/${imageResult.total} new images via direct S3`);
         } else {
-          console.error(`❌ New image upload failed: ${imageResult.failed}/${imageResult.total} failed`);
+          console.error(`❌ New image direct S3 upload failed: ${imageResult.failed}/${imageResult.total} failed`);
           
           if (imageResult.uploaded === 0) {
             throw new Error(`All new image uploads failed. First error: ${imageResult.errors[0]?.error || 'Unknown error'}`);
@@ -346,11 +374,11 @@ export const merchantAPI = {
         }
       }
       
-      // Upload new station master photo if provided
+      // Upload new station master photo if provided via direct S3
       let stationMasterPhotoUrl = null;
       if (files.stationMasterPhoto) {
-        const photoResult = await optimizedUploadAPI.smartUpload(files.stationMasterPhoto, 'Profiles');
-        stationMasterPhotoUrl = photoResult.file.url;
+        const photoResult = await directUploadAPI.uploadProfilePicture(files.stationMasterPhoto);
+        stationMasterPhotoUrl = photoResult.url;
       }
       
       // Prepare final data for backend

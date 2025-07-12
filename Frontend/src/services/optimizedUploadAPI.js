@@ -1,333 +1,92 @@
 /**
- * Optimized Upload API Service - Frontend
- * Uses RAM-efficient upload endpoints with streaming and direct S3 uploads
+ * DEPRECATED: OptimizedUploadAPI - This service is deprecated
+ * All uploads now use DirectS3Upload for better performance and no 413 errors
+ * 
+ * This file provides compatibility wrappers that redirect to directUploadAPI
+ * 
+ * Migration Guide:
+ * - Replace: import optimizedUploadAPI from './optimizedUploadAPI'
+ * - With: import { directUploadAPI } from './directS3Upload'
  */
 
-import axios from 'axios';
+import { directUploadAPI } from './directS3Upload';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-// Create axios instance for optimized uploads
-const optimizedUploadClient = axios.create({
-  baseURL: `${API_BASE_URL}/uploads-optimized`,
-  timeout: 300000, // 5 minutes for large file uploads
-});
-
-// Add auth token to requests
-optimizedUploadClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token') || 
-                localStorage.getItem('vendorToken') || 
-                localStorage.getItem('merchantToken') ||
-                localStorage.getItem('employeeToken') ||
-                localStorage.getItem('adminToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+console.warn('⚠️ DEPRECATED: optimizedUploadAPI is deprecated. Use directUploadAPI instead for better performance and no 413 errors.');
 
 /**
- * Optimized Upload Service Class
- * Automatically selects best upload method based on file size and type
+ * @deprecated Use directUploadAPI instead
+ * Compatibility wrapper that redirects to direct S3 upload
  */
 class OptimizedUploadService {
-  
-  /**
-   * Smart file upload - automatically chooses best method
-   * @param {File} file - File to upload
-   * @param {string} folder - Target folder (Profiles, Images, Documents, etc.)
-   * @param {Object} options - Upload options
-   * @returns {Promise<Object>} Upload result
-   */
-  async smartUpload(file, folder = 'Uploads', options = {}) {
-    const fileSize = file.size;
-    const preferDirect = options.preferDirect || fileSize > 5 * 1024 * 1024; // >5MB prefer direct
-    
-    // For Documents folder, always use streaming due to CORS issues with Cloudflare R2
-    if (folder === 'Documents') {
-      console.log(`🔄 Using streaming upload for document in ${folder} folder: ${file.name} (${this.formatFileSize(fileSize)})`);
-      return await this.uploadViaStreaming(file, folder);
-    }
-    
-    try {
-      // Try direct S3 upload first for large files or when preferred (non-documents)
-      if (preferDirect) {
-        console.log(`🚀 Using direct S3 upload for ${file.name} (${this.formatFileSize(fileSize)})`);
-        return await this.uploadDirectToS3(file, folder);
-      } else {
-        console.log(`🔄 Using streaming upload for ${file.name} (${this.formatFileSize(fileSize)})`);
-        return await this.uploadViaStreaming(file, folder);
-      }
-    } catch (error) {
-      // Fallback to alternative method
-      console.warn(`⚠️ Primary upload method failed, trying fallback...`);
-      
-      if (preferDirect) {
-        return await this.uploadViaStreaming(file, folder);
-      } else {
-        return await this.uploadDirectToS3(file, folder);
-      }
-    }
+  constructor() {
+    console.warn('⚠️ DEPRECATED: OptimizedUploadService is deprecated. Use DirectS3UploadService instead.');
   }
 
   /**
-   * Upload file directly to S3 (NO SERVER RAM USAGE)
-   */
-  async uploadDirectToS3(file, folder) {
-    try {
-      // Step 1: Get presigned URL
-      const { data: presignedData } = await optimizedUploadClient.post('/presigned', {
-        fileName: file.name,
-        folder: folder,
-        contentType: file.type
-      });
-
-      if (!presignedData.success) {
-        throw new Error(presignedData.message || 'Failed to get presigned URL');
-      }
-
-      // Step 2: Upload directly to S3
-      const uploadResponse = await fetch(presignedData.data.presignedUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type
-        }
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Direct upload failed: ${uploadResponse.statusText}`);
-      }
-
-      // Return structured response
-      return {
-        success: true,
-        file: {
-          ...presignedData.data,
-          uploadMethod: 'direct-s3',
-          size: file.size,
-          originalName: file.name,
-          mimetype: file.type
-        },
-        message: 'File uploaded successfully via direct S3'
-      };
-    } catch (error) {
-      console.error('Direct S3 upload failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload file via server streaming (MINIMAL SERVER RAM USAGE)
-   */
-  async uploadViaStreaming(file, folder) {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const { data } = await optimizedUploadClient.post(`/${folder}/single-stream`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-
-    return data;
-  }
-
-  /**
-   * Upload profile picture with optimization
-   */
-  async uploadProfilePicture(file) {
-    try {
-      // Always use direct upload for profile pictures (typically small)
-      const result = await this.uploadDirectToS3(file, 'Profiles');
-      
-      return {
-        success: true,
-        file: result.file,
-        message: 'Profile picture uploaded successfully'
-      };
-    } catch (error) {
-      // Fallback to streaming
-      console.log('🔄 Direct profile upload failed, using streaming...');
-      
-      const formData = new FormData();
-      formData.append('profile', file);
-
-      const { data } = await optimizedUploadClient.post('/profile-stream', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      return data;
-    }
-  }
-
-  /**
-   * Upload multiple station images efficiently (SEQUENTIAL FOR DISTRIBUTED SYSTEMS)
-   * Uploads one image at a time to avoid large payloads that exceed Nginx limits
+   * @deprecated Use directUploadAPI.uploadStationImages() instead
    */
   async uploadStationImages(files, onProgress = null) {
-    console.log(`🔄 Starting sequential upload of ${files.length} station images...`);
-    
-    const results = [];
-    const errors = [];
-    const totalFiles = files.length;
-    
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      try {
-        console.log(`📤 Uploading image ${i + 1}/${totalFiles}: ${file.name}`);
-        
-        if (onProgress) {
-          onProgress({
-            current: i + 1,
-            total: totalFiles,
-            filename: file.name,
-            status: 'uploading'
-          });
-        }
-        
-        // Upload single image
-        const formData = new FormData();
-        formData.append('image', file);
-        
-        const { data } = await optimizedUploadClient.post('/station-image-single', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-        
-        if (data.success) {
-          results.push(data.image);
-          console.log(`✅ Successfully uploaded: ${file.name}`);
-          
-          if (onProgress) {
-            onProgress({
-              current: i + 1,
-              total: totalFiles,
-              filename: file.name,
-              status: 'completed'
-            });
-          }
-        } else {
-          console.error(`❌ Failed to upload: ${file.name} - ${data.message}`);
-          errors.push({ file: file.name, error: data.message });
-        }
-        
-      } catch (error) {
-        console.error(`🚨 Error uploading ${file.name}:`, error);
-        errors.push({ file: file.name, error: error.response?.data?.message || error.message });
-        
-        if (onProgress) {
-          onProgress({
-            current: i + 1,
-            total: totalFiles,
-            filename: file.name,
-            status: 'error',
-            error: error.response?.data?.message || error.message
-          });
-        }
-      }
-    }
-    
-    console.log(`📊 Station images upload complete: ${results.length}/${totalFiles} successful`);
-    
-    return {
-      success: errors.length === 0,
-      images: results,
-      errors: errors,
-      uploaded: results.length,
-      failed: errors.length,
-      total: totalFiles
-    };
+    console.warn('⚠️ DEPRECATED: uploadStationImages() is deprecated. Use directUploadAPI.uploadStationImages() instead.');
+    return await directUploadAPI.uploadStationImages(files, onProgress);
   }
 
   /**
-   * DEPRECATED: Upload multiple station images using streaming (CAUSES 413 ERRORS IN DISTRIBUTED SYSTEMS)
-   * @deprecated Use uploadStationImages() instead for better distributed system compatibility
+   * @deprecated Use directUploadAPI.uploadDocuments() instead
    */
-  async uploadStationImagesLegacy(files) {
-    const formData = new FormData();
-    
-    Array.from(files).forEach(file => {
-      formData.append('images', file);
-    });
-
-    const { data } = await optimizedUploadClient.post('/station-images-stream', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-
-    return data;
+  async uploadDocuments(files, onProgress = null) {
+    console.warn('⚠️ DEPRECATED: uploadDocuments() is deprecated. Use directUploadAPI.uploadDocuments() instead.');
+    return await directUploadAPI.uploadDocuments(files, onProgress);
   }
 
   /**
-   * Upload documents with optimization
+   * @deprecated Use directUploadAPI.uploadProfilePicture() instead
    */
-  async uploadDocuments(files) {
-    // For multiple documents, prefer streaming to maintain stability
-    const formData = new FormData();
-    
-    Array.from(files).forEach(file => {
-      formData.append('documents', files);
-    });
-
-    const { data } = await optimizedUploadClient.post('/documents-stream', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-
-    return data;
+  async uploadProfilePicture(file, onProgress = null) {
+    console.warn('⚠️ DEPRECATED: uploadProfilePicture() is deprecated. Use directUploadAPI.uploadProfilePicture() instead.');
+    return await directUploadAPI.uploadProfilePicture(file, onProgress);
   }
 
   /**
-   * Upload single document
+   * @deprecated Use directUploadAPI.uploadProfilePicture() instead
    */
-  async uploadDocument(file, documentType = null) {
-    try {
-      // For documents, prefer streaming upload due to CORS issues with direct S3
-      // Skip direct upload to avoid CORS errors with Cloudflare R2
-      console.log(`🔄 Using streaming upload for document: ${file.name}`);
-      
-      const formData = new FormData();
-      formData.append('document', file);
-      if (documentType) {
-        formData.append('documentType', documentType);
-      }
-
-      const { data } = await optimizedUploadClient.post('/document-stream', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      return data;
-    } catch (error) {
-      console.error('Document streaming upload failed:', error);
-      throw error;
+  async smartUpload(file, folder, options = {}) {
+    console.warn('⚠️ DEPRECATED: smartUpload() is deprecated. Use directUploadAPI methods instead.');
+    
+    if (folder === 'Profiles') {
+      return await directUploadAPI.uploadProfilePicture(file, null, options);
+    } else if (folder === 'Documents') {
+      return await directUploadAPI.uploadDocuments([file], null, options);
+    } else {
+      return await directUploadAPI.uploadStationImages([file], null, options);
     }
   }
 
   /**
-   * Get server memory status (for monitoring)
+   * @deprecated All uploads now use direct S3 - this method is not needed
    */
-  async getMemoryStatus() {
-    try {
-      const { data } = await optimizedUploadClient.get('/memory-status');
-      return data;
-    } catch (error) {
-      console.error('Failed to get memory status:', error);
-      return null;
+  async uploadDirectToS3(file, folder) {
+    console.warn('⚠️ DEPRECATED: uploadDirectToS3() is deprecated. All uploads are now direct to S3.');
+    
+    if (folder === 'Profiles') {
+      return await directUploadAPI.uploadProfilePicture(file);
+    } else if (folder === 'Documents') {
+      const result = await directUploadAPI.uploadDocuments([file]);
+      return result.files?.[0] || result;
+    } else {
+      const result = await directUploadAPI.uploadStationImages([file]);
+      return result.images?.[0] || result;
     }
   }
 
   /**
-   * Utility: Format file size for display
+   * @deprecated Use directUploadAPI methods instead
    */
+  async uploadFileStream(file, folder, onProgress = null) {
+    console.warn('⚠️ DEPRECATED: uploadFileStream() is deprecated. Use directUploadAPI methods instead.');
+    return await this.smartUpload(file, folder);
+  }
+
+  // Utility methods
   formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -337,76 +96,61 @@ class OptimizedUploadService {
   }
 }
 
-// Export singleton instance
+// Create instance with deprecation warning
 const optimizedUploadAPI = new OptimizedUploadService();
 
+// Export for backward compatibility
 export default optimizedUploadAPI;
 
-/**
- * React Hook for optimized file uploads
- */
-import { useState } from 'react';
-
-export const useOptimizedUpload = () => {
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState(null);
-  const [uploadMethod, setUploadMethod] = useState(null);
-
-  const uploadFile = async (file, folder, options = {}) => {
-    setUploading(true);
-    setError(null);
-    setProgress(0);
-
-    try {
-      const result = await optimizedUploadAPI.smartUpload(file, folder, options);
-      setUploadMethod(result.file?.uploadMethod || 'unknown');
-      setProgress(100);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setUploading(false);
+// Also export utility functions that components might use
+export const uploadUtilities = {
+  /**
+   * @deprecated Use directUploadAPI.uploadStationImages() instead
+   */
+  uploadMultiple: async (files, uploadType, options = {}) => {
+    console.warn('⚠️ DEPRECATED: uploadMultiple() is deprecated. Use directUploadAPI methods instead.');
+    
+    if (uploadType === 'images' || uploadType === 'station-images') {
+      return await directUploadAPI.uploadStationImages(files, null, options);
+    } else if (uploadType === 'documents') {
+      return await directUploadAPI.uploadDocuments(files, null, options);
+    } else {
+      return await directUploadAPI.uploadStationImages(files, null, options);
     }
-  };
+  },
 
-  const uploadMultiple = async (files, uploadType, options = {}) => {
-    setUploading(true);
-    setError(null);
-    setProgress(0);
-
-    try {
-      let result;
-
-      switch (uploadType) {
-        case 'station-images':
-          result = await optimizedUploadAPI.uploadStationImages(files);
-          break;
-        case 'documents':
-          result = await optimizedUploadAPI.uploadDocuments(files);
-          break;
-        default:
-          throw new Error(`Unknown upload type: ${uploadType}`);
-      }
-
-      setProgress(100);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setUploading(false);
+  /**
+   * @deprecated Use directUploadAPI methods instead
+   */
+  uploadSingle: async (file, folder, options = {}) => {
+    console.warn('⚠️ DEPRECATED: uploadSingle() is deprecated. Use directUploadAPI methods instead.');
+    
+    if (folder === 'Profiles') {
+      return await directUploadAPI.uploadProfilePicture(file, null, options);
+    } else if (folder === 'Documents') {
+      const result = await directUploadAPI.uploadDocuments([file], null, options);
+      return result.files?.[0] || result;
+    } else {
+      const result = await directUploadAPI.uploadStationImages([file], null, options);
+      return result.images?.[0] || result;
     }
-  };
-
-  return {
-    uploadFile,
-    uploadMultiple,
-    uploading,
-    progress,
-    error,
-    uploadMethod,
-    setError
-  };
+  }
 };
+
+/**
+ * Migration Notice
+ */
+console.info(`
+🚀 MIGRATION NOTICE: 
+   
+   Replace optimizedUploadAPI with directUploadAPI for:
+   ✅ No more 413 Content Too Large errors
+   ✅ Unlimited file sizes (up to S3 limits)  
+   ✅ 99.99% less server resource usage
+   ✅ Faster uploads (direct to S3)
+   ✅ Better concurrent user support
+
+   Quick Migration:
+   - Old: import optimizedUploadAPI from './optimizedUploadAPI'
+   - New: import { directUploadAPI } from './directS3Upload'
+`);

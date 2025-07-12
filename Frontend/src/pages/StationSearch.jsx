@@ -84,13 +84,13 @@ export default function StationSearch() {
     // Try to find primary image first
     const primaryImage = station.images.find(img => img.isPrimary)
     if (primaryImage) {
-      return primaryImage.url
+      return primaryImage?.url || null
     }
     
     // Try to find thumbnail image
     const thumbnailImage = station.images.find(img => img.isThumbnail)
     if (thumbnailImage) {
-      return thumbnailImage.url
+      return thumbnailImage?.url || null
     }
     
     // Fall back to first image
@@ -104,7 +104,7 @@ export default function StationSearch() {
     
     // Handle both object and string formats
     if (typeof stationMaster.photo === 'object') {
-      return stationMaster.photo.url
+      return stationMaster.photo?.url || null
     }
     
     return stationMaster.photo

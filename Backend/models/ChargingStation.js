@@ -252,13 +252,13 @@ chargingStationSchema.methods.getImagesWithFreshUrls = async function() {
   const imagesWithFreshUrls = [];
   
   for (const image of this.images) {
-    if (image.objectName) {
+    if (image?.objectName) {
       try {
         const freshUrl = await generateFreshUrl(image.objectName, 3600);
         imagesWithFreshUrls.push({
           ...image.toObject(),
           freshUrl: freshUrl,
-          url: image.url // Keep the permanent URL structure
+          url: image?.url // Keep the permanent URL structure
         });
       } catch (error) {
         console.error(`Error generating fresh URL for ${image.objectName}:`, error);
@@ -266,7 +266,7 @@ chargingStationSchema.methods.getImagesWithFreshUrls = async function() {
         imagesWithFreshUrls.push(image.toObject());
       }
     } else {
-      imagesWithFreshUrls.push(image.toObject());
+      imagesWithFreshUrls.push(image?.toObject?.() || image);
     }
   }
   

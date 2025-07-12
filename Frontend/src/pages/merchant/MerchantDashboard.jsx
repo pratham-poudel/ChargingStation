@@ -51,7 +51,8 @@ ChartJS.register(
   Legend
 )
 
-const MerchantDashboard = () => {  const { 
+const MerchantDashboard = () => {
+  const { 
     merchant, 
     dashboardStats, 
     onboardingStatus,
@@ -59,18 +60,22 @@ const MerchantDashboard = () => {  const {
     getOnboardingStatus,
     isLoading 
   } = useMerchant()
-    const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [showBookingsModal, setShowBookingsModal] = useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
+        setIsInitialLoading(true)
         await Promise.all([
           getDashboardStats(),
           getOnboardingStatus()
         ])
       } catch (error) {
         console.error('Failed to load dashboard data:', error)
+      } finally {
+        setIsInitialLoading(false)
       }
     }
 
@@ -94,7 +99,8 @@ const MerchantDashboard = () => {  const {
           canClose={onboardingStatus?.showDashboard}
         />
       </MerchantLayout>
-    )  }
+    )
+  }
 
   // Helper function to calculate merchant revenue including payment adjustments
   const getMerchantRevenue = (booking) => {
@@ -122,7 +128,8 @@ const MerchantDashboard = () => {  const {
     // Final merchant revenue = base merchant amount + adjustments
     return baseMerchantAmount + additionalCharges - refunds;
   };
-    // Debug: Log daily stats to see what data is available
+
+  // Debug: Log daily stats to see what data is available
   console.log('Daily Stats:', dailyStats)
   
   // Chart data for revenue trends with both estimated and actual revenue
@@ -155,6 +162,7 @@ const MerchantDashboard = () => {  const {
       },
     ],
   }
+
   // Chart data for bookings
   const bookingsChartData = {
     labels: dailyStats.map(stat => 
@@ -192,7 +200,7 @@ const MerchantDashboard = () => {  const {
             >
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  Welcome back, {merchant?.name}!
+                  Welcome back, {merchant?.name || 'Merchant'}!
                 </h1>
                 <p className="text-gray-600">
                   Here's what's happening with your charging stations today.
@@ -219,132 +227,208 @@ const MerchantDashboard = () => {  const {
                 </button>
               </div>
             </motion.div>
-          </div>          {/* Stats Overview */}
+          </div>
+
+          {/* Stats Overview */}
           <div className="mb-8">
             {/* Primary Revenue Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-                className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-green-500 rounded-lg">
-                      <DollarSign className="w-6 h-6 text-white" />
+              {isInitialLoading ? (
+                <>
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="p-3 bg-green-500 rounded-lg">
+                          <DollarSign className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="ml-4">
+                          <h3 className="text-lg font-semibold text-green-900">Actual Revenue</h3>
+                          <p className="text-sm text-green-700">From completed bookings</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-semibold text-green-900">Actual Revenue</h3>
-                      <p className="text-sm text-green-700">From completed bookings</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <LoadingSpinner className="w-6 h-6 text-green-600 mr-2" />
+                        <div className="h-8 bg-green-200 rounded animate-pulse w-32"></div>
+                      </div>
+                      <div className="h-4 bg-green-200 rounded animate-pulse w-24"></div>
                     </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-3xl font-bold text-green-900">₹{stats.totalRevenue?.toLocaleString() || 0}</p>
-                  <p className="text-sm text-green-700">₹{stats.monthlyRevenue?.toLocaleString() || 0} this month</p>
-                </div>
-              </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-                className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-blue-500 rounded-lg">
-                      <TrendingUp className="w-6 h-6 text-white" />
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="p-3 bg-blue-500 rounded-lg">
+                          <TrendingUp className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="ml-4">
+                          <h3 className="text-lg font-semibold text-blue-900">Expected Revenue</h3>
+                          <p className="text-sm text-blue-700">Includes confirmed & pending</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-semibold text-blue-900">Expected Revenue</h3>
-                      <p className="text-sm text-blue-700">Includes confirmed & pending</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <LoadingSpinner className="w-6 h-6 text-blue-600 mr-2" />
+                        <div className="h-8 bg-blue-200 rounded animate-pulse w-32"></div>
+                      </div>
+                      <div className="h-4 bg-blue-200 rounded animate-pulse w-24"></div>
                     </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-3xl font-bold text-blue-900">₹{stats.estimatedRevenue?.toLocaleString() || 0}</p>
-                  <p className="text-sm text-blue-700">Total pipeline revenue</p>
-                </div>
-              </motion.div>
+                </>
+              ) : (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="p-3 bg-green-500 rounded-lg">
+                          <DollarSign className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="ml-4">
+                          <h3 className="text-lg font-semibold text-green-900">Actual Revenue</h3>
+                          <p className="text-sm text-green-700">From completed bookings</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-3xl font-bold text-green-900">₹{stats.totalRevenue?.toLocaleString() || 0}</p>
+                      <p className="text-sm text-green-700">₹{stats.monthlyRevenue?.toLocaleString() || 0} this month</p>
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="p-3 bg-blue-500 rounded-lg">
+                          <TrendingUp className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="ml-4">
+                          <h3 className="text-lg font-semibold text-blue-900">Expected Revenue</h3>
+                          <p className="text-sm text-blue-700">Includes confirmed & pending</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-3xl font-bold text-blue-900">₹{stats.estimatedRevenue?.toLocaleString() || 0}</p>
+                      <p className="text-sm text-blue-700">Total pipeline revenue</p>
+                    </div>
+                  </motion.div>
+                </>
+              )}
             </div>
 
             {/* Secondary Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center mb-3">
-                  <div className="p-2 bg-indigo-100 rounded-lg">
-                    <Zap className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Stations</p>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalStations || 0}</p>
-                <p className="text-sm text-gray-500">{stats.activeStations || 0} active</p>
-              </motion.div>
+              {isInitialLoading ? (
+                <>
+                  {[...Array(4)].map((_, index) => (
+                    <div key={index} className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                      <div className="flex items-center mb-3">
+                        <div className="p-2 bg-gray-200 rounded-lg animate-pulse">
+                          <div className="w-5 h-5 bg-gray-300 rounded"></div>
+                        </div>
+                        <div className="ml-3">
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
+                        </div>
+                      </div>
+                      <div className="flex items-center mb-2">
+                        <LoadingSpinner className="w-5 h-5 text-gray-400 mr-2" />
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-12"></div>
+                      </div>
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-20"></div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center mb-3">
+                      <div className="p-2 bg-indigo-100 rounded-lg">
+                        <Zap className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-600">Stations</p>
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalStations || 0}</p>
+                    <p className="text-sm text-gray-500">{stats.activeStations || 0} active</p>
+                  </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center mb-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Users className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalBookings || 0}</p>
-                <p className="text-sm text-gray-500">{stats.completedBookings || 0} completed</p>
-              </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center mb-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Users className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-600">Total Bookings</p>
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalBookings || 0}</p>
+                    <p className="text-sm text-gray-500">{stats.completedBookings || 0} completed</p>
+                  </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center mb-3">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Clock className="w-5 h-5 text-yellow-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Pending</p>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-gray-900">{stats.pendingBookings || 0}</p>
-                <p className="text-sm text-gray-500">{stats.confirmedBookings || 0} confirmed</p>
-              </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                    className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center mb-3">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <Clock className="w-5 h-5 text-yellow-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-600">Pending</p>
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.pendingBookings || 0}</p>
+                    <p className="text-sm text-gray-500">{stats.confirmedBookings || 0} confirmed</p>
+                  </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center mb-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <TrendingUp className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Success Rate</p>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-gray-900">{stats.conversionRate || 0}%</p>
-                <p className="text-sm text-gray-500">{stats.avgRating || 0} avg rating</p>
-              </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center mb-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.conversionRate || 0}%</p>
+                    <p className="text-sm text-gray-500">{stats.avgRating || 0} avg rating</p>
+                  </motion.div>
+                </>
+              )}
             </div>
-          </div>          {/* Charts and Analytics */}
+          </div>
+
+          {/* Charts and Analytics */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Revenue Chart */}
             <motion.div
@@ -363,41 +447,50 @@ const MerchantDashboard = () => {  const {
                 </div>
               </div>              
               <div className="h-64">
-                <Line 
-                  data={revenueChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { 
-                        display: true,
-                        position: 'top',
-                        labels: {
-                          usePointStyle: true,
-                          padding: 20,
-                        }
-                      },
-                    },
-                    scales: {
-                      y: { 
-                        beginAtZero: true,
-                        grid: {
-                          color: 'rgba(0, 0, 0, 0.05)',
+                {isInitialLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <LoadingSpinner className="w-8 h-8 text-blue-600 mx-auto mb-4" />
+                      <p className="text-sm text-gray-500">Loading revenue data...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <Line 
+                    data={revenueChartData} 
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { 
+                          display: true,
+                          position: 'top',
+                          labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                          }
                         },
-                        ticks: {
-                          callback: function(value) {
-                            return '₹' + value.toLocaleString();
+                      },
+                      scales: {
+                        y: { 
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.05)',
+                          },
+                          ticks: {
+                            callback: function(value) {
+                              return '₹' + value.toLocaleString();
+                            }
+                          }
+                        },
+                        x: {
+                          grid: {
+                            display: false,
                           }
                         }
                       },
-                      x: {
-                        grid: {
-                          display: false,
-                        }
-                      }
-                    },
-                  }}
-                />
+                    }}
+                  />
+                )}
               </div>
             </motion.div>
 
@@ -418,32 +511,43 @@ const MerchantDashboard = () => {  const {
                 </div>
               </div>
               <div className="h-64">
-                <Bar 
-                  data={bookingsChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { display: false },
-                    },
-                    scales: {
-                      y: { 
-                        beginAtZero: true,
-                        grid: {
-                          color: 'rgba(0, 0, 0, 0.05)',
+                {isInitialLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <LoadingSpinner className="w-8 h-8 text-green-600 mx-auto mb-4" />
+                      <p className="text-sm text-gray-500">Loading booking data...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <Bar 
+                    data={bookingsChartData} 
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                      },
+                      scales: {
+                        y: { 
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.05)',
+                          }
+                        },
+                        x: {
+                          grid: {
+                            display: false,
+                          }
                         }
                       },
-                      x: {
-                        grid: {
-                          display: false,
-                        }
-                      }
-                    },
-                  }}
-                />
+                    }}
+                  />
+                )}
               </div>
             </motion.div>
-          </div>{/* Revenue Breakdown */}
+          </div>
+
+          {/* Revenue Breakdown */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -472,89 +576,138 @@ const MerchantDashboard = () => {  const {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              {/* Completed Revenue */}
-              <div className="relative">
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-200 h-full">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-green-800">Completed Revenue</h4>
-                    <div className="p-2 bg-green-500 rounded-lg">
-                      <CheckCircle2 className="w-4 h-4 text-white" />
+              {isInitialLoading ? (
+                <>
+                  {[...Array(3)].map((_, index) => (
+                    <div key={index} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-5 border border-gray-200 h-full">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                        <div className="p-2 bg-gray-200 rounded-lg animate-pulse">
+                          <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                        </div>
+                      </div>
+                      <div className="flex items-center mb-2">
+                        <LoadingSpinner className="w-6 h-6 text-gray-400 mr-2" />
+                        <div className="h-8 bg-gray-200 rounded animate-pulse w-24"></div>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
+                        <div className="h-6 bg-gray-200 rounded-full animate-pulse w-16"></div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {/* Completed Revenue */}
+                  <div className="relative">
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-200 h-full">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-green-800">Completed Revenue</h4>
+                        <div className="p-2 bg-green-500 rounded-lg">
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                      <p className="text-2xl font-bold text-green-900 mb-2">₹{stats.totalRevenue?.toLocaleString() || 0}</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-green-700">{stats.completedBookings || 0} bookings</span>
+                        <span className="px-2 py-1 bg-green-200 text-green-800 rounded-full text-xs font-medium">Realized</span>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold text-green-900 mb-2">₹{stats.totalRevenue?.toLocaleString() || 0}</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-green-700">{stats.completedBookings || 0} bookings</span>
-                    <span className="px-2 py-1 bg-green-200 text-green-800 rounded-full text-xs font-medium">Realized</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Confirmed Revenue */}
-              <div className="relative">
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-5 border border-blue-200 h-full">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-blue-800">Confirmed Revenue</h4>
-                    <div className="p-2 bg-blue-500 rounded-lg">
-                      <Clock className="w-4 h-4 text-white" />
+                  {/* Confirmed Revenue */}
+                  <div className="relative">
+                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-5 border border-blue-200 h-full">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-blue-800">Confirmed Revenue</h4>
+                        <div className="p-2 bg-blue-500 rounded-lg">
+                          <Clock className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-900 mb-2">₹{stats.confirmedRevenue?.toLocaleString() || 0}</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-blue-700">{stats.confirmedBookings || 0} bookings</span>
+                        <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded-full text-xs font-medium">Secured</span>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold text-blue-900 mb-2">₹{stats.confirmedRevenue?.toLocaleString() || 0}</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-blue-700">{stats.confirmedBookings || 0} bookings</span>
-                    <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded-full text-xs font-medium">Secured</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Pending Revenue */}
-              <div className="relative">
-                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg p-5 border border-amber-200 h-full">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-amber-800">Pending Revenue</h4>
-                    <div className="p-2 bg-amber-500 rounded-lg">
-                      <AlertCircle className="w-4 h-4 text-white" />
+                  {/* Pending Revenue */}
+                  <div className="relative">
+                    <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg p-5 border border-amber-200 h-full">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-amber-800">Pending Revenue</h4>
+                        <div className="p-2 bg-amber-500 rounded-lg">
+                          <AlertCircle className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                      <p className="text-2xl font-bold text-amber-900 mb-2">₹{stats.pendingRevenue?.toLocaleString() || 0}</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-amber-700">{stats.pendingBookings || 0} bookings</span>
+                        <span className="px-2 py-1 bg-amber-200 text-amber-800 rounded-full text-xs font-medium">Processing</span>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold text-amber-900 mb-2">₹{stats.pendingRevenue?.toLocaleString() || 0}</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-amber-700">{stats.pendingBookings || 0} bookings</span>
-                    <span className="px-2 py-1 bg-amber-200 text-amber-800 rounded-full text-xs font-medium">Processing</span>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </div>
 
             {/* Total Summary */}
             <div className="pt-6 border-t border-gray-200">
               <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-gray-600 rounded-lg">
-                      <TrendingUp className="w-5 h-5 text-white" />
+                {isInitialLoading ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-gray-200 rounded-lg animate-pulse">
+                        <div className="w-5 h-5 bg-gray-300 rounded"></div>
+                      </div>
+                      <div className="ml-4">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-32 mb-2"></div>
+                        <div className="flex items-center">
+                          <LoadingSpinner className="w-6 h-6 text-gray-400 mr-2" />
+                          <div className="h-8 bg-gray-200 rounded animate-pulse w-32"></div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Pipeline Value</p>
+                    <div className="text-right">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-24 mb-2"></div>
+                      <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-gray-600 rounded-lg">
+                        <TrendingUp className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Pipeline Value</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          ₹{((stats.totalRevenue || 0) + (stats.confirmedRevenue || 0) + (stats.pendingRevenue || 0)).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-600">Total Bookings</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        ₹{((stats.totalRevenue || 0) + (stats.confirmedRevenue || 0) + (stats.pendingRevenue || 0)).toLocaleString()}
+                        {((stats.completedBookings || 0) + (stats.confirmedBookings || 0) + (stats.pendingBookings || 0))}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {((stats.completedBookings || 0) + (stats.confirmedBookings || 0) + (stats.pendingBookings || 0))}
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
-          </motion.div>          {/* Recent Bookings */}
+          </motion.div>
+
+          {/* Recent Bookings */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="bg-white rounded-xl shadow-sm border border-gray-200"
-          >            <div className="px-6 py-4 border-b border-gray-200">
+          >
+            <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Recent Bookings</h3>
@@ -573,7 +726,9 @@ const MerchantDashboard = () => {  const {
                   </div>
                 </div>
               </div>
-            </div><div className="overflow-x-auto">
+            </div>
+
+            <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -595,15 +750,51 @@ const MerchantDashboard = () => {  const {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {recentBookings.length > 0 ? (
+                  {isInitialLoading ? (
+                    <>
+                      {[...Array(5)].map((_, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+                              <div className="ml-4">
+                                <div className="h-4 bg-gray-200 rounded animate-pulse w-20 mb-1"></div>
+                                <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-4 bg-gray-200 rounded animate-pulse w-24 mb-1"></div>
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-4 bg-gray-200 rounded animate-pulse w-20 mb-1"></div>
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="space-y-1">
+                              <div className="flex items-center">
+                                <LoadingSpinner className="w-4 h-4 text-gray-400 mr-2" />
+                                <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
+                              </div>
+                              <div className="h-6 bg-gray-200 rounded-full animate-pulse w-20"></div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-6 bg-gray-200 rounded-full animate-pulse w-20"></div>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
+                  ) : recentBookings.length > 0 ? (
                     recentBookings.map((booking, index) => (
                       <tr key={booking._id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                               <span className="text-white font-semibold text-sm">
-                                {(booking.user?.name || 'Guest User').charAt(0).toUpperCase()
-                              }</span>
+                                {(booking.user?.name || 'Guest User').charAt(0).toUpperCase()}
+                              </span>
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
@@ -643,7 +834,8 @@ const MerchantDashboard = () => {  const {
                               : ''
                             }
                           </div>
-                        </td>                          <td className="px-6 py-4 whitespace-nowrap">
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="space-y-1">
                             <div className="text-sm font-semibold text-gray-900">
                               ₹{booking.pricing?.merchantAmount?.toLocaleString() || 0}
@@ -663,7 +855,8 @@ const MerchantDashboard = () => {  const {
                               </div>
                             )}
                           </div>
-                        </td><td className="px-6 py-4 whitespace-nowrap">
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <StatusBadge status={booking.status} />
                         </td>
                       </tr>
@@ -683,7 +876,8 @@ const MerchantDashboard = () => {  const {
                   )}
                 </tbody>
               </table>
-            </div>          </motion.div>
+            </div>
+          </motion.div>
         </div>
       </div>
 

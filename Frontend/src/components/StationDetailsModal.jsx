@@ -103,7 +103,7 @@ const StationDetailsModal = ({ station, onClose, onActionSuccess }) => {
             <div className="mb-2">Rating: {station.rating?.average} ({station.rating?.count} ratings)</div>
             <div className="mb-2">Created: {station.createdAt ? new Date(station.createdAt).toLocaleString() : ''}</div>
             <div className="mb-2">Updated: {station.updatedAt ? new Date(station.updatedAt).toLocaleString() : ''}</div>
-            <div className="mb-2">Images: {station.images?.length ? station.images.map(img => <img src={img.url} alt="station" key={img.url} className="inline w-10 h-10 object-cover rounded mr-1" />) : 'N/A'}</div>
+            <div className="mb-2">Images: {station.images?.length ? station.images.map(img => <img src={img?.url} alt="station" key={img?.url} className="inline w-10 h-10 object-cover rounded mr-1" />) : 'N/A'}</div>
           </div>
         </div>
         <div className="mb-2 mt-4 font-semibold">Charging Ports:</div>
