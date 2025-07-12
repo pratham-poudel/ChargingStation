@@ -161,8 +161,25 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
       
       // Check if this duration conflicts with any existing booking (using 5-minute buffer)
       const hasConflict = existingBookings.some(booking => {
-        const bookingStart = timeToMinutes(booking.startTime)
-        const bookingEnd = timeToMinutes(booking.endTime)
+        // Parse booking times properly - handle both HH:MM and full datetime formats
+        let bookingStartTime = booking.startTime
+        let bookingEndTime = booking.endTime
+        
+        // If it's a full datetime string, extract just the time portion
+        if (bookingStartTime.includes('T') || bookingStartTime.includes(' ')) {
+          const bookingStartDate = new Date(bookingStartTime)
+          const nepalStartTime = new Date(bookingStartDate.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}))
+          bookingStartTime = `${nepalStartTime.getHours().toString().padStart(2, '0')}:${nepalStartTime.getMinutes().toString().padStart(2, '0')}`
+        }
+        
+        if (bookingEndTime.includes('T') || bookingEndTime.includes(' ')) {
+          const bookingEndDate = new Date(bookingEndTime)
+          const nepalEndTime = new Date(bookingEndDate.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}))
+          bookingEndTime = `${nepalEndTime.getHours().toString().padStart(2, '0')}:${nepalEndTime.getMinutes().toString().padStart(2, '0')}`
+        }
+        
+        const bookingStart = timeToMinutes(bookingStartTime)
+        const bookingEnd = timeToMinutes(bookingEndTime)
         return timeRangesOverlap(startMinutes, endMinutes, bookingStart, bookingEnd, 5)
       })
       
@@ -174,7 +191,16 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     // Debug logging for duration calculation
     if (process.env.NODE_ENV === 'development' && availableDurations.length === 0) {
       const slotTime = minutesToTime(startMinutes)
-      console.log(`⚠️ No durations available for slot ${slotTime}, conflicts:`, existingBookings.map(b => `${b.startTime}-${b.endTime}`))
+      const parsedConflicts = existingBookings.map(b => {
+        const startTime = b.startTime.includes('T') || b.startTime.includes(' ') ? 
+          new Date(b.startTime).toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}) : 
+          b.startTime
+        const endTime = b.endTime.includes('T') || b.endTime.includes(' ') ? 
+          new Date(b.endTime).toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}) : 
+          b.endTime
+        return `${startTime}-${endTime}`
+      })
+      console.log(`⚠️ No durations available for slot ${slotTime}, conflicts:`, parsedConflicts)
     }
     
     return availableDurations
@@ -205,20 +231,55 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     let nextConflictStart = maxEndTime
     
     for (const booking of existingBookings) {
-      const bookingStart = timeToMinutes(booking.startTime) - 5 // 5-minute buffer (reduced from 10)
-      if (bookingStart > startMinutes && bookingStart < nextConflictStart) {
+      // Parse booking time properly - handle both HH:MM and full datetime formats
+      let bookingStartTime = booking.startTime
+      
+      // Debug logging for time parsing
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔍 Processing booking:`, {
+          original: booking,
+          startTime: bookingStartTime,
+          isDatetime: bookingStartTime.includes('T') || bookingStartTime.includes(' ')
+        })
+      }
+      
+      // If it's a full datetime string, extract just the time portion
+      if (bookingStartTime.includes('T') || bookingStartTime.includes(' ')) {
+        const bookingDate = new Date(bookingStartTime)
+        // Convert to Nepal timezone and extract time
+        const nepalTime = new Date(bookingDate.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}))
+        bookingStartTime = `${nepalTime.getHours().toString().padStart(2, '0')}:${nepalTime.getMinutes().toString().padStart(2, '0')}`
+      }
+      
+      const bookingStart = timeToMinutes(bookingStartTime) - 5 // 5-minute buffer
+      
+      // Debug logging for conflict analysis
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔍 Conflict check for slot ${minutesToTime(startMinutes)}: booking ${booking.startTime} -> ${bookingStartTime} -> ${bookingStart}min (slot: ${startMinutes}min)`)
+      }
+      
+      if (bookingStart >= startMinutes && bookingStart < nextConflictStart) {
         nextConflictStart = bookingStart
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🎯 Found closer conflict: ${bookingStartTime} at ${bookingStart}min`)
+        }
       }
     }
     
     maxDuration = Math.min(nextConflictStart - startMinutes, 480) // Max 8 hours
     const result = Math.max(0, maxDuration)
     
-    // Debug logging for slot duration calculation
+    // Enhanced debug logging for slot duration calculation
     if (process.env.NODE_ENV === 'development') {
       const slotTime = minutesToTime(startMinutes)
       const nextConflictTime = minutesToTime(nextConflictStart)
-      console.log(`🔍 Slot ${slotTime}: maxDuration=${result}min, nextConflict=${nextConflictTime}, conflicts:`, existingBookings.length)
+      const conflictDetails = existingBookings.map(b => ({
+        original: b.startTime,
+        parsed: b.startTime.includes('T') || b.startTime.includes(' ') ? 
+          new Date(b.startTime).toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}) : 
+          b.startTime
+      }))
+      console.log(`🔍 Slot ${slotTime}: maxDuration=${result}min (${Math.floor(result/60)}h ${result%60}m), nextConflict=${nextConflictTime}, conflicts:`, conflictDetails)
     }
     
     return result
@@ -423,17 +484,17 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                 }
               }
               
-              // Calculate available durations for this slot
+              // Calculate available durations using port-level conflicts (not slot-level)
               const availableDurations = calculateAvailableDurations(
                 slotMinutes, 
-                portData.conflicts || [], 
+                portData.conflicts || [], // Use port-level conflicts which contain all bookings
                 selectedDate
               )
               
-              // Calculate max continuous duration
+              // Calculate max continuous duration using port-level conflicts (not slot-level)
               const maxContinuousDuration = getMaxContinuousDuration(
                 slotMinutes, 
-                portData.conflicts || [],
+                portData.conflicts || [], // Use port-level conflicts which contain all bookings
                 selectedDate
               )
               
