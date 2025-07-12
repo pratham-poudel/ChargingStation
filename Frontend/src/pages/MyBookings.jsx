@@ -566,7 +566,8 @@ function BookingDetailsModal({ booking, onClose, onCancel, statusConfig, canCanc
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Asia/Kathmandu' // Force Nepal timezone
     })
   }
   return (

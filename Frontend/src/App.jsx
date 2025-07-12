@@ -132,7 +132,7 @@ function App() {
                     <Route path="/trip-ai" element={<Layout><TripAI /></Layout>} />
                     <Route path="/book/:stationId" element={<Layout><BookingFlow /></Layout>} />
                     <Route path="/my-bookings" element={<Layout><MyBookings /></Layout>} />
-                    <Route path="/myorders" element={<Layout><MyOrders /></Layout>} />
+                    <Route path="/myorders" element={<Layout><MyBookings /></Layout>} />
                     <Route path="/profile" element={<Layout><Profile /></Layout>} />
                     
                     {/* Catch-all route for undefined pages */}

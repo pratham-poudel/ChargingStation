@@ -641,7 +641,7 @@ router.get('/realtime-availability/:stationId', async (req, res) => {
         message: 'Date parameter is required'
       });
     }
-    
+
     // Validate date format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.status(400).json({
@@ -696,8 +696,18 @@ router.get('/realtime-availability/:stationId', async (req, res) => {
     const conflicts = existingBookings.map(booking => ({
       bookingId: booking.bookingId,
       portId: booking.chargingPort.portId,
-      startTime: new Date(booking.timeSlot.startTime).toTimeString().substring(0, 5), // HH:MM format
-      endTime: new Date(booking.timeSlot.endTime).toTimeString().substring(0, 5),
+      startTime: new Date(booking.timeSlot.startTime).toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'Asia/Kathmandu'
+      }), // Convert to Nepal time for display
+      endTime: new Date(booking.timeSlot.endTime).toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'Asia/Kathmandu'
+      }),
       duration: booking.timeSlot.duration,
       vehicleNumber: booking.vehicle?.vehicleNumber || booking.customerDetails?.vehicleNumber
     }));
@@ -919,8 +929,18 @@ router.get('/conflicts/:stationId', async (req, res) => {
 
     const transformedConflicts = conflicts.map(booking => ({
       bookingId: booking.bookingId,
-      startTime: new Date(booking.timeSlot.startTime).toTimeString().substring(0, 5),
-      endTime: new Date(booking.timeSlot.endTime).toTimeString().substring(0, 5),
+      startTime: new Date(booking.timeSlot.startTime).toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'Asia/Kathmandu'
+      }),
+      endTime: new Date(booking.timeSlot.endTime).toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'Asia/Kathmandu'
+      }),
       duration: booking.timeSlot.duration,
       vehicleNumber: booking.vehicle?.vehicleNumber || booking.customerDetails?.vehicleNumber,
       customerPhone: booking.customerDetails?.phoneNumber,
@@ -990,8 +1010,18 @@ router.get('/existing/:stationId', async (req, res) => {
       return {
         bookingId: booking.bookingId,
         portId: booking.chargingPort.portId,
-        startTime: startTime.toTimeString().substring(0, 5), // HH:MM format
-        endTime: endTime.toTimeString().substring(0, 5),
+        startTime: startTime.toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Asia/Kathmandu'
+        }), // Convert to Nepal time
+        endTime: endTime.toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Asia/Kathmandu'
+        }),
         duration: booking.timeSlot.duration,
         vehicleNumber: booking.vehicle?.vehicleNumber || booking.customerDetails?.vehicleNumber,
         isFlexible: booking.isFlexible,

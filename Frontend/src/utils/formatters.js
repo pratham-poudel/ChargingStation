@@ -36,7 +36,7 @@ export const formatCurrency = (amount, currency = '₹') => {
 }
 
 /**
- * Format date to readable string
+ * Format date to readable string in Nepal timezone
  * @param {String|Date} date - Date to format
  * @param {Object} options - Intl.DateTimeFormat options
  * @returns {String} Formatted date string
@@ -48,6 +48,7 @@ export const formatDate = (date, options = {}) => {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    timeZone: 'Asia/Kathmandu', // Force Nepal timezone
     ...options
   }
   
@@ -59,7 +60,7 @@ export const formatDate = (date, options = {}) => {
 }
 
 /**
- * Format time to readable string
+ * Format time to readable string in Nepal timezone
  * @param {String|Date} date - Date to format time from
  * @param {Object} options - Intl.DateTimeFormat options
  * @returns {String} Formatted time string
@@ -70,6 +71,7 @@ export const formatTime = (date, options = {}) => {
   const defaultOptions = {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Kathmandu', // Force Nepal timezone
     ...options
   }
   

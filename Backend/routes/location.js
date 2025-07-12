@@ -237,7 +237,7 @@ router.post('/distance', async (req, res) => {
       return res.status(400).json({ 
         success: false, 
         message: 'No route found between the specified coordinates' 
-      });
+    });
     }
 
     const path = response.data.paths[0];
@@ -404,15 +404,15 @@ router.post('/distances-batch', async (req, res) => {
       });
 
       if (response.data.paths && response.data.paths.length > 0) {
-        const path = response.data.paths[0];
+      const path = response.data.paths[0];
 
-        results.push({
-          id: dest.id,
-          distance: path.distance,
-          duration: path.time,
-          distanceKm: (path.distance / 1000).toFixed(1),
-          durationMinutes: Math.round(path.time / 60000),
-          mode: mode,
+      results.push({
+        id: dest.id,
+        distance: path.distance,
+        duration: path.time,
+        distanceKm: (path.distance / 1000).toFixed(1),
+        durationMinutes: Math.round(path.time / 60000),
+        mode: mode,
           destination: {
             latitude: dest.latitude,
             longitude: dest.longitude
@@ -422,7 +422,7 @@ router.post('/distances-batch', async (req, res) => {
         errors.push({
           id: dest.id,
           error: 'No route found'
-        });
+      });
       }
     } catch (err) {
       console.warn(`Failed for destination ${dest.id}:`, err.message);

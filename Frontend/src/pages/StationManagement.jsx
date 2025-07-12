@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { stationManagementService } from '../services/stationManagementAPI';
 import { format, parseISO, isToday, isFuture, differenceInMinutes, differenceInHours } from 'date-fns';
+import { formatNepalDate, formatNepalTime, formatNepalDateTime, getTimeDuration } from '../utils/nepalTimeUtils';
 import toast from 'react-hot-toast';
 import EnhancedBookingModal from '../components/EnhancedBookingModal';
 import PaymentAdjustmentModal from '../components/PaymentAdjustmentModal';
@@ -300,23 +301,47 @@ const StationManagement = () => {
   };
 
   const formatTime = (dateString) => {
-    return format(parseISO(dateString), 'HH:mm');
+    // Use Nepal timezone for consistent time display
+    return formatNepalTime(dateString);
   };
 
   const formatDateTime = (dateString) => {
-    return format(parseISO(dateString), 'MMM dd, HH:mm');
+    // Use Nepal timezone for consistent datetime display with full date
+    return formatNepalDateTime(dateString);
+  };
+
+  const formatBookingDateTime = (dateString) => {
+    // Special formatting for booking displays - includes day info
+    if (!dateString) return 'Time not available';
+    
+    try {
+      const date = new Date(dateString);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Format in Nepal timezone
+      const nepalDate = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}));
+      const nepalToday = new Date(today.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}));
+      const nepalTomorrow = new Date(tomorrow.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}));
+      
+      const timeStr = formatNepalTime(dateString);
+      
+      // Check if it's today, tomorrow, or another date
+      if (nepalDate.toDateString() === nepalToday.toDateString()) {
+        return `Today, ${timeStr}`;
+      } else if (nepalDate.toDateString() === nepalTomorrow.toDateString()) {
+        return `Tomorrow, ${timeStr}`;
+      } else {
+        return `${formatNepalDate(dateString)}, ${timeStr}`;
+      }
+    } catch (error) {
+      return 'Invalid date';
+    }
   };
 
   const formatDuration = (startTime, endTime) => {
-    const start = parseISO(startTime);
-    const end = parseISO(endTime);
-    const hours = differenceInHours(end, start);
-    const minutes = differenceInMinutes(end, start) % 60;
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
+    return getTimeDuration(startTime, endTime);
   };
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-NP', {
@@ -848,7 +873,7 @@ const StationManagement = () => {
                               {booking.customerDetails?.name || 'Customer'}
                             </p>
                             <p className="text-sm text-gray-600">
-                              {formatTime(booking.timeSlot.startTime)} - {formatTime(booking.timeSlot.endTime)} • 
+                              {formatBookingDateTime(booking.timeSlot.startTime)} - {formatTime(booking.timeSlot.endTime)} • 
                               {formatCurrency(getMerchantAmount(booking))}
                             </p>
                             <div className="flex items-center space-x-3 mt-1">
@@ -948,7 +973,7 @@ const StationManagement = () => {
                             {booking.customerDetails?.name || 'Customer'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {formatTime(booking.timeSlot.startTime)} - {formatTime(booking.timeSlot.endTime)} • 
+                            {formatBookingDateTime(booking.timeSlot.startTime)} - {formatTime(booking.timeSlot.endTime)} • 
                             {formatCurrency(getMerchantAmount(booking))}
                           </p>
                           <div className="flex items-center space-x-3 mt-1">
@@ -988,7 +1013,7 @@ const StationManagement = () => {
                   {(!bookings.upcoming || bookings.upcoming.length === 0) && (
                     <div className="text-center py-8">
                       <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">No upcoming bookings for today</p>
+                      <p className="text-gray-500">No upcoming bookings scheduled</p>
                     </div>
                   )}
                 </div>              </motion.div>
@@ -1145,7 +1170,7 @@ const StationManagement = () => {
                               {booking.customerDetails?.name || 'Customer'}
                             </p>
                             <p className="text-xs sm:text-sm text-gray-500">
-                              {formatTime(booking.timeSlot.startTime)} - {formatTime(booking.timeSlot.endTime)}
+                              {formatBookingDateTime(booking.timeSlot.startTime)} - {formatTime(booking.timeSlot.endTime)}
                               <span className="hidden sm:inline"> • Duration: {formatDuration(booking.timeSlot.startTime, booking.timeSlot.endTime)}</span>
                             </p>
                           </div>
@@ -1214,6 +1239,8 @@ const StationManagement = () => {
                                 <h4 className="text-sm font-medium text-gray-700 mb-2">Booking Details</h4>
                                 <div className="space-y-1 text-sm text-gray-600">
                                   <div>Port: {booking.chargingPort?.portNumber || 'N/A'}</div>
+                                  <div>Scheduled Start: {formatBookingDateTime(booking.timeSlot.startTime)}</div>
+                                  <div>Scheduled End: {formatBookingDateTime(booking.timeSlot.endTime)}</div>
                                   <div>Created: {formatDateTime(booking.createdAt)}</div>
                                   {booking.actualUsage?.actualStartTime && (
                                     <div>Started: {formatDateTime(booking.actualUsage.actualStartTime)}</div>

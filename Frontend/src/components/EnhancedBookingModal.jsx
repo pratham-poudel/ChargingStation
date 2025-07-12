@@ -159,16 +159,22 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
       // Check if duration goes beyond end of day
       if (endMinutes > maxEndTime) continue
       
-      // Check if this duration conflicts with any existing booking
+      // Check if this duration conflicts with any existing booking (using 5-minute buffer)
       const hasConflict = existingBookings.some(booking => {
         const bookingStart = timeToMinutes(booking.startTime)
         const bookingEnd = timeToMinutes(booking.endTime)
-        return timeRangesOverlap(startMinutes, endMinutes, bookingStart, bookingEnd)
+        return timeRangesOverlap(startMinutes, endMinutes, bookingStart, bookingEnd, 5)
       })
       
       if (!hasConflict) {
         availableDurations.push(duration)
       }
+    }
+    
+    // Debug logging for duration calculation
+    if (process.env.NODE_ENV === 'development' && availableDurations.length === 0) {
+      const slotTime = minutesToTime(startMinutes)
+      console.log(`⚠️ No durations available for slot ${slotTime}, conflicts:`, existingBookings.map(b => `${b.startTime}-${b.endTime}`))
     }
     
     return availableDurations
@@ -199,7 +205,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     let nextConflictStart = maxEndTime
     
     for (const booking of existingBookings) {
-      const bookingStart = timeToMinutes(booking.startTime) - 10 // 10-minute buffer
+      const bookingStart = timeToMinutes(booking.startTime) - 5 // 5-minute buffer (reduced from 10)
       if (bookingStart > startMinutes && bookingStart < nextConflictStart) {
         nextConflictStart = bookingStart
       }
@@ -207,6 +213,13 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     
     maxDuration = Math.min(nextConflictStart - startMinutes, 480) // Max 8 hours
     const result = Math.max(0, maxDuration)
+    
+    // Debug logging for slot duration calculation
+    if (process.env.NODE_ENV === 'development') {
+      const slotTime = minutesToTime(startMinutes)
+      const nextConflictTime = minutesToTime(nextConflictStart)
+      console.log(`🔍 Slot ${slotTime}: maxDuration=${result}min, nextConflict=${nextConflictTime}, conflicts:`, existingBookings.length)
+    }
     
     return result
   }, [])
