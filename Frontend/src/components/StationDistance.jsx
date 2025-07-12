@@ -32,16 +32,51 @@ export default function StationDistance({
     }
   }, [userLocation, station, hasBackendDistance])
   const calculateDistance = async () => {
-    if (!userLocation || !station?.location?.coordinates) return
+    if (!userLocation || !station?.location?.coordinates) {
+      console.log('StationDistance - Missing required data:', {
+        hasUserLocation: !!userLocation,
+        hasStationCoordinates: !!station?.location?.coordinates,
+        userLocation,
+        stationCoordinates: station?.location?.coordinates
+      });
+      return;
+    }
+
+    // Validate coordinates exist and are numbers
+    const stationLat = station.location.coordinates[1];
+    const stationLng = station.location.coordinates[0];
+    
+    if (typeof stationLat !== 'number' || typeof stationLng !== 'number' ||
+        typeof userLocation.latitude !== 'number' || typeof userLocation.longitude !== 'number') {
+      console.log('StationDistance - Invalid coordinates:', {
+        userLocation,
+        stationCoordinates: station.location.coordinates,
+        stationLat,
+        stationLng,
+        userLatType: typeof userLocation.latitude,
+        userLngType: typeof userLocation.longitude,
+        stationLatType: typeof stationLat,
+        stationLngType: typeof stationLng
+      });
+      return;
+    }
+
+    // Debug logging
+    console.log('StationDistance - Calculating distance:', {
+      userLocation,
+      stationCoordinates: station.location.coordinates,
+      stationLat,
+      stationLng
+    });
 
     setIsLoading(true)
     try {
       const routeDistance = await locationService.calculateRouteDistance(
         userLocation.latitude,
         userLocation.longitude,
-        station.location.coordinates[1], // latitude
-        station.location.coordinates[0], // longitude
-        'driving' // Always use driving mode
+        stationLat, // latitude
+        stationLng, // longitude
+        'car' // Use car mode for backend compatibility
       )
       
       setDistanceInfo(routeDistance)
@@ -54,6 +89,14 @@ export default function StationDistance({
     }
   }
   if (!distanceInfo && (!userLocation || !station?.location?.coordinates)) {
+    // Debug logging for missing data
+    console.log('StationDistance - Missing data for distance calculation:', {
+      hasDistanceInfo: !!distanceInfo,
+      hasUserLocation: !!userLocation,
+      hasStationCoordinates: !!station?.location?.coordinates,
+      userLocation,
+      stationCoordinates: station?.location?.coordinates
+    });
     return null
   }
 

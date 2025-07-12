@@ -98,14 +98,17 @@ class LocationService {
   }
 
   // Calculate distance and duration using backend API
-  async calculateRouteDistance(srcLat, srcLng, dstLat, dstLng, mode = 'driving') {
+  async calculateRouteDistance(srcLat, srcLng, dstLat, dstLng, mode = 'car') {
     try {
+      // Map frontend mode to backend mode
+      const backendMode = this.mapModeToBackend(mode);
+      
       const response = await locationAPI.calculateDistance({
         srcLat,
         srcLng,
         dstLat,
         dstLng,
-        mode
+        mode: backendMode
       });
       
       if (response.data.success) {
@@ -120,13 +123,16 @@ class LocationService {
   }
 
   // Calculate distances to multiple destinations
-  async calculateDistancesBatch(srcLat, srcLng, destinations, mode = 'driving') {
+  async calculateDistancesBatch(srcLat, srcLng, destinations, mode = 'car') {
     try {
+      // Map frontend mode to backend mode
+      const backendMode = this.mapModeToBackend(mode);
+      
       const response = await locationAPI.calculateDistancesBatch({
         srcLat,
         srcLng,
         destinations,
-        mode
+        mode: backendMode
       });
       
       if (response.data.success) {
@@ -137,6 +143,18 @@ class LocationService {
       console.error('Batch distance calculation error:', error);
       return [];
     }
+  }
+
+  // Map frontend transport modes to backend modes
+  mapModeToBackend(frontendMode) {
+    const modeMap = {
+      'driving': 'car',
+      'walking': 'foot',
+      'cycling': 'bike',
+      'motorcycle': 'motorcycle',
+      'truck': 'truck'
+    };
+    return modeMap[frontendMode] || 'car';
   }
 
   // Calculate straight-line distance (Haversine formula) as fallback

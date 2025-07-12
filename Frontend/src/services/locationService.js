@@ -97,14 +97,41 @@ class LocationService {
     }
   }
   // Calculate distance and duration using backend API
-  async calculateRouteDistance(srcLat, srcLng, dstLat, dstLng, mode = 'driving') {
+  async calculateRouteDistance(srcLat, srcLng, dstLat, dstLng, mode = 'car') {
     try {
+      // Map frontend mode to backend mode
+      const backendMode = this.mapModeToBackend(mode);
+      
+      // Validate coordinates before making API call
+      if (typeof srcLat !== 'number' || typeof srcLng !== 'number' || 
+          typeof dstLat !== 'number' || typeof dstLng !== 'number') {
+        throw new Error('All coordinates must be valid numbers');
+      }
+      
+      // Check for valid coordinate ranges
+      if (srcLat < -90 || srcLat > 90 || dstLat < -90 || dstLat > 90) {
+        throw new Error('Latitude must be between -90 and 90');
+      }
+      
+      if (srcLng < -180 || srcLng > 180 || dstLng < -180 || dstLng > 180) {
+        throw new Error('Longitude must be between -180 and 180');
+      }
+      
+      // Debug logging
+      console.log('LocationService - calculateRouteDistance called with:', {
+        srcLat, srcLng, dstLat, dstLng, mode, backendMode,
+        srcLatType: typeof srcLat,
+        srcLngType: typeof srcLng,
+        dstLatType: typeof dstLat,
+        dstLngType: typeof dstLng
+      });
+      
       const response = await locationAPI.calculateDistance({
         srcLat,
         srcLng,
         dstLat,
         dstLng,
-        mode
+        mode: backendMode
       });
       
       if (response.data.success) {
@@ -118,13 +145,16 @@ class LocationService {
   }
 
   // Calculate distances to multiple destinations
-  async calculateDistancesBatch(srcLat, srcLng, destinations, mode = 'driving') {
+  async calculateDistancesBatch(srcLat, srcLng, destinations, mode = 'car') {
     try {
+      // Map frontend mode to backend mode
+      const backendMode = this.mapModeToBackend(mode);
+      
       const response = await locationAPI.calculateDistancesBatch({
         srcLat,
         srcLng,
         destinations,
-        mode
+        mode: backendMode
       });
       
       if (response.data.success) {
@@ -135,6 +165,18 @@ class LocationService {
       console.error('Batch distance calculation error:', error);
       return [];
     }
+  }
+
+  // Map frontend transport modes to backend modes
+  mapModeToBackend(frontendMode) {
+    const modeMap = {
+      'driving': 'car',
+      'walking': 'foot',
+      'cycling': 'bike',
+      'motorcycle': 'motorcycle',
+      'truck': 'truck'
+    };
+    return modeMap[frontendMode] || 'car';
   }  // Format distance for display
   formatDistance(distanceKm) {
     const distance = parseFloat(distanceKm);

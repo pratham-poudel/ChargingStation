@@ -641,6 +641,30 @@ router.get('/realtime-availability/:stationId', async (req, res) => {
         message: 'Date parameter is required'
       });
     }
+    
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Use YYYY-MM-DD format'
+      });
+    }
+    
+    // Validate stationId format
+    if (!mongoose.Types.ObjectId.isValid(stationId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid station ID format'
+      });
+    }
+    
+    // Validate portId format if provided
+    if (portId && !mongoose.Types.ObjectId.isValid(portId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid port ID format'
+      });
+    }
 
     const station = await ChargingStation.findById(stationId);
     if (!station) {
@@ -723,10 +747,67 @@ router.get('/realtime-availability/:stationId', async (req, res) => {
         console.log(`🎯 Exact buffer time: ${exactBufferTime}`);
       }
       
+      // Get operating hours for the selected date
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayOfWeek = dayNames[new Date(date).getDay()];
+      const operatingHours = station.operatingHours?.[dayOfWeek];
+      
+      // Calculate operating hours in minutes
+      let stationOpenMinutes = 0;
+      let stationCloseMinutes = 24 * 60; // Default to end of day
+      
+      if (operatingHours && !operatingHours.is24Hours && operatingHours.open && operatingHours.close) {
+        const [openHour, openMin] = operatingHours.open.split(':').map(Number);
+        const [closeHour, closeMin] = operatingHours.close.split(':').map(Number);
+        
+        stationOpenMinutes = openHour * 60 + openMin;
+        stationCloseMinutes = closeHour * 60 + closeMin;
+        
+        // Handle next-day closing (e.g., open 22:00, close 06:00)
+        if (stationCloseMinutes <= stationOpenMinutes) {
+          stationCloseMinutes += 24 * 60; // Add 24 hours
+        }
+      }
+      
+      console.log(`🕒 Operating hours for ${dayOfWeek}: ${operatingHours?.is24Hours ? '24/7' : `${operatingHours?.open || '00:00'} - ${operatingHours?.close || '23:59'}`}`);
+      console.log(`📊 Station open: ${Math.floor(stationOpenMinutes / 60)}:${(stationOpenMinutes % 60).toString().padStart(2, '0')}, close: ${Math.floor(stationCloseMinutes / 60)}:${(stationCloseMinutes % 60).toString().padStart(2, '0')}`);
+      
+      // Calculate actual start time considering operating hours and current time
+      let actualStartHour = Math.floor(stationOpenMinutes / 60);
+      let actualStartMinute = stationOpenMinutes % 60;
+      
+      if (isToday) {
+        // For today: start from the later of (current time + buffer) or station opening
+        const nextAvailableTime = new Date(currentTime.getTime() + 5 * 60 * 1000); // 5-minute buffer
+        const nextHour = nextAvailableTime.getHours();
+        const nextMinute = Math.ceil(nextAvailableTime.getMinutes() / 5) * 5;
+        
+        if (nextHour * 60 + nextMinute > stationOpenMinutes) {
+          actualStartHour = nextHour;
+          actualStartMinute = nextMinute;
+        }
+      }
+      
+      // Round start minute to 5-minute intervals
+      actualStartMinute = Math.ceil(actualStartMinute / 5) * 5;
+      if (actualStartMinute >= 60) {
+        actualStartHour += 1;
+        actualStartMinute = 0;
+      }
+      
+      console.log(`🚀 Generating slots from ${actualStartHour.toString().padStart(2, '0')}:${actualStartMinute.toString().padStart(2, '0')} to ${Math.floor(stationCloseMinutes / 60)}:${(stationCloseMinutes % 60).toString().padStart(2, '0')}`);
+      
       for (let hour = 0; hour < 24; hour++) {
         for (let minute = 0; minute < 60; minute += 5) {
+          const slotMinutes = hour * 60 + minute;
+          
+          // Skip slots outside operating hours
+          if (slotMinutes < stationOpenMinutes || slotMinutes >= stationCloseMinutes) {
+            continue;
+          }
+          
           // Skip slots before the calculated start time for today
-          if (isToday && (hour < startHour || (hour === startHour && minute < startMinute))) {
+          if (isToday && (hour < actualStartHour || (hour === actualStartHour && minute < actualStartMinute))) {
             continue;
           }
           
@@ -750,17 +831,6 @@ router.get('/realtime-availability/:stationId', async (req, res) => {
           // Log the first slot being added
           if (slots.length === 1) {
             console.log(`✅ First slot added: ${slotTime} (available: ${!hasConflict})`);
-            if (isToday && bufferTime) {
-              const expectedFirstSlot = new Date(bufferTime);
-              const expectedHour = expectedFirstSlot.getHours();
-              const expectedMinute = Math.ceil(expectedFirstSlot.getMinutes() / 5) * 5;
-              const expectedSlot = `${expectedHour.toString().padStart(2, '0')}:${expectedMinute.toString().padStart(2, '0')}`;
-              console.log(`🎯 Expected first slot should be: ${expectedSlot}`);
-              
-              // Also show the exact buffer time
-              const exactBufferTime = `${bufferTime.getHours().toString().padStart(2, '0')}:${bufferTime.getMinutes().toString().padStart(2, '0')}`;
-              console.log(`⏰ Exact buffer time: ${exactBufferTime}`);
-            }
           }
         }
       }
@@ -785,7 +855,7 @@ router.get('/realtime-availability/:stationId', async (req, res) => {
         date,
         totalExistingBookings: existingBookings.length,
         ports: portsWithAvailability,
-        generatedAt: nepalTime.toISOString(),
+        generatedAt: getNepalTime().toISOString(),
         realTimeData: true
       }
     });

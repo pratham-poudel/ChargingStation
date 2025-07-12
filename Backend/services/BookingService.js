@@ -6,6 +6,13 @@ const smsService = require('./smsService')
 const emailService = require('./emailService')
 const bookingScheduler = require('./RedisBookingScheduler')
 
+// Helper function to get Nepal time consistently
+const getNepalTime = () => {
+  const now = new Date()
+  // Convert to Nepal timezone (UTC+5:45)
+  return new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}))
+}
+
 class BookingService {// Generate time slots for a given date respecting station operating hours
   static generateTimeSlots(date, existingBookings = [], portId = null, operatingHours = null) {
     const slots = []
@@ -157,6 +164,21 @@ class BookingService {// Generate time slots for a given date respecting station
         if (!bookingData[field]) {
           throw new Error(`Missing required field: ${field}`)
         }
+      }
+      
+      // Validate duration bounds
+      if (bookingData.duration < 30 || bookingData.duration > 480) {
+        throw new Error('Booking duration must be between 30 minutes and 8 hours')
+      }
+      
+      // Validate start time format
+      if (!/^\d{2}:\d{2}$/.test(bookingData.startTime)) {
+        throw new Error('Invalid start time format. Use HH:MM format')
+      }
+      
+      // Validate date format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(bookingData.date)) {
+        throw new Error('Invalid date format. Use YYYY-MM-DD format')
       }      // Find or create user
       let user = null
       const { customerDetails } = bookingData
@@ -202,6 +224,47 @@ class BookingService {// Generate time slots for a given date respecting station
       if (!port) {
         throw new Error('Charging port not found')
       }
+      
+      // Check if port is operational
+      if (port.isOperational === false) {
+        throw new Error('This charging port is currently out of service')
+      }
+      
+      // Check station operating hours
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const dayOfWeek = dayNames[new Date(bookingData.date).getDay()]
+      const operatingHours = station.operatingHours?.[dayOfWeek]
+      
+      if (operatingHours && !operatingHours.is24Hours) {
+        if (!operatingHours.open || !operatingHours.close) {
+          throw new Error(`Station is closed on ${dayOfWeek}s`)
+        }
+        
+        const [openHour, openMin] = operatingHours.open.split(':').map(Number)
+        const [closeHour, closeMin] = operatingHours.close.split(':').map(Number)
+        const [startHour, startMin] = bookingData.startTime.split(':').map(Number)
+        
+        const openMinutes = openHour * 60 + openMin
+        const closeMinutes = closeHour * 60 + closeMin
+        const startMinutes = startHour * 60 + startMin
+        
+        // Handle next-day closing
+        let adjustedCloseMinutes = closeMinutes
+        if (closeMinutes <= openMinutes) {
+          adjustedCloseMinutes += 24 * 60
+        }
+        
+        // Check if start time is within operating hours
+        if (startMinutes < openMinutes || startMinutes >= adjustedCloseMinutes) {
+          throw new Error(`Booking start time must be within operating hours: ${operatingHours.open} - ${operatingHours.close}`)
+        }
+        
+        // Check if booking duration extends beyond operating hours
+        const endMinutes = startMinutes + bookingData.duration
+        if (endMinutes > adjustedCloseMinutes) {
+          throw new Error(`Booking duration extends beyond operating hours. Maximum duration from ${bookingData.startTime} is ${Math.floor((adjustedCloseMinutes - startMinutes) / 60)}h ${(adjustedCloseMinutes - startMinutes) % 60}m`)
+        }
+      }
 
       // Calculate start and end times
       const bookingDate = new Date(bookingData.date)
@@ -210,21 +273,40 @@ class BookingService {// Generate time slots for a given date respecting station
       startTime.setHours(hours, minutes, 0, 0)
       
       const endTime = new Date(startTime)
-      endTime.setMinutes(endTime.getMinutes() + bookingData.duration)      // Check for conflicts using correct schema fields
+      endTime.setMinutes(endTime.getMinutes() + bookingData.duration)      // Check for conflicts using correct schema fields with 5-minute buffer
+      const bufferMinutes = 5
+      const bufferedStartTime = new Date(startTime.getTime() - bufferMinutes * 60 * 1000)
+      const bufferedEndTime = new Date(endTime.getTime() + bufferMinutes * 60 * 1000)
+      
       const conflictingBooking = await Booking.findOne({
         chargingStation: bookingData.stationId,
         'chargingPort.portId': bookingData.portId,
         status: { $in: ['confirmed', 'active'] },
         $or: [
           {
-            'timeSlot.startTime': { $lt: endTime },
-            'timeSlot.endTime': { $gt: startTime }
+            'timeSlot.startTime': { $lt: bufferedEndTime },
+            'timeSlot.endTime': { $gt: bufferedStartTime }
           }
         ]
       })
 
       if (conflictingBooking) {
-        throw new Error('Time slot is no longer available. Please select a different time.')
+        const conflictStart = new Date(conflictingBooking.timeSlot.startTime).toTimeString().substring(0, 5)
+        const conflictEnd = new Date(conflictingBooking.timeSlot.endTime).toTimeString().substring(0, 5)
+        throw new Error(`Time slot conflicts with existing booking (${conflictStart} - ${conflictEnd}). Please select a different time.`)
+      }
+      
+      // Additional check: Verify the slot is still available in real-time
+      const nepalTime = getNepalTime()
+      const isToday = bookingData.date === nepalTime.toISOString().split('T')[0]
+      
+      if (isToday) {
+        const currentMinutes = nepalTime.getHours() * 60 + nepalTime.getMinutes()
+        const startMinutes = parseInt(bookingData.startTime.split(':')[0]) * 60 + parseInt(bookingData.startTime.split(':')[1])
+        
+        if (startMinutes <= currentMinutes + bufferMinutes) {
+          throw new Error('This time slot has already passed. Please select a future time.')
+        }
       }      // Calculate pricing - Simple model: Energy consumption + Platform fee
       const durationHours = bookingData.duration / 60
       const estimatedEnergyConsumption = port.powerOutput * durationHours
@@ -280,7 +362,49 @@ class BookingService {// Generate time slots for a given date respecting station
         }
       })
 
-      await newBooking.save()
+      // Use transaction to ensure atomic booking creation
+      const session = await mongoose.startSession()
+      session.startTransaction()
+      
+      try {
+        // Double-check for conflicts within transaction
+        const finalConflictCheck = await Booking.findOne({
+          chargingStation: bookingData.stationId,
+          'chargingPort.portId': bookingData.portId,
+          status: { $in: ['confirmed', 'active'] },
+          $or: [
+            {
+              'timeSlot.startTime': { $lt: bufferedEndTime },
+              'timeSlot.endTime': { $gt: bufferedStartTime }
+            }
+          ]
+        }).session(session)
+
+        if (finalConflictCheck) {
+          const conflictStart = new Date(finalConflictCheck.timeSlot.startTime).toTimeString().substring(0, 5)
+          const conflictEnd = new Date(finalConflictCheck.timeSlot.endTime).toTimeString().substring(0, 5)
+          throw new Error(`Time slot was just booked by another user (${conflictStart} - ${conflictEnd}). Please select a different time.`)
+        }
+        
+        // Save booking within transaction
+        await newBooking.save({ session })
+        
+        // Update port status to occupied
+        const portIndex = station.chargingPorts.findIndex(p => p._id.toString() === bookingData.portId.toString())
+        if (portIndex !== -1) {
+          station.chargingPorts[portIndex].currentStatus = 'occupied'
+          await station.save({ session })
+        }
+        
+        await session.commitTransaction()
+        console.log(`✅ Booking ${newBooking.bookingId} created successfully with transaction`)
+        
+      } catch (error) {
+        await session.abortTransaction()
+        throw error
+      } finally {
+        session.endSession()
+      }
 
       // Schedule slot monitoring notifications
       try {

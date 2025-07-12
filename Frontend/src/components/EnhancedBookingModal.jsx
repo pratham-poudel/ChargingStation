@@ -49,6 +49,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
   const [lastRefreshed, setLastRefreshed] = useState(null)
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(null)
+  const [slotLoadError, setSlotLoadError] = useState(null) // Track slot loading errors
 
   // Turnstile hook for payment verification
   const paymentTurnstile = useTurnstile({
@@ -130,18 +131,8 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     return start1 < bufferedEnd2 && end1 > bufferedStart2
   }
 
-  // Performance-optimized slot calculation cache
-  const slotCalculationCache = useMemo(() => new Map(), [])
-
-  // Memoized calculation of available durations for a specific start time
+  // Real-time slot calculation without caching to ensure fresh data
   const calculateAvailableDurations = useCallback((startMinutes, existingBookings, selectedDate) => {
-    // Create cache key for memoization
-    const cacheKey = `${startMinutes}-${selectedDate}-${JSON.stringify(existingBookings.map(b => `${b.startTime}-${b.endTime}`))}`
-    
-    if (slotCalculationCache.has(cacheKey)) {
-      return slotCalculationCache.get(cacheKey)
-    }
-
     // Get operating hours for the selected date
     const operatingHours = getOperatingHoursForDate(selectedDate)
     
@@ -180,27 +171,11 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
       }
     }
     
-    // Cache the result
-    slotCalculationCache.set(cacheKey, availableDurations)
-    
-    // Clear cache if it gets too large (prevent memory leaks)
-    if (slotCalculationCache.size > 1000) {
-      const firstKey = slotCalculationCache.keys().next().value
-      slotCalculationCache.delete(firstKey)
-    }
-    
     return availableDurations
-  }, [slotCalculationCache])
+  }, [])
 
-  // Memoized calculation of maximum continuous duration available from a start time
+  // Real-time calculation of maximum continuous duration available from a start time
   const getMaxContinuousDuration = useCallback((startMinutes, existingBookings, selectedDate) => {
-    // Create cache key for memoization
-    const cacheKey = `max-${startMinutes}-${selectedDate}-${JSON.stringify(existingBookings.map(b => `${b.startTime}-${b.endTime}`))}`
-    
-    if (slotCalculationCache.has(cacheKey)) {
-      return slotCalculationCache.get(cacheKey)
-    }
-
     // Get operating hours for the selected date
     const operatingHours = getOperatingHoursForDate(selectedDate)
     
@@ -233,17 +208,8 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     maxDuration = Math.min(nextConflictStart - startMinutes, 480) // Max 8 hours
     const result = Math.max(0, maxDuration)
     
-    // Cache the result
-    slotCalculationCache.set(cacheKey, result)
-    
-    // Clear cache if it gets too large (prevent memory leaks)
-    if (slotCalculationCache.size > 1000) {
-      const firstKey = slotCalculationCache.keys().next().value
-      slotCalculationCache.delete(firstKey)
-    }
-    
     return result
-  }, [slotCalculationCache])
+  }, [])
 
   // Helper function to get day of week from date string
   const getDayOfWeek = (dateString) => {
@@ -270,114 +236,8 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
     return dayOperatingHours
   }
 
-  // Optimized dynamic time slots generation with batch processing and operating hours consideration
-  const generateDynamicTimeSlots = useCallback((existingBookings = [], selectedDate) => {
-    const performanceStart = performance.now()
-    
-    const isToday = selectedDate === getNepalTime().toISOString().split('T')[0]
-    const currentTimeMinutes = getCurrentTimeMinutes()
-    
-    // Get operating hours for the selected date
-    const operatingHours = getOperatingHoursForDate(selectedDate)
-    
-    // Calculate station operating hours in minutes
-    let stationOpenMinutes = 0
-    let stationCloseMinutes = 24 * 60 // Default to end of day
-    
-    if (!operatingHours.is24Hours && operatingHours.open && operatingHours.close) {
-      stationOpenMinutes = timeToMinutes(operatingHours.open)
-      stationCloseMinutes = timeToMinutes(operatingHours.close)
-      
-      // Handle next-day closing (e.g., open 22:00, close 06:00)
-      if (stationCloseMinutes <= stationOpenMinutes) {
-        stationCloseMinutes += 24 * 60 // Add 24 hours
-      }
-    }
-    
-    // Calculate actual start time considering operating hours and current time
-    let startTimeMinutes
-    if (isToday) {
-      // For today: start from the later of (current time + buffer) or station opening
-      const nextAvailableTime = getNextAvailableTime(currentTimeMinutes)
-      startTimeMinutes = Math.max(nextAvailableTime, stationOpenMinutes)
-    } else {
-      // For future dates: start from station opening time
-      startTimeMinutes = stationOpenMinutes
-    }
-    
-    // End time is the station closing time (but don't exceed end of day for calculation purposes)
-    const endTimeMinutes = Math.min(stationCloseMinutes, 24 * 60)
-    
-    // Performance optimization: Pre-process bookings for faster lookups
-    const bookingIntervals = existingBookings.map(booking => ({
-      start: timeToMinutes(booking.startTime),
-      end: timeToMinutes(booking.endTime),
-      booking
-    })).sort((a, b) => a.start - b.start) // Sort for faster conflict detection
-    
-    // If station is closed for the entire day, return empty slots
-    if (startTimeMinutes >= endTimeMinutes) {
-      console.log(`🚫 Station is closed on ${selectedDate} (${getDayOfWeek(selectedDate)})`)
-      return []
-    }
-    
-    // Generate 5-minute interval slots with batch processing
-    const slots = []
-    const slotIntervalMinutes = 5
-    const totalSlots = Math.floor((endTimeMinutes - startTimeMinutes) / slotIntervalMinutes)
-    
-    // Batch process slots in chunks of 50 for better performance with large datasets
-    const batchSize = 50
-    const batches = Math.ceil(totalSlots / batchSize)
-    
-          for (let batchIndex = 0; batchIndex < batches; batchIndex++) {
-        const batchStart = batchIndex * batchSize
-        const batchEnd = Math.min(batchStart + batchSize, totalSlots)
-        
-        for (let slotIndex = batchStart; slotIndex < batchEnd; slotIndex++) {
-          const minutes = startTimeMinutes + (slotIndex * slotIntervalMinutes)
-          
-          // Skip slots that exceed station operating hours
-          if (minutes >= endTimeMinutes) break
-          
-          const slotStartTime = minutesToTime(minutes % (24 * 60)) // Handle next-day scenarios
-          const slotEndTime = minutesToTime(Math.min(minutes + slotIntervalMinutes, endTimeMinutes) % (24 * 60))
-        
-        // Optimized conflict detection using pre-sorted intervals
-        let hasConflict = false
-        for (const interval of bookingIntervals) {
-          if (interval.start >= minutes + slotIntervalMinutes) break // No more conflicts possible
-          if (timeRangesOverlap(minutes, minutes + slotIntervalMinutes, interval.start, interval.end)) {
-            hasConflict = true
-            break
-          }
-        }
-        
-        // Calculate available durations for this slot (cached)
-        const availableDurations = calculateAvailableDurations(minutes, existingBookings, selectedDate)
-        
-        slots.push({
-          id: `${Math.floor(minutes / 60)}-${minutes % 60}`,
-          startTime: slotStartTime,
-          endTime: slotEndTime,
-          display: slotStartTime,
-          minutes: minutes,
-          isAvailable: !hasConflict && availableDurations.length > 0,
-          hasConflict: hasConflict,
-          availableDurations: availableDurations,
-          maxContinuousDuration: getMaxContinuousDuration(minutes, existingBookings, selectedDate),
-          pricing: [{ duration: 120, totalPrice: 300 }] // Fallback pricing
-        })
-      }
-    }
-    
-    const performanceEnd = performance.now()
-    console.log(`⚡ Generated ${slots.length} dynamic slots in ${Math.round(performanceEnd - performanceStart)}ms with ${existingBookings.length} existing bookings`)
-    console.log(`🕒 Operating hours for ${getDayOfWeek(selectedDate)}: ${operatingHours.is24Hours ? '24/7' : `${operatingHours.open} - ${operatingHours.close}`}`)
-    console.log(`📊 Slot range: ${minutesToTime(startTimeMinutes)} to ${minutesToTime(endTimeMinutes % (24 * 60))}`)
-    
-    return slots
-  }, [calculateAvailableDurations, getMaxContinuousDuration, station?.operatingHours])
+  // Note: Removed generateDynamicTimeSlots function to ensure only real-time data is used
+  // This prevents any caching or fallback to static data that could be outdated
 
   // Load port availability
   const loadPortAvailability = async () => {
@@ -465,6 +325,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
       setSelectedDuration(120)
       setTimeSlots([])
       setPortAvailability([])
+      setSlotLoadError(null) // Clear any previous errors
       
       // Initialize booking form - auto-fill if user is logged in
       const initialFormData = {
@@ -511,6 +372,8 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
       // We need to fetch existing bookings for the selected date and port
       const fetchRealTimeSlots = async () => {
         setLoadingSlots(true)
+        setSlotLoadError(null) // Clear previous errors
+        
         try {
           console.log(`🔄 Fetching real-time slots for station ${station._id}, port ${selectedPort._id}, date ${selectedDate}`)
           
@@ -590,83 +453,9 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
         } catch (error) {
           console.error('Error loading real-time slots:', error)
           
-          // Enhanced fallback: try to get existing bookings data
-          try {
-            const bookingsResponse = await bookingsAPI.getBookingsByDateAndPort(station._id, selectedDate, selectedPort._id)
-            if (bookingsResponse.success) {
-              const existingBookings = bookingsResponse.data.bookings
-              const dynamicSlots = generateDynamicTimeSlots(existingBookings, selectedDate)
-              console.log(`📦 Using existing bookings fallback: ${existingBookings.length} bookings found`)
-              setTimeSlots(dynamicSlots)
-            } else {
-              throw new Error('Bookings fallback also failed')
-            }
-          } catch (fallbackError) {
-            console.error('Fallback booking fetch also failed:', fallbackError)
-            
-            // Final fallback to static slots with operating hours consideration
-            const staticSlots = []
-            const isToday = selectedDate === getNepalTime().toISOString().split('T')[0]
-            const currentTime = getNepalTime()
-            
-            // Get operating hours for filtering
-            const operatingHours = getOperatingHoursForDate(selectedDate)
-            let stationOpenMinutes = 0
-            let stationCloseMinutes = 24 * 60
-            
-            if (!operatingHours.is24Hours && operatingHours.open && operatingHours.close) {
-              stationOpenMinutes = timeToMinutes(operatingHours.open)
-              stationCloseMinutes = timeToMinutes(operatingHours.close)
-              
-              // Handle next-day closing
-              if (stationCloseMinutes <= stationOpenMinutes) {
-                stationCloseMinutes += 24 * 60
-              }
-            }
-            
-            // Calculate start and end hours based on operating hours
-            const startHour = Math.floor(stationOpenMinutes / 60)
-            const endHour = Math.min(Math.ceil(stationCloseMinutes / 60), 24)
-            
-            for (let hour = startHour; hour < endHour; hour++) {
-              for (let minute = 0; minute < 60; minute += 5) { // 5-minute intervals
-                const slotMinutes = hour * 60 + minute
-                
-                // Skip slots outside operating hours
-                if (!operatingHours.is24Hours) {
-                  if (slotMinutes < stationOpenMinutes || slotMinutes >= stationCloseMinutes) {
-                    continue
-                  }
-                }
-                
-                const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-                
-                // For today, only show slots from current time onwards with buffer
-                let isAvailable = true
-                if (isToday) {
-                  const slotDateTime = new Date(currentTime)
-                  slotDateTime.setHours(hour, minute, 0, 0)
-                  const bufferTime = new Date(currentTime.getTime() + 5 * 60 * 1000) // 5-minute buffer
-                  isAvailable = slotDateTime >= bufferTime
-                }
-                
-                staticSlots.push({
-                  id: `static-${hour}-${minute}`,
-                  startTime,
-                  display: startTime,
-                  minutes: slotMinutes,
-                  isAvailable,
-                  hasConflict: false,
-                  availableDurations: [30, 60, 90, 120, 180, 240, 300, 360, 480],
-                  maxContinuousDuration: 480,
-                  pricing: [{ duration: 120, totalPrice: 300 }]
-                })
-              }
-            }
-            
-            console.log(`🔄 Using static fallback: ${staticSlots.filter(s => s.isAvailable).length} available slots (${operatingHours.is24Hours ? '24/7' : `${operatingHours.open}-${operatingHours.close}`})`)
-            setTimeSlots(staticSlots)
-          }
+          // No fallback to static data - show error if real-time data fails
+          setSlotLoadError(`Failed to load real-time slot availability. Please try again or contact support. Error: ${error.message}`)
+          setTimeSlots([]) // Clear any existing slots
         } finally {
           setLoadingSlots(false)
         }
@@ -754,6 +543,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                 if (hasChanges) {
                   console.log(`✅ Auto-refresh: Updated ${realTimeSlots.length} slots`)
                   setLastRefreshed(new Date())
+                  setSlotLoadError(null) // Clear any previous errors on successful refresh
                   return realTimeSlots
                 } else {
                   console.log('📌 Auto-refresh: No changes detected')
@@ -763,7 +553,8 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
             }
           } catch (error) {
             console.error('Auto-refresh failed:', error)
-            // Optionally disable auto-refresh if it fails multiple times
+            // Don't show error for auto-refresh failures, just log them
+            // This prevents the UI from showing errors for background refresh attempts
           }
         }
         
@@ -1047,13 +838,20 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                   {!loadingPorts && (portAvailability.length > 0 ? portAvailability : station?.chargingPorts || []).length > 0 && (
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-blue-800 font-medium">Port Status:</span>
+                        <span className="text-blue-800 font-medium">Port Status (Real-time):</span>
                         <div className="flex space-x-4">
                           {(() => {
                             const ports = portAvailability.length > 0 ? portAvailability : station?.chargingPorts || []
+                            const today = getNepalTime().toISOString().split('T')[0]
+                            
                             const operational = ports.filter(p => p.isOperational !== false).length
-                            const available = ports.filter(p => p.isOperational !== false && p.currentStatus === 'available' && !p.isCurrentlyBooked).length
+                            const available = ports.filter(p => {
+                              const isOperational = p.isOperational !== false
+                              const slotCount = slotCounts[today]?.[p._id]
+                              return isOperational && slotCount !== undefined && slotCount > 0
+                            }).length
                             const underMaintenance = ports.filter(p => p.isOperational === false).length
+                            const noSlots = operational - available
                             
                             return (
                               <>
@@ -1063,6 +861,11 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                                 <span className="text-blue-700">
                                   <span className="font-medium">{operational}</span> Operational
                                 </span>
+                                {noSlots > 0 && (
+                                  <span className="text-red-700">
+                                    <span className="font-medium">{noSlots}</span> No Slots
+                                  </span>
+                                )}
                                 {underMaintenance > 0 && (
                                   <span className="text-gray-700">
                                     <span className="font-medium">{underMaintenance}</span> Maintenance
@@ -1095,22 +898,27 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">                      {(portAvailability.length > 0 ? portAvailability : station?.chargingPorts || []).map((port, index) => {
                         // Check all conditions for port availability
                         const isOperational = port.isOperational !== false // Default to true if undefined
-                        const isStatusAvailable = port.currentStatus === 'available'
-                        const isNotBooked = !port.isCurrentlyBooked
-                        const isAvailable = isOperational && isStatusAvailable && isNotBooked
                         
-                        // Determine status message
+                        // Get real-time slot availability for this port
+                        const todaySlotCount = slotCounts[getNepalTime().toISOString().split('T')[0]]?.[port._id]
+                        const hasAvailableSlots = todaySlotCount !== undefined && todaySlotCount > 0
+                        
+                        // Port is available if operational AND has available slots
+                        const isAvailable = isOperational && hasAvailableSlots
+                        
+                        // Determine status message based on real-time data
                         const getStatusMessage = () => {
                           if (!isOperational) return 'Out of Service'
-                          if (!isStatusAvailable) return 'Occupied'
-                          if (port.isCurrentlyBooked) return 'Currently Booked'
-                          return 'Available 24/7'
+                          if (loadingSlotCounts) return 'Checking Availability...'
+                          if (!hasAvailableSlots) return 'No Slots Available'
+                          return `${todaySlotCount} Slots Available`
                         }
                         
                         // Determine status color
                         const getStatusColor = () => {
                           if (!isOperational) return 'bg-gray-100 text-gray-800'
-                          if (!isAvailable) return 'bg-red-100 text-red-800'
+                          if (loadingSlotCounts) return 'bg-blue-100 text-blue-800'
+                          if (!hasAvailableSlots) return 'bg-red-100 text-red-800'
                           return 'bg-green-100 text-green-800'
                         }
                         
@@ -1152,14 +960,15 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                                 </div>
                               )}
                               
-                              {port.currentBookings > 0 && isOperational && (
+                              {/* Real-time availability indicator */}
+                              {isOperational && !loadingSlotCounts && (
                                 <div className="text-xs text-blue-600 mt-1">
-                                  {port.currentBookings} booking(s) today
+                                  {hasAvailableSlots ? '✅ Slots available' : '❌ No slots available'}
                                 </div>
                               )}                                {/* Available Slot Counts for Next 3 Days */}
                               {isOperational ? (
                                 <div className="mt-2 pt-2 border-t border-gray-200">
-                                  <div className="text-xs font-medium text-gray-700 mb-1">Available Slots:</div>
+                                  <div className="text-xs font-medium text-gray-700 mb-1">Real-time Slots:</div>
                                   <div className="space-y-1">
                                     {availableDays.slice(0, 3).map((day) => {
                                       const slotCount = slotCounts[day.date]?.[port._id]
@@ -1169,7 +978,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                                       const displayText = loadingSlotCounts 
                                         ? 'Loading...' 
                                         : slotCount !== undefined
-                                          ? slotCount > 0 ? `${slotCount} slots` : 'Full'
+                                          ? slotCount > 0 ? `${slotCount} slots` : 'No slots'
                                           : 'Loading...'
                                       
                                       const textColor = loadingSlotCounts
@@ -1386,7 +1195,29 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                         </div>
                       )}
                       
-                      {!loadingSlots && timeSlots.length === 0 && (
+                      {/* Show error message if slot loading failed */}
+                      {slotLoadError && (
+                        <div className="text-center py-8">
+                          <AlertCircle className="h-12 w-12 mx-auto mb-2 text-red-500" />
+                          <p className="font-medium text-red-600 mb-2">Failed to Load Slots</p>
+                          <p className="text-sm text-gray-600 mb-4">{slotLoadError}</p>
+                          <button
+                            onClick={() => {
+                              setSlotLoadError(null)
+                              // Trigger a re-fetch by changing the dependency
+                              const currentDate = selectedDate
+                              setSelectedDate('')
+                              setTimeout(() => setSelectedDate(currentDate), 100)
+                            }}
+                            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+                          >
+                            Retry Loading Slots
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Show no slots message only if no error and no slots */}
+                      {!loadingSlots && !slotLoadError && timeSlots.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                           {(() => {
@@ -1414,7 +1245,7 @@ const EnhancedBookingModal = ({ station, isOpen, onClose }) => {
                       )}
                       
                       {/* Booking conflicts summary */}
-                      {!loadingSlots && timeSlots.length > 0 && (
+                      {!loadingSlots && !slotLoadError && timeSlots.length > 0 && (
                         <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                           <div className="text-sm text-gray-700">
                             <strong>Availability Summary:</strong> {timeSlots.filter(s => s.isAvailable).length} available slots out of {timeSlots.length} total slots.

@@ -322,7 +322,7 @@ export default function Home() {
             <div className="absolute bottom-20 right-20 w-1.5 h-1.5 bg-yellow-400 rounded-full opacity-60 animate-pulse delay-700"></div>
           </div>
 
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div className="max-w-5xl mx-auto">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -335,13 +335,13 @@ export default function Home() {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.8, delay: 0.2 }}
-                  className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/20 rounded-full px-6 py-3 mb-8"
+                  className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/20 rounded-full px-4 sm:px-6 py-2 sm:py-3 mb-6 sm:mb-8"
                 >
-                  <Award className="w-5 h-5 text-yellow-400" />
-                  <span className="text-sm font-semibold tracking-wide text-blue-100">
+                  <Award className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+                  <span className="text-xs sm:text-sm font-semibold tracking-wide text-blue-100">
                     NEPAL'S #1 EV CHARGING PLATFORM
                   </span>
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
                 </motion.div>
 
                 {/* Revolutionary Headline - Award-winning Typography */}
@@ -349,7 +349,7 @@ export default function Home() {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1, delay: 0.3 }}
-                  className="text-5xl sm:text-6xl lg:text-8xl font-black leading-[0.95] mb-8 tracking-tight font-display"
+                  className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-[0.95] mb-6 sm:mb-8 tracking-tight font-display px-2"
                 >
                   <span className="block">
                     <span className="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
@@ -361,9 +361,9 @@ export default function Home() {
                       Charge Anxiety
                     </span>
                     {/* Underline decoration */}
-                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-blue-400 to-green-400 rounded-full"></div>
+                    <div className="absolute -bottom-1 sm:-bottom-2 left-1/2 transform -translate-x-1/2 w-16 sm:w-24 h-0.5 sm:h-1 bg-gradient-to-r from-blue-400 to-green-400 rounded-full"></div>
                   </span>
-                  <span className="block text-lg sm:text-xl lg:text-2xl font-normal text-blue-100 mt-6 tracking-normal">
+                  <span className="block text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-blue-100 mt-4 sm:mt-6 tracking-normal">
                     <span className="font-light">Forever.</span>
                   </span>
                 </motion.h1>
@@ -373,13 +373,13 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.5 }}
-                  className="max-w-4xl mx-auto mb-12"
+                  className="max-w-4xl mx-auto mb-8 sm:mb-12 px-4"
                 >
-                  <p className="text-xl sm:text-2xl lg:text-3xl text-blue-100 mb-6 leading-relaxed font-light">
+                  <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-blue-100 mb-4 sm:mb-6 leading-relaxed font-light">
                     Nepal's largest EV charging network with 
                     <span className="font-semibold text-white"> 100% slot guarantee</span>.
                   </p>
-                  <p className="text-lg sm:text-xl text-blue-200 leading-relaxed">
+                  <p className="text-base sm:text-lg md:text-xl text-blue-200 leading-relaxed">
                     Find, book, and charge with complete confidence across 
                     <span className="font-semibold text-green-300"> 200+ verified stations</span>.
                   </p>
@@ -390,34 +390,34 @@ export default function Home() {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.7 }}
-                  className="max-w-2xl mx-auto mb-12"
+                  className="max-w-2xl mx-auto mb-8 sm:mb-12 px-4"
                 >
                   <form onSubmit={handleSearch} className="relative">
                     <div className="relative group">
                       {/* Search Input Container with Glass Effect */}
-                      <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-2 transition-all duration-300 group-hover:bg-white/15 group-focus-within:bg-white/15 group-focus-within:border-white/30">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0">
-                            <MapPin className="w-6 h-6 text-white" />
+                      <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl sm:rounded-3xl p-2 transition-all duration-300 group-hover:bg-white/15 group-focus-within:bg-white/15 group-focus-within:border-white/30">
+                        <div className="flex items-center gap-2 sm:gap-4">
+                          <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
                           </div>
                           <input
                             type="text"
                             placeholder="Where are you going?"
                             value={searchLocation}
                             onChange={(e) => setSearchLocation(e.target.value)}
-                            className="flex-1 bg-transparent text-white placeholder-blue-200 text-lg focus:outline-none"
+                            className="flex-1 bg-transparent text-white placeholder-blue-200 text-sm sm:text-lg focus:outline-none min-w-0"
                           />
                           <button
                             type="submit"
-                            className="w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center hover:from-green-600 hover:to-green-700 transition-all duration-200 group"
+                            className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-r from-green-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center hover:from-green-600 hover:to-green-700 transition-all duration-200 group"
                           >
-                            <Search className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-200" />
+                            <Search className="w-4 h-4 sm:w-6 sm:h-6 text-white group-hover:scale-110 transition-transform duration-200" />
                           </button>
                         </div>
                       </div>
                       
                       {/* Subtle glow effect */}
-                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-500/20 to-green-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-xl"></div>
+                      <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-500/20 to-green-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-xl"></div>
                     </div>
                   </form>
                 </motion.div>
@@ -427,7 +427,7 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.9 }}
-                  className={`grid gap-8 max-w-2xl mx-auto mb-16 ${quickActions.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-1 sm:grid-cols-2'}`}
+                  className={`grid gap-4 sm:gap-8 max-w-2xl mx-auto mb-12 sm:mb-16 px-4 ${quickActions.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-1 sm:grid-cols-2'}`}
                 >
                   {quickActions.map((action, index) => {
                     const Icon = action.icon
@@ -453,33 +453,33 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 1 + index * 0.15 }}
                         onClick={action.action}
-                        className={`group relative bg-gradient-to-r ${design.gradient} ${design.hover} p-6 rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl ${design.glow} focus:outline-none focus:ring-4 focus:ring-white/30 ${isPrimary ? 'ring-2 ring-blue-300/30' : ''}`}
+                        className={`group relative bg-gradient-to-r ${design.gradient} ${design.hover} p-4 sm:p-6 rounded-xl sm:rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl ${design.glow} focus:outline-none focus:ring-4 focus:ring-white/30 ${isPrimary ? 'ring-2 ring-blue-300/30' : ''}`}
                       >
                         {/* Background Pattern */}
-                        <div className="absolute inset-0 rounded-2xl opacity-10">
+                        <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-10">
                           <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent"></div>
                         </div>
                         
                         {/* Primary action indicator */}
                         {isPrimary && (
-                          <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                            <div className="w-2 h-2 bg-yellow-600 rounded-full animate-pulse"></div>
+                          <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3 h-3 sm:w-4 sm:h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-600 rounded-full animate-pulse"></div>
                           </div>
                         )}
                         
                         {/* Content */}
-                        <div className="relative flex items-center gap-5">
-                          <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                            <Icon className="w-7 h-7 text-white" />
+                        <div className="relative flex items-center gap-3 sm:gap-5">
+                          <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                           </div>
-                          <div className="text-left flex-1">
-                            <div className="font-bold text-lg text-white mb-1">
+                          <div className="text-left flex-1 min-w-0">
+                            <div className="font-bold text-sm sm:text-lg text-white mb-1">
                               {action.title}
-                              {isPrimary && <span className="ml-2 text-sm font-normal text-white/80">★</span>}
+                              {isPrimary && <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-white/80">★</span>}
                             </div>
-                            <div className="text-white/90 text-sm leading-relaxed">{action.description}</div>
+                            <div className="text-white/90 text-xs sm:text-sm leading-relaxed">{action.description}</div>
                           </div>
-                          <ArrowRight className="w-5 h-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
+                          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-300 flex-shrink-0" />
                         </div>
                       </motion.button>
                     )
@@ -491,17 +491,17 @@ export default function Home() {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 1.2 }}
-                  className="relative bg-white/5 backdrop-blur-2xl rounded-4xl p-8 mx-4 sm:mx-0 border border-white/10 shadow-2xl"
+                  className="relative bg-white/5 backdrop-blur-2xl rounded-3xl sm:rounded-4xl p-6 sm:p-8 mx-2 sm:mx-4 lg:mx-0 border border-white/10 shadow-2xl"
                 >
                   {/* Background decoration */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
+                  <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full transform translate-x-12 -translate-y-12 sm:translate-x-16 sm:-translate-y-16"></div>
                   
                   <div className="relative">
-                    <h3 className="text-2xl font-bold mb-8 text-center bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                    <h3 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
                       Trusted by Thousands Across Nepal
                     </h3>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
                       {stats.map((stat, index) => {
                         const Icon = stat.icon
                         return (
@@ -512,29 +512,29 @@ export default function Home() {
                             transition={{ duration: 0.6, delay: 1.3 + index * 0.1 }}
                             className="text-center group"
                           >
-                            <div className="w-16 h-16 bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 border border-white/10">
-                              <Icon className="w-8 h-8 text-white" />
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 border border-white/10">
+                              <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                             </div>
-                            <div className="text-3xl sm:text-4xl font-black text-white mb-2">{stat.value}</div>
-                            <div className="text-blue-200 font-medium tracking-wide">{stat.label}</div>
+                            <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-1 sm:mb-2">{stat.value}</div>
+                            <div className="text-blue-200 font-medium tracking-wide text-xs sm:text-sm">{stat.label}</div>
                           </motion.div>
                         )
                       })}
                     </div>
 
                     {/* Trust Indicators */}
-                    <div className="mt-8 pt-6 border-t border-white/10">
-                      <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-blue-200">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5 text-green-400" />
+                    <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white/10">
+                      <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-6 text-xs sm:text-sm text-blue-200">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                           <span className="font-medium">Verified Network</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Shield className="w-5 h-5 text-blue-400" />
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                           <span className="font-medium">100% Secure</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Timer className="w-5 h-5 text-purple-400" />
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <Timer className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
                           <span className="font-medium">24/7 Available</span>
                         </div>
                       </div>
@@ -1429,20 +1429,20 @@ export default function Home() {
 
         {/* Luxury Testimonial Modal - Premium Design */}
         {selectedUser && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="bg-gradient-to-br from-white via-gray-50 to-white rounded-4xl max-w-7xl w-full max-h-[95vh] overflow-hidden relative shadow-3xl border border-gray-100"
+              className="bg-gradient-to-br from-white via-gray-50 to-white rounded-2xl sm:rounded-4xl w-full max-w-7xl max-h-[95vh] overflow-hidden relative shadow-3xl border border-gray-100"
             >
               {/* Close Button - Premium Design */}
               <button
                 onClick={() => setSelectedUser(null)}
-                className="absolute top-8 right-8 z-20 w-12 h-12 bg-white/90 backdrop-blur-xl hover:bg-white rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl border border-gray-200"
+                className="absolute top-2 right-2 sm:top-8 sm:right-8 z-20 w-8 h-8 sm:w-12 sm:h-12 bg-white/90 backdrop-blur-xl hover:bg-white rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl border border-gray-200"
               >
-                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1450,25 +1450,25 @@ export default function Home() {
               {/* Navigation Buttons - Enhanced Design */}
               <button
                 onClick={() => handleUserNavigation('prev')}
-                className="absolute left-8 top-1/2 transform -translate-y-1/2 z-20 w-16 h-16 bg-white/90 backdrop-blur-xl hover:bg-white rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 border border-gray-200"
+                className="absolute left-2 sm:left-8 top-1/2 transform -translate-y-1/2 z-20 w-10 h-10 sm:w-16 sm:h-16 bg-white/90 backdrop-blur-xl hover:bg-white rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 border border-gray-200"
               >
-                <svg className="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-8 sm:h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
 
               <button
                 onClick={() => handleUserNavigation('next')}
-                className="absolute right-8 top-1/2 transform -translate-y-1/2 z-20 w-16 h-16 bg-white/90 backdrop-blur-xl hover:bg-white rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 border border-gray-200"
+                className="absolute right-2 sm:right-8 top-1/2 transform -translate-y-1/2 z-20 w-10 h-10 sm:w-16 sm:h-16 bg-white/90 backdrop-blur-xl hover:bg-white rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 border border-gray-200"
               >
-                <svg className="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-8 sm:h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[80vh]">
+              <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[60vh] sm:min-h-[80vh]">
                 {/* Video Side - Dark Theme */}
-                <div className="bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 flex flex-col justify-center p-8 lg:p-16 relative overflow-hidden">
+                <div className="bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 flex flex-col justify-center p-4 sm:p-8 lg:p-16 relative overflow-hidden">
                   {/* Background Pattern */}
                   <div className="absolute inset-0 opacity-5">
                     <div className="absolute inset-0" style={{
@@ -1478,8 +1478,8 @@ export default function Home() {
 
                   <div className="relative w-full max-w-2xl mx-auto">
                     {/* Video Container - Premium Frame */}
-                    <div className="relative mb-8">
-                      <div className="aspect-video bg-gray-800 rounded-3xl overflow-hidden shadow-3xl border-4 border-white/10 relative">
+                    <div className="relative mb-4 sm:mb-8">
+                      <div className="aspect-video bg-gray-800 rounded-xl sm:rounded-3xl overflow-hidden shadow-3xl border-2 sm:border-4 border-white/10 relative">
                         <video 
                           src={selectedUser.videoUrl}
                           poster={selectedUser.videoPreview}
@@ -1490,59 +1490,59 @@ export default function Home() {
                         />
                         
                         {/* Decorative corner elements */}
-                        <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-white/30 rounded-tl-lg"></div>
-                        <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-white/30 rounded-tr-lg"></div>
-                        <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-white/30 rounded-bl-lg"></div>
-                        <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-white/30 rounded-br-lg"></div>
+                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 w-4 h-4 sm:w-6 sm:h-6 border-l-2 border-t-2 border-white/30 rounded-tl-lg"></div>
+                        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 w-4 h-4 sm:w-6 sm:h-6 border-r-2 border-t-2 border-white/30 rounded-tr-lg"></div>
+                        <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 w-4 h-4 sm:w-6 sm:h-6 border-l-2 border-b-2 border-white/30 rounded-bl-lg"></div>
+                        <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-4 h-4 sm:w-6 sm:h-6 border-r-2 border-b-2 border-white/30 rounded-br-lg"></div>
                       </div>
                       
                       {/* Floating Live Badge */}
-                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                        <div className="inline-flex items-center gap-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-2xl border border-red-400">
-                          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                      <div className="absolute -top-2 sm:-top-4 left-1/2 transform -translate-x-1/2">
+                        <div className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 sm:px-6 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-2xl border border-red-400">
+                          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
                           <span>LIVE TESTIMONIAL</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Premium Action Buttons */}
-                    <div className="space-y-4">
-                      <h4 className="text-white font-black text-2xl text-center mb-8 tracking-wide">
+                    <div className="space-y-3 sm:space-y-4">
+                      <h4 className="text-white font-black text-lg sm:text-2xl text-center mb-4 sm:mb-8 tracking-wide">
                         Start Your Journey Today
                       </h4>
                       
                       <Link
                         to="/search"
                         onClick={() => setSelectedUser(null)}
-                        className="group w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-5 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center gap-4 shadow-2xl hover:shadow-3xl hover:scale-105"
+                        className="group w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 sm:py-5 px-4 sm:px-8 rounded-xl sm:rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 sm:gap-4 shadow-2xl hover:shadow-3xl hover:scale-105 text-sm sm:text-lg"
                       >
-                        <Search className="w-6 h-6 group-hover:scale-110 transition-transform duration-300" />
-                        <span className="text-lg">Find Charging Stations</span>
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                        <Search className="w-4 h-4 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform duration-300" />
+                        <span>Find Charging Stations</span>
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform duration-300" />
                       </Link>
                       
                       <Link
                         to="/trip-ai"
                         onClick={() => setSelectedUser(null)}
-                        className="group w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold py-5 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center gap-4 shadow-2xl hover:shadow-3xl hover:scale-105"
+                        className="group w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold py-3 sm:py-5 px-4 sm:px-8 rounded-xl sm:rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 sm:gap-4 shadow-2xl hover:shadow-3xl hover:scale-105 text-sm sm:text-lg"
                       >
-                        <Brain className="w-6 h-6 group-hover:scale-110 transition-transform duration-300" />
-                        <span className="text-lg">Try Trip AI</span>
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                        <Brain className="w-4 h-4 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform duration-300" />
+                        <span>Try Trip AI</span>
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform duration-300" />
                       </Link>
 
                       {/* Trust Indicators */}
-                      <div className="flex flex-wrap justify-center gap-6 pt-6 text-sm text-gray-400">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-400" />
+                      <div className="flex flex-wrap justify-center gap-3 sm:gap-6 pt-4 sm:pt-6 text-xs sm:text-sm text-gray-400">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
                           <span>Free to join</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-blue-400" />
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
                           <span>100% secure</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Timer className="w-4 h-4 text-purple-400" />
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <Timer className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400" />
                           <span>24/7 support</span>
                         </div>
                       </div>
@@ -1551,16 +1551,16 @@ export default function Home() {
                 </div>
 
                 {/* User Details Side - Light Theme */}
-                <div className="p-8 lg:p-16 flex flex-col justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
+                <div className="p-4 sm:p-8 lg:p-16 flex flex-col justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
                   {/* Background decoration */}
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-100/50 to-transparent rounded-full transform translate-x-48 -translate-y-48"></div>
-                  <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-100/50 to-transparent rounded-full transform -translate-x-48 translate-y-48"></div>
+                  <div className="absolute top-0 right-0 w-48 h-48 sm:w-96 sm:h-96 bg-gradient-to-br from-blue-100/50 to-transparent rounded-full transform translate-x-24 -translate-y-24 sm:translate-x-48 sm:-translate-y-48"></div>
+                  <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-96 sm:h-96 bg-gradient-to-tr from-purple-100/50 to-transparent rounded-full transform -translate-x-24 translate-y-24 sm:-translate-x-48 sm:translate-y-48"></div>
 
                   <div className="relative">
                     {/* User Header - Premium Layout */}
-                    <div className="flex items-center gap-8 mb-12">
+                    <div className="flex items-center gap-4 sm:gap-8 mb-6 sm:mb-12">
                       <div className="relative">
-                        <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white shadow-2xl">
+                        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl overflow-hidden border-2 sm:border-4 border-white shadow-2xl">
                           <img 
                             src={selectedUser.image} 
                             alt={selectedUser.name}
@@ -1568,61 +1568,61 @@ export default function Home() {
                           />
                         </div>
                         {/* Verified badge */}
-                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                          <CheckCircle className="w-4 h-4 text-white" />
+                        <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center border-2 sm:border-4 border-white shadow-lg">
+                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                         </div>
                       </div>
                       
-                      <div className="flex-1">
-                        <h3 className="text-4xl font-black text-gray-900 mb-3 tracking-tight">{selectedUser.name}</h3>
-                        <p className="text-blue-600 font-bold text-xl mb-2">{selectedUser.role}</p>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-5 h-5 text-gray-400" />
-                          <span className="text-gray-600 font-medium">{selectedUser.location}</span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xl sm:text-2xl md:text-4xl font-black text-gray-900 mb-2 sm:mb-3 tracking-tight">{selectedUser.name}</h3>
+                        <p className="text-blue-600 font-bold text-sm sm:text-xl mb-1 sm:mb-2">{selectedUser.role}</p>
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                          <span className="text-gray-600 font-medium text-sm sm:text-base">{selectedUser.location}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Quote Section - Elegant Typography */}
-                    <div className="relative mb-12">
-                      <Quote className="absolute -top-4 -left-4 w-12 h-12 text-blue-200" />
-                      <blockquote className="text-2xl sm:text-3xl font-medium text-gray-800 leading-relaxed pl-8 relative">
+                    <div className="relative mb-6 sm:mb-12">
+                      <Quote className="absolute -top-2 -left-2 sm:-top-4 sm:-left-4 w-8 h-8 sm:w-12 sm:h-12 text-blue-200" />
+                      <blockquote className="text-lg sm:text-2xl md:text-3xl font-medium text-gray-800 leading-relaxed pl-6 sm:pl-8 relative">
                         "{selectedUser.quote}"
                       </blockquote>
                     </div>
 
                     {/* Story Section */}
-                    <div className="space-y-8 mb-12">
+                    <div className="space-y-4 sm:space-y-8 mb-6 sm:mb-12">
                       <div>
-                        <h4 className="font-black text-gray-900 mb-4 text-2xl tracking-wide">Their Story</h4>
-                        <p className="text-gray-600 leading-relaxed text-lg font-light">
+                        <h4 className="font-black text-gray-900 mb-2 sm:mb-4 text-lg sm:text-2xl tracking-wide">Their Story</h4>
+                        <p className="text-gray-600 leading-relaxed text-sm sm:text-lg font-light">
                           {selectedUser.story}
                         </p>
                       </div>
 
                       {/* Premium Rating Card */}
-                      <div className="bg-gradient-to-r from-white to-blue-50 rounded-3xl p-8 shadow-xl border border-blue-100">
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-3">
+                      <div className="bg-gradient-to-r from-white to-blue-50 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl border border-blue-100">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
+                          <div className="flex items-center gap-2 sm:gap-3">
                             {[...Array(5)].map((_, i) => (
-                              <Star key={i} className="w-6 h-6 text-yellow-400 fill-current" />
+                              <Star key={i} className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400 fill-current" />
                             ))}
-                            <span className="text-gray-600 ml-3 font-semibold">5.0 Rating</span>
+                            <span className="text-gray-600 ml-2 sm:ml-3 font-semibold text-sm sm:text-base">5.0 Rating</span>
                           </div>
-                          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-4 py-2 rounded-full text-sm font-bold border border-green-200">
-                            <CheckCircle className="w-4 h-4" />
+                          <div className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold border border-green-200">
+                            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>Verified User</span>
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-2 gap-4 sm:gap-6">
                           <div className="text-center">
-                            <div className="text-3xl font-black text-blue-600 mb-1">2023</div>
-                            <div className="text-sm text-gray-600 font-medium">Member Since</div>
+                            <div className="text-xl sm:text-3xl font-black text-blue-600 mb-1">2023</div>
+                            <div className="text-xs sm:text-sm text-gray-600 font-medium">Member Since</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-3xl font-black text-green-600 mb-1">47</div>
-                            <div className="text-sm text-gray-600 font-medium">Sessions</div>
+                            <div className="text-xl sm:text-3xl font-black text-green-600 mb-1">47</div>
+                            <div className="text-xs sm:text-sm text-gray-600 font-medium">Sessions</div>
                           </div>
                         </div>
                       </div>
@@ -1632,15 +1632,15 @@ export default function Home() {
               </div>
 
               {/* Premium Navigation Dots */}
-              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
+              <div className="absolute bottom-4 sm:bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2 sm:gap-4">
                 {testimonialUsers.map((user) => (
                   <button
                     key={user.id}
                     onClick={() => setSelectedUser(user)}
                     className={`transition-all duration-500 ${
                       selectedUser.id === user.id 
-                        ? 'w-12 h-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg' 
-                        : 'w-3 h-3 bg-gray-300 hover:bg-gray-400 rounded-full hover:scale-150'
+                        ? 'w-8 h-2 sm:w-12 sm:h-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg' 
+                        : 'w-2 h-2 sm:w-3 sm:h-3 bg-gray-300 hover:bg-gray-400 rounded-full hover:scale-150'
                     }`}
                   />
                 ))}
