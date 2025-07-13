@@ -5,15 +5,21 @@ let redisClient;
 
 const connectRedis = async () => {
   try {
-    redisClient = redis.createClient({
+    const redisConfig = {
       socket: {
         host: process.env.REDIS_HOST || '127.0.0.1',
         port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379,
-        tls: true,
         keepAlive: true,
       },
       password: process.env.REDIS_PASSWORD || undefined,
-    });
+    };
+
+    // Only enable TLS if explicitly set in environment
+    if (process.env.REDIS_TLS === 'true') {
+      redisConfig.socket.tls = true;
+    }
+
+    redisClient = redis.createClient(redisConfig);
 
     redisClient.on('error', (err) => {
       console.error('Redis Client Error:', err);

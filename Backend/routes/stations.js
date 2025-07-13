@@ -10,6 +10,7 @@ const {
   handleValidationErrors 
 } = require('../middleware/validation');
 const { optionalAuth } = require('../middleware/auth');
+const { cacheStationData } = require('../middleware/cache');
 
 const router = express.Router();
 
@@ -1014,7 +1015,8 @@ router.get('/search',
 
 router.get('/:id', 
   mongoIdValidation('id'), 
-  handleValidationErrors, 
+  handleValidationErrors,
+  cacheStationData(), // Add caching middleware
   getStation
 );
 

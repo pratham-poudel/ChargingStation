@@ -7,6 +7,7 @@ const { authorizeVendor } = require('../middleware/auth');
 const { body, param, validationResult } = require('express-validator');
 const smsService = require('../services/smsService');
 const emailService = require('../services/emailService');
+const { invalidateStationCache } = require('../middleware/cache');
 // Using optimized upload service for RAM-efficient uploads
 
 // Import optimized upload service
@@ -1648,6 +1649,14 @@ router.put('/:stationId/update',
       
       await station.save();
       await station.populate('vendor', 'name businessName');
+
+      // Manually invalidate cache after successful update
+      try {
+        const { invalidateStation } = require('../middleware/cache');
+        await invalidateStation(stationId);
+      } catch (cacheError) {
+        console.error(`Failed to invalidate cache for station ${stationId}:`, cacheError.message);
+      }
 
       res.json({
         success: true,

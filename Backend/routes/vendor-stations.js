@@ -4,6 +4,7 @@ const { authorizeVendor } = require('../middleware/auth');
 const { checkVendorSubscription, checkStationLimit } = require('../middleware/subscriptionCheck');
 const { body, param, validationResult } = require('express-validator');
 const ConcurrencySafeStationService = require('../services/ConcurrencySafeStationService');
+const { invalidateStationCache } = require('../middleware/cache');
 
 // Import optimized upload service
 const { optimizedUploadService } = require('../config/optimized-upload');
@@ -726,6 +727,14 @@ router.put('/:id',
       await station.save();
       await station.populate('vendor', 'name businessName');
 
+      // Manually invalidate cache after successful update
+      try {
+        const { invalidateStation } = require('../middleware/cache');
+        await invalidateStation(req.params.id);
+      } catch (cacheError) {
+        console.error(`Failed to invalidate cache for station ${req.params.id}:`, cacheError.message);
+      }
+
       res.json({
         success: true,
         message: 'Station updated successfully',
@@ -812,7 +821,9 @@ router.delete('/:id/images/:imageId', authorizeVendor, async (req, res) => {
 // @desc    Update image properties (primary, thumbnail, caption)
 // @route   PATCH /api/vendor/stations/:id/images/:imageId
 // @access  Private (Vendor)
-router.patch('/:id/images/:imageId', authorizeVendor, async (req, res) => {
+router.patch('/:id/images/:imageId', 
+  authorizeVendor, 
+  async (req, res) => {
   try {
     const { isPrimary, isThumbnail, caption } = req.body;
     
@@ -868,6 +879,14 @@ router.patch('/:id/images/:imageId', authorizeVendor, async (req, res) => {
 
     await station.save();
 
+    // Manually invalidate cache after successful image update
+    try {
+      const { invalidateStation } = require('../middleware/cache');
+      await invalidateStation(req.params.id);
+    } catch (cacheError) {
+      console.error(`Failed to invalidate cache for station ${req.params.id}:`, cacheError.message);
+    }
+
     res.json({
       success: true,
       message: 'Image updated successfully',
@@ -885,7 +904,9 @@ router.patch('/:id/images/:imageId', authorizeVendor, async (req, res) => {
 // @desc    Toggle station active status
 // @route   PATCH /api/vendor/stations/:id/status
 // @access  Private (Vendor)
-router.patch('/:id/status', authorizeVendor, async (req, res) => {
+router.patch('/:id/status', 
+  authorizeVendor, 
+  async (req, res) => {
   try {
     const station = await ChargingStation.findOne({
       _id: req.params.id,
@@ -901,6 +922,14 @@ router.patch('/:id/status', authorizeVendor, async (req, res) => {
 
     station.isActive = !station.isActive;
     await station.save();
+
+    // Manually invalidate cache after successful status update
+    try {
+      const { invalidateStation } = require('../middleware/cache');
+      await invalidateStation(req.params.id);
+    } catch (cacheError) {
+      console.error(`Failed to invalidate cache for station ${req.params.id}:`, cacheError.message);
+    }
 
     res.json({
       success: true,

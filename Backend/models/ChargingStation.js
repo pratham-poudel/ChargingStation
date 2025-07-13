@@ -501,4 +501,50 @@ chargingStationSchema.statics.findPremiumStations = function(query = {}) {
   });
 };
 
+// Cache invalidation hooks
+chargingStationSchema.post('save', async function(doc) {
+  try {
+    const { invalidateStation } = require('../middleware/cache');
+    await invalidateStation(doc._id.toString());
+    console.log(`🗑️ Cache invalidated for station ${doc._id} after save`);
+  } catch (error) {
+    console.error(`❌ Failed to invalidate cache for station ${doc._id} after save:`, error.message);
+  }
+});
+
+chargingStationSchema.post('findOneAndUpdate', async function(doc) {
+  if (doc) {
+    try {
+      const { invalidateStation } = require('../middleware/cache');
+      await invalidateStation(doc._id.toString());
+      console.log(`🗑️ Cache invalidated for station ${doc._id} after update`);
+    } catch (error) {
+      console.error(`❌ Failed to invalidate cache for station ${doc._id} after update:`, error.message);
+    }
+  }
+});
+
+chargingStationSchema.post('updateOne', async function() {
+  try {
+    const filter = this.getFilter();
+    if (filter._id) {
+      const { invalidateStation } = require('../middleware/cache');
+      await invalidateStation(filter._id.toString());
+      console.log(`🗑️ Cache invalidated for station ${filter._id} after updateOne`);
+    }
+  } catch (error) {
+    console.error(`❌ Failed to invalidate cache after updateOne:`, error.message);
+  }
+});
+
+chargingStationSchema.post('updateMany', async function() {
+  try {
+    const { invalidateAllStations } = require('../middleware/cache');
+    await invalidateAllStations();
+    console.log(`🗑️ All station caches invalidated after updateMany`);
+  } catch (error) {
+    console.error(`❌ Failed to invalidate all station caches after updateMany:`, error.message);
+  }
+});
+
 module.exports = mongoose.model('ChargingStation', chargingStationSchema);
