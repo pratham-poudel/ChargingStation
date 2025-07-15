@@ -43,7 +43,7 @@
     "multer": "^2.0.1",
     "node-cron": "^4.1.1",
     "node-fetch": "^2.7.0",
-    "redis": "^4.6.10",
+    "redis": "^5.6.0",
     "uuid": "^9.0.1",
     "zeptomail": "^6.2.1"
   },
