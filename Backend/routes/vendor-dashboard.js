@@ -4,6 +4,7 @@ const Vendor = require('../models/Vendor');
 const ChargingStation = require('../models/ChargingStation');
 const Booking = require('../models/Booking');
 const Settlement = require('../models/Settlement');
+const Restaurant = require('../models/Restaurant');
 const { protect } = require('../middleware/auth');
 const { checkVendorSubscription } = require('../middleware/subscriptionCheck');
 // Using optimized upload service for RAM-efficient uploads
@@ -1294,6 +1295,7 @@ const getTransactionAnalytics = async (req, res) => {
       endDate = new Date();
     }
 
+    // ============== CHARGING STATION REVENUE ==============
     // Get completed bookings for the date range with populated fields
     // Use actualEndTime when available, fallback to updatedAt
     const completedBookings = await Booking.find({
@@ -1311,10 +1313,35 @@ const getTransactionAnalytics = async (req, res) => {
     .populate('chargingStation', 'name location')
     .lean();
 
-    // Calculate total amount to be received (merchant revenue for completed bookings on selected date)
-    const totalToBeReceived = completedBookings.reduce((total, booking) => {
+    // Calculate charging station revenue for selected date
+    const chargingStationRevenue = completedBookings.reduce((total, booking) => {
       return total + calculateMerchantRevenue(booking);
     }, 0);
+
+    // ============== RESTAURANT ORDER REVENUE ==============
+    // Import the Order model
+    const Order = require('../models/Order');
+    
+    // Get completed orders for the vendor's restaurants on the selected date
+    const vendorRestaurants = await Restaurant.find({ vendor: vendorId }).select('_id');
+    const restaurantIds = vendorRestaurants.map(r => r._id);
+
+    const completedOrders = await Order.find({
+      restaurant: { $in: restaurantIds },
+      status: 'completed',
+      completedAt: { $gte: startDate, $lte: endDate }
+    })
+    .populate('restaurant', 'name')
+    .populate('chargingStation', 'name location')
+    .lean();
+
+    // Calculate restaurant revenue (vendor gets 100% since they pay annual service charge)
+    const restaurantRevenue = completedOrders.reduce((total, order) => {
+      return total + order.totalAmount; // 100% to vendor (they pay annual service charge)
+    }, 0);
+
+    // ============== COMBINED ANALYTICS ==============
+    const totalToBeReceived = chargingStationRevenue + restaurantRevenue;
 
     // For settlements, we need to check if they were requested for this specific date
     // regardless of when the settlement was actually requested
@@ -1330,6 +1357,7 @@ const getTransactionAnalytics = async (req, res) => {
     let inSettlementAmountForDate = 0;
     let pendingSettlementForDate = 0;
 
+    // Process charging station bookings for settlement status
     completedBookings.forEach(booking => {
       const merchantRevenue = calculateMerchantRevenue(booking);
       
@@ -1344,19 +1372,6 @@ const getTransactionAnalytics = async (req, res) => {
         if (isInActiveSettlement) {
           inSettlementAmountForDate += merchantRevenue;
         } else {
-          // If settlement was completed/failed, treat as settled or pending based on final status
-          if (booking.settlementStatus === 'included_in_settlement') {
-            // Check the final settlement status
-            Settlement.findOne({
-              transactionIds: booking._id,
-              vendor: vendorId
-            }).then(settlement => {
-              if (settlement && settlement.status === 'completed') {
-                // This should be counted as settled, not in process
-                booking.settlementStatus = 'settled';
-              }
-            });
-          }
           settledAmountForDate += merchantRevenue;
         }
       } else {
@@ -1365,17 +1380,52 @@ const getTransactionAnalytics = async (req, res) => {
       }
     });
 
-    // OVERALL STATS (across all time) - these remain unchanged
-    const allCompletedEarnings = await Booking.find({
+    // Process restaurant orders for settlement status (orders use different settlement tracking)
+    completedOrders.forEach(order => {
+      const vendorShare = order.totalAmount; // 100% to vendor (annual service charge model)
+      
+      // Check if order is in settlement (orders might have different settlement field structure)
+      if (order.settlementStatus === 'settled') {
+        settledAmountForDate += vendorShare;
+      } else if (order.settlementStatus === 'included_in_settlement') {
+        const isInActiveSettlement = settlementsForThisDate.some(settlement => 
+          settlement.orderIds && settlement.orderIds.some(id => id.toString() === order._id.toString())
+        );
+        
+        if (isInActiveSettlement) {
+          inSettlementAmountForDate += vendorShare;
+        } else {
+          settledAmountForDate += vendorShare;
+        }
+      } else {
+        pendingSettlementForDate += vendorShare;
+      }
+    });
+
+    // ============== OVERALL STATS (across all time) ==============
+    // Charging station earnings
+    const allCompletedBookings = await Booking.find({
       vendor: vendorId,
       status: 'completed'
     }).lean();
 
-    const totalBalance = allCompletedEarnings.reduce((total, booking) => {
+    const totalChargingStationBalance = allCompletedBookings.reduce((total, booking) => {
       return total + calculateMerchantRevenue(booking);
     }, 0);
 
-    // Total Withdrawn = Sum of all completed settlements
+    // Restaurant earnings (all time)
+    const allCompletedOrders = await Order.find({
+      restaurant: { $in: restaurantIds },
+      status: 'completed'
+    }).lean();
+
+    const totalRestaurantBalance = allCompletedOrders.reduce((total, order) => {
+      return total + order.totalAmount; // 100% to vendor (annual service charge model)
+    }, 0);
+
+    const totalBalance = totalChargingStationBalance + totalRestaurantBalance;
+
+    // Total Withdrawn = Sum of all completed settlements (covers both bookings and orders)
     const totalWithdrawnResult = await Settlement.aggregate([
       {
         $match: {
@@ -1414,41 +1464,80 @@ const getTransactionAnalytics = async (req, res) => {
       data: {
         selectedDate: date || new Date().toISOString().split('T')[0],
         dailyStats: {
-          totalToBeReceived, // Total earnings for the selected date
+          totalToBeReceived, // Combined earnings from both sources for the selected date
+          chargingStationRevenue, // Breakdown: charging station revenue
+          restaurantRevenue, // Breakdown: restaurant revenue
           paymentSettled: settledAmountForDate, // How much from selected date is already settled
           inSettlementProcess: inSettlementAmountForDate, // How much is currently in settlement process
           pendingSettlement: pendingSettlementForDate, // How much from selected date is truly pending
           needsSettlement
         },
         overallStats: {
-          totalBalance, // Sum of all completed earnings
+          totalBalance, // Sum of all completed earnings (charging + restaurant)
+          totalChargingStationBalance, // Breakdown: charging station balance
+          totalRestaurantBalance, // Breakdown: restaurant balance
           totalWithdrawn, // Money actually transferred to bank account
           pendingWithdrawal // Total Balance - Total Withdrawn
         },
         settlementInfo, // Information about active settlements for this date
-        transactions: completedBookings.map(booking => {
-          // Determine display settlement status
-          let displayStatus = booking.settlementStatus || 'pending';
-          if (displayStatus === 'included_in_settlement') {
-            const isInActiveSettlement = settlementsForThisDate.some(settlement => 
-              settlement.transactionIds.some(id => id.toString() === booking._id.toString())
-            );
-            if (!isInActiveSettlement) {
-              displayStatus = 'settled'; // Settlement was completed
+        transactions: [
+          // Charging station transactions
+          ...completedBookings.map(booking => {
+            // Determine display settlement status
+            let displayStatus = booking.settlementStatus || 'pending';
+            if (displayStatus === 'included_in_settlement') {
+              const isInActiveSettlement = settlementsForThisDate.some(settlement => 
+                settlement.transactionIds.some(id => id.toString() === booking._id.toString())
+              );
+              if (!isInActiveSettlement) {
+                displayStatus = 'settled'; // Settlement was completed
+              }
             }
-          }
 
-          return {
-            bookingId: booking.bookingId,
-            amount: calculateMerchantRevenue(booking),
-            customerName: booking.user?.name || 'Walk-in Customer',
-            stationName: booking.chargingStation?.name || 'Unknown Station',
-            completedAt: booking.actualUsage?.actualEndTime || booking.updatedAt,
-            status: 'completed',
-            settlementStatus: displayStatus,
-            transactionDate: booking.updatedAt // Keep original transaction date for reference
-          }
-        })
+            return {
+              type: 'charging',
+              bookingId: booking.bookingId,
+              orderId: null,
+              amount: calculateMerchantRevenue(booking),
+              customerName: booking.user?.name || 'Walk-in Customer',
+              stationName: booking.chargingStation?.name || 'Unknown Station',
+              restaurantName: null,
+              completedAt: booking.actualUsage?.actualEndTime || booking.updatedAt,
+              status: 'completed',
+              settlementStatus: displayStatus,
+              transactionDate: booking.updatedAt,
+              description: 'EV Charging Session'
+            }
+          }),
+          // Restaurant order transactions
+          ...completedOrders.map(order => {
+            // Determine display settlement status for orders
+            let displayStatus = order.settlementStatus || 'pending';
+            if (displayStatus === 'included_in_settlement') {
+              const isInActiveSettlement = settlementsForThisDate.some(settlement => 
+                settlement.orderIds && settlement.orderIds.some(id => id.toString() === order._id.toString())
+              );
+              if (!isInActiveSettlement) {
+                displayStatus = 'settled';
+              }
+            }
+
+            return {
+              type: 'restaurant',
+              bookingId: null,
+              orderId: order.orderNumber,
+              amount: order.totalAmount, // Vendor's 100% share (annual service charge model)
+              customerName: order.customer.name,
+              stationName: order.chargingStation?.name || 'Unknown Station',
+              restaurantName: order.restaurant?.name || 'Unknown Restaurant',
+              completedAt: order.completedAt,
+              status: 'completed',
+              settlementStatus: displayStatus,
+              transactionDate: order.completedAt,
+              description: `Restaurant Order (${order.items.length} items)`
+            }
+          })
+        ].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)) // Sort by completion date
       }
     });
 
@@ -1502,6 +1591,7 @@ const requestUrgentSettlement = async (req, res) => {
     const endDate = new Date(inputDate);
     endDate.setUTCHours(23, 59, 59, 999);
 
+    // ============== GET PENDING CHARGING STATION BOOKINGS ==============
     const completedBookings = await Booking.find({
       vendor: vendorId,
       status: 'completed',
@@ -1523,21 +1613,55 @@ const requestUrgentSettlement = async (req, res) => {
       ]
     }).lean();
 
-    if (completedBookings.length === 0) {
+    const chargingStationAmount = completedBookings.reduce((total, booking) => {
+      return total + calculateMerchantRevenue(booking);
+    }, 0);
+
+    // ============== GET PENDING RESTAURANT ORDERS ==============
+    const Order = require('../models/Order');
+    
+    // Get vendor's restaurants
+    const vendorRestaurants = await Restaurant.find({ vendor: vendorId }).select('_id');
+    const restaurantIds = vendorRestaurants.map(r => r._id);
+
+    // Get completed orders that haven't been settled
+    const completedOrders = await Order.find({
+      restaurant: { $in: restaurantIds },
+      status: 'completed',
+      completedAt: { $gte: startDate, $lte: endDate },
+      $or: [
+        { settlementStatus: 'pending' },
+        { settlementStatus: { $exists: false } },
+        { settlementStatus: null }
+      ]
+    }).lean();
+
+    const restaurantAmount = completedOrders.reduce((total, order) => {
+      return total + order.totalAmount; // 100% to vendor (annual service charge model)
+    }, 0);
+
+    // ============== VALIDATE TOTAL AMOUNT ==============
+    const totalCalculatedAmount = chargingStationAmount + restaurantAmount;
+
+    if (completedBookings.length === 0 && completedOrders.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'No pending transactions found for the selected date'
       });
     }
 
-    const totalAmount = completedBookings.reduce((total, booking) => {
-      return total + calculateMerchantRevenue(booking);
-    }, 0);
-
-    if (Math.abs(totalAmount - amount) > 0.01) { // Allow for small floating point differences
+    if (Math.abs(totalCalculatedAmount - amount) > 0.01) { // Allow for small floating point differences
       return res.status(400).json({
         success: false,
-        message: 'Amount mismatch. Please refresh and try again.'
+        message: 'Amount mismatch. Please refresh and try again.',
+        details: {
+          calculated: totalCalculatedAmount,
+          provided: amount,
+          breakdown: {
+            chargingStation: chargingStationAmount,
+            restaurant: restaurantAmount
+          }
+        }
       });
     }
 
@@ -1559,9 +1683,10 @@ const requestUrgentSettlement = async (req, res) => {
     // Create settlement request with clear date tracking
     const settlement = new Settlement({
       vendor: vendorId,
-      amount: totalAmount,
+      amount: totalCalculatedAmount,
       settlementDate: new Date(date), // The date for which transactions are being settled
       transactionIds: completedBookings.map(booking => booking._id),
+      orderIds: completedOrders.map(order => order._id), // Add order IDs for restaurant orders
       status: 'pending',
       requestType: 'urgent',
       bankDetails: {
@@ -1578,23 +1703,45 @@ const requestUrgentSettlement = async (req, res) => {
       metadata: {
         transactionDate: date, // The original transaction date
         requestedDate: new Date().toISOString().split('T')[0], // Today's date when request was made
-        isUrgentForPastDate: date !== new Date().toISOString().split('T')[0] // Flag if this is for a past date
+        isUrgentForPastDate: date !== new Date().toISOString().split('T')[0], // Flag if this is for a past date
+        breakdown: {
+          chargingStationAmount,
+          restaurantAmount,
+          chargingStationTransactions: completedBookings.length,
+          restaurantOrders: completedOrders.length
+        }
       }
     });
 
     await settlement.save();
 
     // Update booking settlement status with additional tracking
-    await Booking.updateMany(
-      { _id: { $in: completedBookings.map(b => b._id) } },
-      { 
-        settlementStatus: 'included_in_settlement',
-        settlementId: settlement._id,
-        // Add settlement request tracking
-        settlementRequestedAt: new Date(),
-        settlementRequestedFor: date // Track which date this settlement was requested for
-      }
-    );
+    if (completedBookings.length > 0) {
+      await Booking.updateMany(
+        { _id: { $in: completedBookings.map(b => b._id) } },
+        { 
+          settlementStatus: 'included_in_settlement',
+          settlementId: settlement._id,
+          // Add settlement request tracking
+          settlementRequestedAt: new Date(),
+          settlementRequestedFor: date // Track which date this settlement was requested for
+        }
+      );
+    }
+
+    // Update order settlement status with additional tracking
+    if (completedOrders.length > 0) {
+      await Order.updateMany(
+        { _id: { $in: completedOrders.map(o => o._id) } },
+        { 
+          settlementStatus: 'included_in_settlement',
+          settlementId: settlement._id,
+          // Add settlement request tracking
+          settlementRequestedAt: new Date(),
+          settlementRequestedFor: date // Track which date this settlement was requested for
+        }
+      );
+    }
 
     res.json({
       success: true,
@@ -1603,8 +1750,13 @@ const requestUrgentSettlement = async (req, res) => {
         requestId: settlement.settlementId,
         status: 'pending',
         estimatedProcessingTime: '24 hours',
-        amount: totalAmount,
+        amount: totalCalculatedAmount,
         transactionCount: completedBookings.length,
+        orderCount: completedOrders.length,
+        breakdown: {
+          chargingStationRevenue: chargingStationAmount,
+          restaurantRevenue: restaurantAmount
+        },
         settlementInfo: {
           transactionDate: date,
           requestedOn: new Date().toISOString().split('T')[0],

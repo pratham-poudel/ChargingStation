@@ -15,7 +15,8 @@ import {
   Check,
   Trash2,
   Circle,
-  Crown
+  Crown,
+  ChefHat
 } from 'lucide-react'
 import { useMerchant } from '../../context/MerchantContext'
 import { merchantAPI } from '../../services/merchantAPI'
@@ -124,6 +125,12 @@ const MerchantLayout = ({ children }) => {
       href: '/merchant/stations',
       icon: Zap,
       current: location.pathname.startsWith('/merchant/stations')
+    },
+    {
+      name: 'Restaurants',
+      href: '/merchant/restaurants',
+      icon: ChefHat,
+      current: location.pathname.startsWith('/merchant/restaurants')
     },
     {
       name: 'Licensing & Activation',

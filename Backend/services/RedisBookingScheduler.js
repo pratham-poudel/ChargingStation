@@ -1,8 +1,12 @@
 const cron = require('node-cron');
+const moment = require('moment-timezone');
 const Booking = require('../models/Booking');
 const emailService = require('./emailService');
 const smsService = require('./smsService');
 const { getRedisClient } = require('../config/redis');
+
+// Nepali timezone constant
+const NEPAL_TIMEZONE = 'Asia/Kathmandu';
 
 class DistributedBookingScheduler {
   constructor() {
@@ -24,6 +28,34 @@ class DistributedBookingScheduler {
     };
     
     console.log(`📡 Scheduler instance created: ${this.instanceId}`);
+  }
+
+  /**
+   * Get current time in Nepali timezone
+   */
+  getNepaliNow() {
+    return moment().tz(NEPAL_TIMEZONE);
+  }
+
+  /**
+   * Convert any date to Nepali timezone moment
+   */
+  toNepaliTime(date) {
+    return moment(date).tz(NEPAL_TIMEZONE);
+  }
+
+  /**
+   * Get UTC timestamp for Redis sorting (always use UTC for storage)
+   */
+  getUtcTimestamp(date) {
+    return moment(date).utc().valueOf();
+  }
+
+  /**
+   * Format time for display in Nepali timezone
+   */
+  formatNepaliTime(date) {
+    return moment(date).tz(NEPAL_TIMEZONE).format('YYYY-MM-DD HH:mm:ss [NPT]');
   }
 
   /**
@@ -234,12 +266,13 @@ class DistributedBookingScheduler {
    */
   async failSafeJobCheck() {
     try {
-      const now = Date.now(); // Use numeric timestamp, not ISO string
+      const nowUtc = moment().utc().valueOf(); // Use UTC timestamp for Redis comparison
+      const nowNepali = this.getNepaliNow();
       
       const overdueJobs = await this.redis.zRangeByScore(
         this.KEYS.JOBS,
         0,
-        now,
+        nowUtc,
         { LIMIT: { offset: 0, count: 10 } }
       );
 
@@ -248,7 +281,7 @@ class DistributedBookingScheduler {
         const currentLeader = await this.redis.get(this.KEYS.LEADER);
         
         if (!currentLeader) {
-          console.log(`🚨 FAIL-SAFE: No leader detected, processing ${overdueJobs.length} overdue jobs`);
+          console.log(`🚨 FAIL-SAFE: No leader detected at ${nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}, processing ${overdueJobs.length} overdue jobs`);
           
           for (const jobStr of overdueJobs) {
             try {
@@ -260,7 +293,8 @@ class DistributedBookingScheduler {
 
               if (lockAcquired === 'OK') {
                 const job = JSON.parse(jobStr);
-                console.log(`🚨 FAIL-SAFE: Processing job ${job.id} (${job.type})`);
+                const jobTimeNepali = this.toNepaliTime(job.executeAt);
+                console.log(`🚨 FAIL-SAFE: Processing job ${job.id} (${job.type}) scheduled for ${jobTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}`);
                 await this.executeJob(job);
                 
                 // Remove the job after processing
@@ -274,7 +308,7 @@ class DistributedBookingScheduler {
         } else {
           // Leader exists but jobs are overdue - this shouldn't happen
           if (overdueJobs.length > 5) {
-            console.warn(`⚠️ FAIL-SAFE WARNING: Leader exists but ${overdueJobs.length} jobs are overdue`);
+            console.warn(`⚠️ FAIL-SAFE WARNING at ${nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}: Leader exists but ${overdueJobs.length} jobs are overdue`);
           }
         }
       }
@@ -288,25 +322,32 @@ class DistributedBookingScheduler {
    */
   async scheduleBookingNotifications(booking) {
     try {
-      const startTime = new Date(booking.timeSlot.startTime);
-      const now = new Date();
-      const graceEndTime = new Date(startTime.getTime() + 30 * 60 * 1000);
+      // Convert booking start time to Nepali timezone
+      const startTimeNepali = this.toNepaliTime(booking.timeSlot.startTime);
+      const nowNepali = this.getNepaliNow();
+      const graceEndTimeNepali = startTimeNepali.clone().add(30, 'minutes');
 
-      // Don't schedule if already started
-      if (startTime <= now) {
-        console.log(`⚠️ Booking ${booking.bookingId} start time already passed`);
+      console.log(`📅 Scheduling for booking ${booking.bookingId}:`);
+      console.log(`   Start Time (NPT): ${startTimeNepali.format('YYYY-MM-DD HH:mm:ss')}`);
+      console.log(`   Current Time (NPT): ${nowNepali.format('YYYY-MM-DD HH:mm:ss')}`);
+      console.log(`   Grace End (NPT): ${graceEndTimeNepali.format('YYYY-MM-DD HH:mm:ss')}`);
+
+      // Don't schedule if already started (compare in Nepali timezone)
+      if (startTimeNepali.isSameOrBefore(nowNepali)) {
+        console.log(`⚠️ Booking ${booking.bookingId} start time already passed (NPT)`);
         return;
       }
 
       const jobs = [];
 
       // Schedule slot start notification
-      if (startTime > now) {
+      if (startTimeNepali.isAfter(nowNepali)) {
         jobs.push({
           id: `start_${booking._id}`,
           type: 'slot_start',
           bookingId: booking._id.toString(),
-          executeAt: startTime.toISOString(),
+          executeAt: startTimeNepali.utc().toISOString(), // Store as UTC
+          executeAtNepali: startTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]'), // For logging
           data: {
             bookingId: booking.bookingId,
             userId: booking.user.toString(),
@@ -316,12 +357,13 @@ class DistributedBookingScheduler {
       }
 
       // Schedule grace period expiration
-      if (graceEndTime > now) {
+      if (graceEndTimeNepali.isAfter(nowNepali)) {
         jobs.push({
           id: `grace_${booking._id}`,
           type: 'grace_expiration',
           bookingId: booking._id.toString(),
-          executeAt: graceEndTime.toISOString(),
+          executeAt: graceEndTimeNepali.utc().toISOString(), // Store as UTC
+          executeAtNepali: graceEndTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]'), // For logging
           data: {
             bookingId: booking.bookingId,
             userId: booking.user.toString(),
@@ -330,12 +372,14 @@ class DistributedBookingScheduler {
         });
       }
 
-      // Store jobs in Redis with sorted set for time-based execution
+      // Store jobs in Redis with sorted set for time-based execution (using UTC timestamps)
       for (const job of jobs) {
+        const utcTimestamp = this.getUtcTimestamp(job.executeAt);
         await this.redis.zAdd(
           this.KEYS.JOBS,
-          { score: new Date(job.executeAt).getTime(), value: JSON.stringify(job) }
+          { score: utcTimestamp, value: JSON.stringify(job) }
         );
+        console.log(`📝 Scheduled job ${job.id} for ${job.executeAtNepali}`);
       }
 
       console.log(`📅 Scheduled ${jobs.length} distributed jobs for booking ${booking.bookingId}`);
@@ -350,23 +394,27 @@ class DistributedBookingScheduler {
    */
   async processScheduledJobs() {
     try {
-      const now = Date.now();
+      const nowUtc = moment().utc().valueOf(); // Use UTC for Redis comparison
       
-      // Get jobs that need to be executed
+      // Get jobs that need to be executed (stored as UTC timestamps)
       const jobs = await this.redis.zRangeByScore(
         this.KEYS.JOBS,
         0,
-        now,
+        nowUtc,
         { LIMIT: { offset: 0, count: 50 } } // Process max 50 jobs at once
       );
 
       if (jobs.length === 0) return;
 
-      console.log(`⏰ Processing ${jobs.length} scheduled jobs...`);
+      console.log(`⏰ Processing ${jobs.length} scheduled jobs (Current NPT: ${this.getNepaliNow().format('YYYY-MM-DD HH:mm:ss')})...`);
 
       for (const jobStr of jobs) {
         try {
           const job = JSON.parse(jobStr);
+          
+          // Log job execution time in Nepali timezone
+          const jobTimeNepali = this.toNepaliTime(job.executeAt);
+          console.log(`🔄 Processing job ${job.id} scheduled for ${jobTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}`);
           
           // Try to acquire lock for this job
           const lockKey = `${this.KEYS.LOCK}:${job.id}`;
@@ -392,7 +440,8 @@ class DistributedBookingScheduler {
               3600, // Keep for 1 hour
               JSON.stringify({
                 processedBy: this.instanceId,
-                processedAt: new Date().toISOString(),
+                processedAt: this.getNepaliNow().toISOString(),
+                processedAtNepali: this.getNepaliNow().format('YYYY-MM-DD HH:mm:ss [NPT]'),
                 job
               })
             );
@@ -400,7 +449,7 @@ class DistributedBookingScheduler {
             // Release lock
             await this.redis.del(lockKey);
             
-            console.log(`✅ Processed job ${job.id} (${job.type})`);
+            console.log(`✅ Processed job ${job.id} (${job.type}) at ${this.getNepaliNow().format('YYYY-MM-DD HH:mm:ss [NPT]')}`);
           } else {
             console.log(`🔒 Job ${job.id} is locked by another instance`);
           }
@@ -452,13 +501,18 @@ class DistributedBookingScheduler {
       return;
     }
 
-    // Update slot status
+    const nowNepali = this.getNepaliNow();
+    const gracePeriodEndNepali = nowNepali.clone().add(30, 'minutes');
+
+    console.log(`🚀 Starting slot for booking ${booking.bookingId} at ${nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}`);
+
+    // Update slot status with Nepali timezone
     booking.slotStatus = {
       ...booking.slotStatus,
       started: true,
-      startedAt: new Date(),
+      startedAt: nowNepali.toDate(), // Convert to JS Date for MongoDB
       gracePeridActive: true,
-      gracePeriodEndsAt: new Date(Date.now() + 30 * 60 * 1000)
+      gracePeriodEndsAt: gracePeriodEndNepali.toDate() // Convert to JS Date for MongoDB
     };
 
     await booking.save();
@@ -470,7 +524,8 @@ class DistributedBookingScheduler {
     await this.redis.publish('booking-events', JSON.stringify({
       type: 'slot_started',
       bookingId: booking.bookingId,
-      timestamp: new Date().toISOString()
+      timestamp: nowNepali.toISOString(),
+      timestampNepali: nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')
     }));
   }
 
@@ -489,19 +544,22 @@ class DistributedBookingScheduler {
       return;
     }
 
+    const nowNepali = this.getNepaliNow();
+    console.log(`⏰ Expiring booking ${booking.bookingId} at ${nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')} due to no-show`);
+
     // Mark as expired
     booking.status = 'expired';
     booking.slotStatus = {
       ...booking.slotStatus,
       gracePeridActive: false,
-      expiredAt: new Date(),
+      expiredAt: nowNepali.toDate(), // Convert to JS Date for MongoDB
       expiredReason: 'no_show_after_grace_period'
     };
 
     booking.cancellation = {
       cancelledBy: 'system',
       cancellationReason: 'User did not arrive within 30 minutes of slot start time',
-      cancelledAt: new Date(),
+      cancelledAt: nowNepali.toDate(), // Convert to JS Date for MongoDB
       refundEligible: false,
       refundRequested: false,
       hoursBeforeCharge: 0
@@ -516,7 +574,8 @@ class DistributedBookingScheduler {
     await this.redis.publish('booking-events', JSON.stringify({
       type: 'slot_expired',
       bookingId: booking.bookingId,
-      timestamp: new Date().toISOString()
+      timestamp: nowNepali.toISOString(),
+      timestampNepali: nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')
     }));
 
     console.log(`⏰ Expired booking ${booking.bookingId} due to no-show`);
@@ -528,6 +587,9 @@ class DistributedBookingScheduler {
   async sendSlotStartNotifications(booking) {
     const user = booking.user;
     const station = booking.chargingStation;
+    const nowNepali = this.getNepaliNow();
+    const startTimeNepali = this.toNepaliTime(booking.timeSlot.startTime);
+    const graceEndTimeNepali = nowNepali.clone().add(30, 'minutes');
     
     // Email notification
     if (user.email) {
@@ -540,8 +602,8 @@ class DistributedBookingScheduler {
             bookingId: booking.bookingId,
             stationName: station.name,
             stationAddress: this.formatAddress(station.address),
-            startTime: booking.timeSlot.startTime.toLocaleString(),
-            graceEndTime: new Date(Date.now() + 30 * 60 * 1000).toLocaleString(),
+            startTime: startTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]'),
+            graceEndTime: graceEndTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]'),
             portNumber: booking.chargingPort.portNumber,
             connectorType: booking.chargingPort.connectorType,
             checkInUrl: `${process.env.FRONTEND_URL}/bookings/${booking._id}/checkin`
@@ -551,13 +613,13 @@ class DistributedBookingScheduler {
         // Update notification tracking
         booking.slotStatus.notificationsSent.slotStart.email = {
           sent: true,
-          sentAt: new Date()
+          sentAt: nowNepali.toDate() // Convert to JS Date for MongoDB
         };
       } catch (error) {
         console.error('Error sending start email:', error);
         booking.slotStatus.notificationsSent.slotStart.email = {
           sent: false,
-          sentAt: new Date()
+          sentAt: nowNepali.toDate() // Convert to JS Date for MongoDB
         };
       }
     }
@@ -572,13 +634,13 @@ class DistributedBookingScheduler {
         
         booking.slotStatus.notificationsSent.slotStart.sms = {
           sent: true,
-          sentAt: new Date()
+          sentAt: nowNepali.toDate() // Convert to JS Date for MongoDB
         };
       } catch (error) {
         console.error('Error sending start SMS:', error);
         booking.slotStatus.notificationsSent.slotStart.sms = {
           sent: false,
-          sentAt: new Date()
+          sentAt: nowNepali.toDate() // Convert to JS Date for MongoDB
         };
       }
     }
@@ -592,6 +654,8 @@ class DistributedBookingScheduler {
   async sendSlotExpirationNotifications(booking) {
     const user = booking.user;
     const station = booking.chargingStation;
+    const nowNepali = this.getNepaliNow();
+    const startTimeNepali = this.toNepaliTime(booking.timeSlot.startTime);
     
     // Email notification
     if (user.email) {
@@ -604,8 +668,8 @@ class DistributedBookingScheduler {
             bookingId: booking.bookingId,
             stationName: station.name,
             stationAddress: this.formatAddress(station.address),
-            startTime: booking.timeSlot.startTime.toLocaleString(),
-            expiredAt: new Date().toLocaleString(),
+            startTime: startTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]'),
+            expiredAt: nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]'),
             totalAmount: booking.pricing.totalAmount,
             reason: 'Did not arrive within 30 minutes of slot start time',
             bookNewSlotUrl: `${process.env.FRONTEND_URL}/stations`
@@ -614,13 +678,13 @@ class DistributedBookingScheduler {
         
         booking.slotStatus.notificationsSent.slotExpired.email = {
           sent: true,
-          sentAt: new Date()
+          sentAt: nowNepali.toDate() // Convert to JS Date for MongoDB
         };
       } catch (error) {
         console.error('Error sending expiration email:', error);
         booking.slotStatus.notificationsSent.slotExpired.email = {
           sent: false,
-          sentAt: new Date()
+          sentAt: nowNepali.toDate() // Convert to JS Date for MongoDB
         };
       }
     }
@@ -635,13 +699,13 @@ class DistributedBookingScheduler {
         
         booking.slotStatus.notificationsSent.slotExpired.sms = {
           sent: true,
-          sentAt: new Date()
+          sentAt: nowNepali.toDate() // Convert to JS Date for MongoDB
         };
       } catch (error) {
         console.error('Error sending expiration SMS:', error);
         booking.slotStatus.notificationsSent.slotExpired.sms = {
           sent: false,
-          sentAt: new Date()
+          sentAt: nowNepali.toDate() // Convert to JS Date for MongoDB
         };
       }
     }
@@ -654,14 +718,19 @@ class DistributedBookingScheduler {
    */
   async backupMonitoringCheck() {
     try {
-      const now = new Date();
+      const nowNepali = this.getNepaliNow();
       
-      // Find bookings that might have been missed
+      console.log(`🔍 Backup monitoring check at ${nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}`);
+      
+      // Find bookings that might have been missed (5 minutes past start time in Nepali timezone)
+      const fiveMinutesAgoNepali = nowNepali.clone().subtract(5, 'minutes');
+      const oneHourAgoNepali = nowNepali.clone().subtract(1, 'hour');
+      
       const overdueBookings = await Booking.find({
         status: 'confirmed',
         'timeSlot.startTime': { 
-          $lte: new Date(now.getTime() - 5 * 60 * 1000), // 5 minutes past start
-          $gte: new Date(now.getTime() - 60 * 60 * 1000) // Within last hour
+          $lte: fiveMinutesAgoNepali.toDate(), // 5 minutes past start (converted to UTC for MongoDB)
+          $gte: oneHourAgoNepali.toDate() // Within last hour (converted to UTC for MongoDB)
         },
         'slotStatus.started': { $ne: true }
       }).limit(10);
@@ -670,26 +739,28 @@ class DistributedBookingScheduler {
       for (const booking of overdueBookings) {
         const jobId = `start_${booking._id}`;
         const processed = await this.redis.get(`${this.KEYS.PROCESSED}:${jobId}`);
+        const bookingStartTimeNepali = this.toNepaliTime(booking.timeSlot.startTime);
         
         if (!processed) {
-          console.log(`🔄 Backup processing start notification for ${booking.bookingId}`);
+          console.log(`🔄 Backup processing start notification for ${booking.bookingId} (was scheduled for ${bookingStartTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')})`);
           await this.handleSlotStart(booking);
         }
       }
 
-      // Find bookings that should be expired
+      // Find bookings that should be expired (grace period ended in Nepali timezone)
       const shouldExpireBookings = await Booking.find({
         status: 'confirmed',
         'slotStatus.gracePeridActive': true,
-        'slotStatus.gracePeriodEndsAt': { $lte: now }
+        'slotStatus.gracePeriodEndsAt': { $lte: nowNepali.toDate() } // Convert to UTC for MongoDB comparison
       }).limit(10);
 
       for (const booking of shouldExpireBookings) {
         const jobId = `grace_${booking._id}`;
         const processed = await this.redis.get(`${this.KEYS.PROCESSED}:${jobId}`);
+        const graceEndTimeNepali = this.toNepaliTime(booking.slotStatus.gracePeriodEndsAt);
         
         if (!processed) {
-          console.log(`🔄 Backup processing expiration for ${booking.bookingId}`);
+          console.log(`🔄 Backup processing expiration for ${booking.bookingId} (grace period ended at ${graceEndTimeNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')})`);
           await this.handleGraceExpiration(booking);
         }
       }
@@ -727,13 +798,16 @@ class DistributedBookingScheduler {
    */
   async cleanupExpiredJobs() {
     try {
-      const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+      const oneDayAgoUtc = moment().utc().subtract(1, 'day').valueOf();
+      const nowNepali = this.getNepaliNow();
       
-      // Remove old jobs that failed to execute
+      console.log(`🧹 Cleanup started at ${nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}`);
+      
+      // Remove old jobs that failed to execute (older than 24 hours)
       const removedJobs = await this.redis.zRemRangeByScore(
         this.KEYS.JOBS,
         0,
-        oneDayAgo
+        oneDayAgoUtc
       );
       
       if (removedJobs > 0) {
@@ -853,6 +927,31 @@ class DistributedBookingScheduler {
     if (address.pincode) parts.push(address.pincode);
     
     return parts.join(', ');
+  }
+
+  /**
+   * Debug method to verify timezone handling
+   */
+  debugTimezoneInfo() {
+    const nowUtc = moment().utc();
+    const nowNepali = this.getNepaliNow();
+    const testDate = moment('2025-07-15T03:45:00.000Z'); // Your sample booking time
+    const testDateNepali = this.toNepaliTime(testDate);
+    
+    console.log('🕐 TIMEZONE DEBUG INFO:');
+    console.log(`   Current UTC: ${nowUtc.format('YYYY-MM-DD HH:mm:ss [UTC]')}`);
+    console.log(`   Current NPT: ${nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}`);
+    console.log(`   UTC Offset: ${nowNepali.format('Z')} (Nepal is UTC+05:45)`);
+    console.log(`   Sample booking time (UTC): ${testDate.format('YYYY-MM-DD HH:mm:ss [UTC]')}`);
+    console.log(`   Sample booking time (NPT): ${testDateNepali.format('YYYY-MM-DD HH:mm:ss [NPT]')}`);
+    console.log(`   UTC timestamp for Redis: ${nowUtc.valueOf()}`);
+    
+    return {
+      utc: nowUtc.toISOString(),
+      nepali: nowNepali.format('YYYY-MM-DD HH:mm:ss [NPT]'),
+      offset: nowNepali.format('Z'),
+      utcTimestamp: nowUtc.valueOf()
+    };
   }
 }
 

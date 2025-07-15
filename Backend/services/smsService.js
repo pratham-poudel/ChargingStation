@@ -43,8 +43,20 @@ class SMSService {
     return await this.sendSMS(phoneNumber, message);
   }
 
-  async sendBookingConfirmation(phoneNumber, bookingId, stationName, dateTime) {
-    const message = `Booking Confirmed! ID: ${bookingId}, Station: ${stationName}, Time: ${dateTime}. Thank you for choosing ChargingStation Nepal!`;
+  async sendBookingConfirmation(phoneNumber, bookingId, stationName, dateTime, foodOrder = null) {
+    let message = `Booking Confirmed! ID: ${bookingId}, Station: ${stationName}, Time: ${dateTime}.`;
+    
+    // Add food order details if present
+    if (foodOrder && foodOrder.items && foodOrder.items.length > 0) {
+      const itemCount = foodOrder.items.reduce((total, item) => total + item.quantity, 0);
+      const itemNames = foodOrder.items.slice(0, 2).map(item => `${item.name} x${item.quantity}`).join(', ');
+      const moreItems = foodOrder.items.length > 2 ? ` +${foodOrder.items.length - 2} more` : '';
+      
+      message += ` Food Order: ${itemNames}${moreItems} (${itemCount} items, Rs.${foodOrder.totalAmount}). Food will be prepared during charging.`;
+    }
+    
+    message += ` Thank you for choosing ChargingStation Nepal!`;
+    
     return await this.sendSMS(phoneNumber, message);
   }
 
@@ -55,6 +67,21 @@ class SMSService {
 
   async sendAdminLoginOTP(phoneNumber, fullName, otp) {
     const message = `ChargEase Admin Login OTP: ${otp}. Valid for 5 minutes. Do not share this code. -ChargEase Security`;
+    return await this.sendSMS(phoneNumber, message);
+  }
+
+  async sendEmployeeAssignment(phoneNumber, employeeName, employeeId, password, restaurantName, role, loginUrl) {
+    const message = `Welcome ${employeeName}! You've been assigned as ${role} at ${restaurantName}. Login ID: ${employeeId}, Password: ${password}. Login: ${loginUrl} -ChargingStation Nepal`;
+    return await this.sendSMS(phoneNumber, message);
+  }
+
+  async sendPasswordChangeOTP(phoneNumber, employeeName, otp) {
+    const message = `ChargingStation Nepal: OTP to change password for employee ${employeeName}: ${otp}. Valid for 10 minutes. Do not share this code.`;
+    return await this.sendSMS(phoneNumber, message);
+  }
+
+  async sendPasswordChangeNotification(phoneNumber, employeeName, newPassword) {
+    const message = `ChargingStation Nepal: Your login password for ${employeeName} has been changed by the restaurant owner. New Password: ${newPassword}. Please use this new password for future logins.`;
     return await this.sendSMS(phoneNumber, message);
   }
 }

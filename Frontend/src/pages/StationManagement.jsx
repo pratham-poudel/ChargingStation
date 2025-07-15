@@ -49,7 +49,7 @@ import { stationManagementService } from '../services/stationManagementAPI';
 import { format, parseISO, isToday, isFuture, differenceInMinutes, differenceInHours } from 'date-fns';
 import { formatNepalDate, formatNepalTime, formatNepalDateTime, getTimeDuration } from '../utils/nepalTimeUtils';
 import toast from 'react-hot-toast';
-import EnhancedBookingModal from '../components/EnhancedBookingModal';
+import EnhancedBookingWithRestaurantModal from '../components/EnhancedBookingWithRestaurantModal';
 import PaymentAdjustmentModal from '../components/PaymentAdjustmentModal';
 import EditStationModal from './merchant/components/EditStationModal';
 import StartSessionOTPModal from '../components/StartSessionOTPModal';
@@ -1795,7 +1795,7 @@ const StationManagement = () => {
           </motion.div>
         )}
       </AnimatePresence>      {/* Enhanced Booking Modal for Walk-in Customers */}
-      <EnhancedBookingModal
+      <EnhancedBookingWithRestaurantModal
         station={safeStation}
         isOpen={showBookingModal}
         onClose={() => {

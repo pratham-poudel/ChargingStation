@@ -18,7 +18,9 @@ import {
   FileText,
   TrendingUp,
   AlertCircle,
-  Info
+  Info,
+  Zap,
+  Activity
 } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import { useAdminAuth } from '../../context/AdminAuthContext'
@@ -821,13 +823,27 @@ const AdminPaymentSettlement = () => {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                   <StatCard
                     title="Total Balance"
                     value={vendorDetails.overallStats.totalBalance}
                     icon={Wallet}
                     prefix="₹"
                     color="blue"
+                  />
+                  <StatCard
+                    title="Charging Balance"
+                    value={vendorDetails.overallStats.totalChargingStationBalance || 0}
+                    icon={Zap}
+                    prefix="₹"
+                    color="blue"
+                  />
+                  <StatCard
+                    title="Restaurant Balance"
+                    value={vendorDetails.overallStats.totalRestaurantBalance || 0}
+                    icon={Activity}
+                    prefix="₹"
+                    color="green"
                   />
                   <StatCard
                     title="Total Withdrawn"
@@ -858,13 +874,27 @@ const AdminPaymentSettlement = () => {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
                   <StatCard
                     title="Total to be Received"
                     value={vendorDetails.dailyStats.totalToBeReceived}
                     icon={DollarSign}
                     prefix="₹"
                     color="blue"
+                  />
+                  <StatCard
+                    title="Charging Revenue"
+                    value={vendorDetails.dailyStats.chargingStationRevenue || 0}
+                    icon={Zap}
+                    prefix="₹"
+                    color="blue"
+                  />
+                  <StatCard
+                    title="Restaurant Revenue"
+                    value={vendorDetails.dailyStats.restaurantRevenue || 0}
+                    icon={Activity}
+                    prefix="₹"
+                    color="green"
                   />
                   <StatCard
                     title="Payment Settled"
@@ -1044,13 +1074,16 @@ const AdminPaymentSettlement = () => {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Booking ID
+                            Type
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Transaction ID
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Customer
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Station
+                            Location
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Amount
@@ -1066,14 +1099,34 @@ const AdminPaymentSettlement = () => {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {vendorDetails.transactions.map((transaction, index) => (
                           <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                {transaction.type === 'charging' ? (
+                                  <div className="flex items-center">
+                                    <Zap className="w-4 h-4 text-blue-500 mr-2" />
+                                    <span className="text-sm font-medium text-blue-700">Charging</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center">
+                                    <Activity className="w-4 h-4 text-green-500 mr-2" />
+                                    <span className="text-sm font-medium text-green-700">Restaurant</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {transaction.bookingId}
+                              {transaction.bookingId || transaction.orderId}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {transaction.customerName}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {transaction.stationName}
+                              <div>
+                                <div className="font-medium">{transaction.stationName}</div>
+                                {transaction.restaurantName && (
+                                  <div className="text-xs text-gray-500">{transaction.restaurantName}</div>
+                                )}
+                              </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               ₹{transaction.amount.toLocaleString()}

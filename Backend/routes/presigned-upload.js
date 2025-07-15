@@ -57,8 +57,29 @@ router.post('/generate-upload-url',
         'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'
       ];
       const allowedDocTypes = [
-        'application/pdf', 'application/msword', 
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        // PDF files
+        'application/pdf',
+        // Microsoft Office documents
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        // Text files
+        'text/plain',
+        'text/csv',
+        'text/rtf',
+        // Archive files
+        'application/zip',
+        'application/x-rar-compressed',
+        'application/x-7z-compressed',
+        // Image files (for documents that might contain images)
+        'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+        // Other common document types
+        'application/json',
+        'application/xml',
+        'text/xml'
       ];
       
       if (folder === 'Images' && !allowedImageTypes.includes(fileType)) {
@@ -71,7 +92,7 @@ router.post('/generate-upload-url',
       if (folder === 'Documents' && !allowedDocTypes.includes(fileType)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid document file type. Only PDF and Word documents are allowed.'
+          message: 'Invalid document file type. Please upload a supported document format (PDF, Word, Excel, PowerPoint, Text, CSV, ZIP, etc.).'
         });
       }
 

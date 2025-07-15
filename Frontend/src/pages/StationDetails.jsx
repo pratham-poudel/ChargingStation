@@ -38,7 +38,7 @@ import {
   QrCode
 } from 'lucide-react'
 import { stationsAPI } from '../services/api'
-import EnhancedBookingModal from '../components/EnhancedBookingModal'
+import EnhancedBookingWithRestaurantModal from '../components/EnhancedBookingWithRestaurantModal'
 
 function StationDetails() {
   const { id: stationId } = useParams()
@@ -955,7 +955,7 @@ function StationDetails() {
             </motion.div>
           )}
         </AnimatePresence>        {/* Enhanced Booking Modal */}
-        <EnhancedBookingModal
+        <EnhancedBookingWithRestaurantModal
           station={station}
           isOpen={showBookingModal}
           onClose={() => setShowBookingModal(false)}

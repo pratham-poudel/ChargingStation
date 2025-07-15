@@ -97,6 +97,14 @@ const bookingSchema = new mongoose.Schema({
       type: Number,
       default: 5 // Fixed ₹5 platform fee
     },
+    foodOrderAmount: {
+      type: Number,
+      default: 0 // Amount for food order if any
+    },
+    restaurantAmount: {
+      type: Number,
+      default: 0 // Amount that goes to restaurant
+    },
     merchantAmount: {
       type: Number,
       required: true // Amount that goes to merchant
@@ -303,6 +311,69 @@ const bookingSchema = new mongoose.Schema({
     phoneNumber: String,
     email: String,
     driverName: String
+  },
+  // Food order details if this booking includes food
+  foodOrder: {
+    type: {
+      restaurantId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Restaurant'
+      },
+      orderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order',
+        required: false // Optional since it's set after order creation
+      },
+      items: [{
+        menuItemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true
+        },
+        name: {
+          type: String,
+          required: true
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 10
+        },
+        price: {
+          type: Number,
+          required: true,
+          min: 0
+        }
+      }],
+      totalAmount: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
+        default: 'pending'
+      },
+      orderedAt: {
+        type: Date,
+        default: Date.now
+      },
+      estimatedDeliveryTime: {
+        type: Date
+      },
+      specialInstructions: {
+        type: String,
+        trim: true,
+        maxlength: 300
+      }
+    },
+    required: false, // Make the entire foodOrder optional
+    default: null // Default to null when no food order
+  },
+  isFlexible: {
+    type: Boolean,
+    default: false
   },  qrCode: {
     type: String // QR code for easy check-in at the station
   },

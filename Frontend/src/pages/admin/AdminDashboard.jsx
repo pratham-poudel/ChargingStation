@@ -68,20 +68,18 @@ const generateChartDataFromStats = (stats) => {
     })
     return sortedData.map(item => {
       const totalBookings = item.totalBookings || 0
-      // Always calculate platform revenue as ₹5 per booking
-      const platformRevenue = totalBookings * 5
-      // If totalRevenue is 0 but bookings exist, estimate revenue (optional: you can use a better formula)
-      let totalRevenue = item.totalRevenue
-      if ((!totalRevenue || totalRevenue === 0) && totalBookings > 0) {
-        totalRevenue = platformRevenue // fallback: show platform revenue if totalRevenue is missing
-      }
+      const totalRevenue = item.totalRevenue || 0
+      const platformRevenue = item.platformRevenue || 0
+      const merchantRevenue = item.merchantRevenue || 0
+      
       return {
         month: months[item._id.month - 1],
         totalBookings,
         totalRevenue,
         completedBookings: item.completedBookings || 0,
         cancelledBookings: item.cancelledBookings || 0,
-        platformRevenue
+        platformRevenue,
+        merchantRevenue
       }
     })
   }
@@ -98,6 +96,7 @@ const generateChartDataFromStats = (stats) => {
   const monthlyStats = stats.monthlyStats || {}
   const baseBookings = monthlyStats.bookings || 10
   const baseRevenue = monthlyStats.revenue || 5000
+  const basePlatformRevenue = monthlyStats.platformRevenue || 250
 
   return chartMonths.map((month, index) => {
     // Calculate progression factor (gradual increase towards current month)
@@ -114,9 +113,13 @@ const generateChartDataFromStats = (stats) => {
       ? baseRevenue 
       : Math.round(baseRevenue * progressionFactor * (0.7 + Math.random() * 0.6))
     
+    const platformRevenue = isCurrentMonth 
+      ? basePlatformRevenue 
+      : Math.round(basePlatformRevenue * progressionFactor * (0.7 + Math.random() * 0.6))
+    
     const completedBookings = Math.round(totalBookings * 0.85)
     const cancelledBookings = Math.round(totalBookings * 0.15)
-    const platformRevenue = Math.round(totalRevenue * 0.15) // 15% platform commission
+    const merchantRevenue = totalRevenue - platformRevenue
     
     return {
       month,
@@ -124,7 +127,8 @@ const generateChartDataFromStats = (stats) => {
       totalRevenue,
       completedBookings,
       cancelledBookings,
-      platformRevenue
+      platformRevenue,
+      merchantRevenue
     }
   })
 }
@@ -351,6 +355,13 @@ const AdminDashboard = () => {
         tension: 0.4,
       },
       {
+        label: 'Merchant Revenue',
+        data: chartData.map(stat => stat.merchantRevenue || 0),
+        borderColor: 'rgb(16, 185, 129)',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        tension: 0.4,
+      },
+      {
         label: 'Platform Revenue',
         data: chartData.map(stat => stat.platformRevenue || 0),
         borderColor: 'rgb(16, 185, 129)',
@@ -551,6 +562,150 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Platform Revenue Analytics */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-4 lg:p-6 border border-blue-200">
+          <div className="mb-4 lg:mb-6">
+            <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-2">Platform Revenue Analytics</h2>
+            <p className="text-gray-600 text-sm">Real-time platform commission tracking from completed bookings</p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            {/* Total Platform Revenue */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-lg p-6 shadow-md border-l-4 border-blue-500"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <DollarSign className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                  ALL TIME
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Total Platform Revenue</p>
+                <p className="text-xl lg:text-2xl font-bold text-gray-900">{formatCurrency(dashboardData?.totalStats?.totalPlatformRevenue || 0)}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  From {formatNumber(dashboardData?.totalStats?.totalBookings || 0)} bookings
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Avg: {formatCurrency(dashboardData?.platformRevenue?.avgPerBooking || 0)}/booking
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Monthly Platform Revenue */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-lg p-6 shadow-md border-l-4 border-green-500"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Calendar className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  THIS MONTH
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Monthly Platform Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(dashboardData?.platformRevenue?.monthly || 0)}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  From {formatNumber(monthlyStats.bookings || 0)} bookings
+                </p>
+                <p className={`text-xs mt-1 font-medium ${
+                  growth.platformRevenue >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {growth.platformRevenue >= 0 ? '+' : ''}{growth.platformRevenue}% vs last month
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Weekly Platform Revenue */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white rounded-lg p-6 shadow-md border-l-4 border-purple-500"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <BarChart3 className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                  THIS WEEK
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Weekly Platform Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(dashboardData?.platformRevenue?.weekly || 0)}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  From {formatNumber(weeklyStats.bookings || 0)} bookings
+                </p>
+                <p className="text-xs text-purple-600 mt-1 font-medium">
+                  {weeklyStats.bookings > 0 
+                    ? `₹${((dashboardData?.platformRevenue?.weekly || 0) / weeklyStats.bookings).toFixed(2)} avg/booking`
+                    : 'No bookings yet'
+                  }
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Today's Platform Revenue */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white rounded-lg p-6 shadow-md border-l-4 border-orange-500"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <TrendingUp className="w-6 h-6 text-orange-600" />
+                </div>
+                <div className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                  TODAY
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Today's Platform Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(dashboardData?.platformRevenue?.today || 0)}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  From {formatNumber(dashboardData?.todayStats?.bookings || 0)} completed bookings
+                </p>
+                <p className="text-xs text-orange-600 mt-1 font-medium">
+                  {dashboardData?.todayStats?.bookings > 0 
+                    ? `₹${((dashboardData?.platformRevenue?.today || 0) / dashboardData.todayStats.bookings).toFixed(2)} avg`
+                    : 'No bookings today'
+                  }
+                </p>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Revenue Breakdown Summary */}
+          <div className="mt-6 bg-white/70 backdrop-blur-sm rounded-lg p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">TOTAL ECOSYSTEM REVENUE</p>
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(dashboardData?.totalStats?.totalRevenue || 0)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">MERCHANT SHARE</p>
+                <p className="text-lg font-bold text-green-700">{formatCurrency(dashboardData?.totalStats?.totalMerchantRevenue || 0)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">PLATFORM SHARE</p>
+                <p className="text-lg font-bold text-blue-700">{formatCurrency(dashboardData?.totalStats?.totalPlatformRevenue || 0)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="border-b border-gray-200">
@@ -580,9 +735,9 @@ const AdminDashboard = () => {
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 {/* Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Revenue</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Revenue Breakdown</h3>
                     <div className="h-64">
                       <Line data={monthlyRevenueData} options={chartOptions} />
                     </div>
@@ -592,6 +747,69 @@ const AdminDashboard = () => {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Booking Analytics</h3>
                     <div className="h-64">
                       <Bar data={bookingsData} options={chartOptions} />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                    <h3 className="text-lg font-semibold text-blue-900 mb-4">Platform Revenue Trend</h3>
+                    <div className="h-64">
+                      <Line 
+                        data={{
+                          labels: chartData.map(stat => stat.month),
+                          datasets: [
+                            {
+                              label: 'Platform Revenue (₹)',
+                              data: chartData.map(stat => stat.platformRevenue || 0),
+                              borderColor: 'rgb(59, 130, 246)',
+                              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                              fill: true,
+                              tension: 0.4,
+                              borderWidth: 3,
+                              pointBackgroundColor: 'rgb(59, 130, 246)',
+                              pointBorderColor: '#fff',
+                              pointBorderWidth: 2,
+                              pointRadius: 5,
+                            }
+                          ]
+                        }}
+                        options={{
+                          ...chartOptions,
+                          plugins: {
+                            legend: {
+                              display: true,
+                              position: 'top',
+                              labels: {
+                                color: 'rgb(30, 64, 175)',
+                                font: {
+                                  weight: 'bold'
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              grid: {
+                                color: 'rgba(59, 130, 246, 0.1)',
+                              },
+                              ticks: {
+                                color: 'rgb(55, 65, 81)',
+                                callback: function(value) {
+                                  return '₹' + value.toLocaleString();
+                                }
+                              }
+                            },
+                            x: {
+                              grid: {
+                                color: 'rgba(59, 130, 246, 0.1)',
+                              },
+                              ticks: {
+                                color: 'rgb(55, 65, 81)'
+                              }
+                            }
+                          }
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -625,14 +843,16 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Additional Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Enhanced Platform Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-blue-100">Platform Commission</p>
-                        <p className="text-2xl font-bold">{formatCurrency(stats.platformCommission)}</p>
-                        <p className="text-blue-100 text-sm mt-1">This month</p>
+                        <p className="text-blue-100">Monthly Platform Revenue</p>
+                        <p className="text-2xl font-bold">{formatCurrency(dashboardData?.platformRevenue?.monthly || 0)}</p>
+                        <p className="text-blue-100 text-sm mt-1">
+                          {growth.platformRevenue >= 0 ? '+' : ''}{growth.platformRevenue}% growth
+                        </p>
                       </div>
                       <CreditCard className="w-8 h-8 text-blue-200" />
                     </div>
@@ -641,22 +861,105 @@ const AdminDashboard = () => {
                   <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-green-100">Avg. Session Duration</p>
-                        <p className="text-2xl font-bold">{stats.avgSessionDuration || '0'} min</p>
-                        <p className="text-green-100 text-sm mt-1">Per booking</p>
+                        <p className="text-green-100">Revenue Conversion Rate</p>
+                        <p className="text-2xl font-bold">
+                          {dashboardData?.totalStats?.totalRevenue > 0 
+                            ? ((dashboardData?.totalStats?.totalPlatformRevenue / dashboardData?.totalStats?.totalRevenue) * 100).toFixed(1)
+                            : '0'
+                          }%
+                        </p>
+                        <p className="text-green-100 text-sm mt-1">Platform share of total</p>
                       </div>
-                      <Clock className="w-8 h-8 text-green-200" />
+                      <BarChart3 className="w-8 h-8 text-green-200" />
                     </div>
                   </div>
 
                   <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-purple-100">User Growth Rate</p>
-                        <p className="text-2xl font-bold">+{stats.userGrowthRate || 0}%</p>
-                        <p className="text-purple-100 text-sm mt-1">Month over month</p>
+                        <p className="text-purple-100">Daily Average</p>
+                        <p className="text-2xl font-bold">
+                          {dashboardData?.platformRevenue?.daily?.length > 0 
+                            ? formatCurrency(
+                                dashboardData.platformRevenue.daily.reduce((sum, day) => sum + day.dailyPlatformFees, 0) 
+                                / dashboardData.platformRevenue.daily.length
+                              )
+                            : '₹0'
+                          }
+                        </p>
+                        <p className="text-purple-100 text-sm mt-1">Last 30 days avg</p>
                       </div>
-                      <TrendingUp className="w-8 h-8 text-purple-200" />
+                      <Calendar className="w-8 h-8 text-purple-200" />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-orange-100">Projected Monthly</p>
+                        <p className="text-2xl font-bold">
+                          {dashboardData?.platformRevenue?.today > 0 
+                            ? formatCurrency((dashboardData?.platformRevenue?.today || 0) * 30)
+                            : formatCurrency((dashboardData?.platformRevenue?.weekly || 0) * 4.3)
+                          }
+                        </p>
+                        <p className="text-orange-100 text-sm mt-1">Based on current trend</p>
+                      </div>
+                      <TrendingUp className="w-8 h-8 text-orange-200" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Platform Performance Insights */}
+                <div className="bg-white rounded-lg p-6 border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform Performance Insights</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="text-center">
+                      <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                        <DollarSign className="w-8 h-8 text-blue-600" />
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">Avg. Commission</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {formatCurrency(dashboardData?.platformRevenue?.avgPerBooking || 0)}
+                      </p>
+                      <p className="text-xs text-gray-500">per booking</p>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                        <Users className="w-8 h-8 text-green-600" />
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">Active Vendors</p>
+                      <p className="text-xl font-bold text-gray-900">{formatNumber(vendorStats.verified)}</p>
+                      <p className="text-xs text-gray-500">contributing revenue</p>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                        <Zap className="w-8 h-8 text-purple-600" />
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">Revenue/Station</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {overview.totalStations > 0 
+                          ? formatCurrency((dashboardData?.totalStats?.totalPlatformRevenue || 0) / overview.totalStations)
+                          : '₹0'
+                        }
+                      </p>
+                      <p className="text-xs text-gray-500">avg per station</p>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="bg-orange-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                        <Activity className="w-8 h-8 text-orange-600" />
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {overview.totalBookings > 0 
+                          ? ((dashboardData?.totalStats?.totalBookings || 0) / overview.totalBookings * 100).toFixed(1)
+                          : '0'
+                        }%
+                      </p>
+                      <p className="text-xs text-gray-500">completion rate</p>
                     </div>
                   </div>
                 </div>

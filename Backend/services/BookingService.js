@@ -2,6 +2,8 @@ const mongoose = require('mongoose')
 const Booking = require('../models/Booking')
 const ChargingStation = require('../models/ChargingStation')
 const User = require('../models/User')
+const Order = require('../models/Order')
+const Restaurant = require('../models/Restaurant')
 const smsService = require('./smsService')
 const emailService = require('./emailService')
 const bookingScheduler = require('./RedisBookingScheduler')
@@ -179,7 +181,9 @@ class BookingService {// Generate time slots for a given date respecting station
       // Validate date format
       if (!/^\d{4}-\d{2}-\d{2}$/.test(bookingData.date)) {
         throw new Error('Invalid date format. Use YYYY-MM-DD format')
-      }      // Find or create user
+      }
+      
+      // Find or create user
       let user = null
       const { customerDetails } = bookingData
       
@@ -329,14 +333,22 @@ class BookingService {// Generate time slots for a given date respecting station
         if (startMinutes <= currentMinutes + bufferMinutes) {
           throw new Error('This time slot has already passed. Please select a future time.')
         }
-      }      // Calculate pricing - Simple model: Energy consumption + Platform fee
+      }      // Calculate pricing - Include food order if provided
       const durationHours = bookingData.duration / 60
       const estimatedEnergyConsumption = port.powerOutput * durationHours
       const pricePerUnit = port.pricePerUnit || 3 // Default ₹3/kWh if not specified
       const energyCost = estimatedEnergyConsumption * pricePerUnit
       const platformFee = 5
-      const totalAmount = energyCost + platformFee
+      
+      // Add food order amount if provided
+      let foodOrderAmount = 0
+      if (bookingData.foodOrder && bookingData.foodOrder.items && bookingData.foodOrder.items.length > 0) {
+        foodOrderAmount = bookingData.foodOrder.totalAmount || 0
+      }
+      
+      const totalAmount = energyCost + platformFee + foodOrderAmount
       const merchantAmount = energyCost // Merchant gets energy cost, platform gets platformFee
+      const restaurantAmount = foodOrderAmount // Restaurant gets food order amount
 
       // Generate booking ID
       const bookingId = `CHG${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`      // Create the booking with proper schema structure
@@ -367,7 +379,9 @@ class BookingService {// Generate time slots for a given date respecting station
           taxes: 0, // No taxes in simple model
           serviceCharges: 0, // No additional service charges
           platformFee: platformFee,
+          foodOrderAmount: foodOrderAmount,
           merchantAmount: Math.round(merchantAmount),
+          restaurantAmount: Math.round(restaurantAmount),
           totalAmount: Math.round(totalAmount)
         },status: 'confirmed',
         paymentStatus: 'paid',
@@ -381,7 +395,16 @@ class BookingService {// Generate time slots for a given date respecting station
           paymentMethod: 'card',
           transactionId: `TXN${Date.now()}`,
           paidAt: new Date()
-        }
+        },
+        // Add food order if provided
+        foodOrder: bookingData.foodOrder ? {
+          restaurantId: bookingData.foodOrder.restaurantId,
+          items: bookingData.foodOrder.items,
+          totalAmount: bookingData.foodOrder.totalAmount,
+          status: 'pending',
+          orderedAt: new Date()
+        } : null,
+        isFlexible: bookingData.isFlexible || false
       })
 
       // Use transaction to ensure atomic booking creation
@@ -410,6 +433,95 @@ class BookingService {// Generate time slots for a given date respecting station
         
         // Save booking within transaction
         await newBooking.save({ session })
+        
+        // Create Order document if there's a food order
+        let order = null
+        if (bookingData.foodOrder && bookingData.foodOrder.items && bookingData.foodOrder.items.length > 0) {
+          console.log('Creating Order document for food order...')
+          
+          // Get the restaurant details
+          const restaurant = await Restaurant.findById(bookingData.foodOrder.restaurantId).session(session)
+          if (!restaurant) {
+            throw new Error('Restaurant not found for food order')
+          }
+          
+          // Create order items with menu item snapshots
+          const orderItems = []
+          for (const item of bookingData.foodOrder.items) {
+            // Find the menu item in the restaurant's menu
+            const menuItem = restaurant.menu.find(m => m._id.toString() === item.menuItemId.toString())
+            if (!menuItem) {
+              console.warn(`Menu item ${item.menuItemId} not found in restaurant ${restaurant._id}`)
+              continue
+            }
+            
+            const orderItem = {
+              menuItem: item.menuItemId,
+              menuItemSnapshot: {
+                name: menuItem.name,
+                description: menuItem.description,
+                price: menuItem.price,
+                category: menuItem.category,
+                image: menuItem.image
+              },
+              quantity: item.quantity,
+              unitPrice: menuItem.price,
+              totalPrice: menuItem.price * item.quantity,
+              status: 'pending'
+            }
+            orderItems.push(orderItem)
+          }
+          
+          // Create the Order document with proper date and no automatic tax
+          const scheduledDate = new Date(`${bookingData.date}T${bookingData.startTime}:00.000Z`)
+          
+          order = new Order({
+            restaurant: bookingData.foodOrder.restaurantId,
+            chargingStation: bookingData.stationId,
+            vendor: station.vendor,
+            customer: {
+              name: bookingData.customerDetails?.driverName || user.name,
+              phoneNumber: bookingData.customerDetails?.phoneNumber || user.phoneNumber,
+              email: bookingData.customerDetails?.email || user.email,
+              userId: user._id
+            },
+            items: orderItems,
+            subtotal: bookingData.foodOrder.totalAmount,
+            // Set tax to 0% since payment is already processed
+            tax: {
+              percentage: 0,
+              amount: 0
+            },
+            serviceCharge: {
+              percentage: 0,
+              amount: 0
+            },
+            totalAmount: bookingData.foodOrder.totalAmount,
+            status: 'pending',
+            orderType: 'dine_in',
+            // Add scheduled service date and time
+            scheduledServiceDate: scheduledDate,
+            scheduledServiceTime: bookingData.startTime,
+            payment: {
+              method: 'card',
+              status: 'paid',
+              transactionId: `TXN${Date.now()}`,
+              paidAt: new Date()
+            },
+            notes: {
+              customer: `Order placed with charging booking ${newBooking.bookingId}. Service scheduled for ${bookingData.date} at ${bookingData.startTime}`,
+              restaurant: `Associated with charging session from ${bookingData.date} ${bookingData.startTime}. Food to be served during charging.`
+            }
+          })
+          
+          await order.save({ session })
+          console.log(`✅ Order ${order.orderNumber} created for booking ${newBooking.bookingId}`)
+          
+          // Update booking with order reference
+          newBooking.foodOrder.orderId = order._id
+          await newBooking.save({ session })
+          console.log(`✅ Updated booking ${newBooking.bookingId} with order reference ${order._id}`)
+        }
         
         // Update port status to occupied
         const portIndex = station.chargingPorts.findIndex(p => p._id.toString() === bookingData.portId.toString())
@@ -446,13 +558,15 @@ class BookingService {// Generate time slots for a given date respecting station
               phoneNumber: bookingData.customerDetails.phoneNumber,
               bookingId,
               stationName: station.name,
-              dateTime
+              dateTime,
+              foodOrder: bookingData.foodOrder
             })
             await smsService.sendBookingConfirmation(
               bookingData.customerDetails.phoneNumber, 
               bookingId,
               station.name,
-              dateTime
+              dateTime,
+              bookingData.foodOrder // Pass food order to SMS
             )
           }
 
@@ -467,12 +581,14 @@ class BookingService {// Generate time slots for a given date respecting station
               dateTime: dateTime,
               duration: `${bookingData.duration} minutes`,
               connectorType: port.connectorType,
-              totalAmount: totalAmount
+              totalAmount: totalAmount,
+              chargingAmount: energyCost + platformFee,
+              foodOrder: bookingData.foodOrder // Pass food order to email
             }
             
             console.log('Email Notification Data:', {
               userEmail: bookingData.customerDetails.email,
-              userName: bookingData.customerDetails.name,
+              userName: bookingData.customerDetails.driverName,
               booking: emailData
             })
               await emailService.sendBookingConfirmationEmail(

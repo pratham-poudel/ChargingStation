@@ -20,7 +20,7 @@ import { stationsAPI } from '../services/api'
 import LocationSelector from '../components/LocationSelector'
 import StationDistance from '../components/StationDistance'
 import DistanceSlider from '../components/DistanceSlider'
-import EnhancedBookingModal from '../components/EnhancedBookingModal'
+import EnhancedBookingWithRestaurantModal from '../components/EnhancedBookingWithRestaurantModal'
 import StationSlotAvailability from '../components/StationSlotAvailability'
 import StationMap from '../components/StationMap'
 import SEOHead from '../components/SEOHead'
@@ -848,7 +848,7 @@ export default function StationSearch() {
             </div>
           </div>        </div>
       </div>      {/* Enhanced Booking Modal */}
-      <EnhancedBookingModal
+      <EnhancedBookingWithRestaurantModal
         station={bookingModal.station}
         isOpen={bookingModal.isOpen}
         onClose={() => setBookingModal({ isOpen: false, station: null })}

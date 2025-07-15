@@ -13,6 +13,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminVendors from './pages/admin/AdminVendors'
 import AdminStations from './pages/admin/AdminStations'
+import AdminRestaurants from './pages/admin/AdminRestaurants'
 import AdminBookings from './pages/admin/AdminBookings'
 import AdminPayments from './pages/admin/AdminPayments'
 import AdminRefunds from './pages/admin/AdminRefunds'
@@ -35,12 +36,15 @@ import StationManagement from './pages/StationManagement'
 import StationEmployeeLogin from './pages/StationEmployeeLogin'
 import RateExperience from './pages/RateExperience'
 import TripAI from './pages/TripAI'
+import RestaurantManagement from './pages/RestaurantManagement'
 
 // Merchant Pages
 import MerchantLogin from './pages/merchant/MerchantLogin'
 import MerchantRegistration from './pages/merchant/MerchantRegistration'
 import MerchantDashboard from './pages/merchant/MerchantDashboard'
 import MerchantStations from './pages/merchant/MerchantStations'
+import MerchantRestaurants from './pages/merchant/MerchantRestaurants'
+import RestaurantDetails from './pages/merchant/RestaurantDetails'
 import MerchantTransactionsAnalytics from './pages/merchant/MerchantAnalytics'
 import MerchantSettings from './pages/merchant/MerchantSettings'
 import LicensingActivation from './pages/merchant/LicensingActivation'
@@ -105,6 +109,8 @@ function App() {
                     <Route path="/merchant/register" element={<AuthLayout><MerchantRegistration /></AuthLayout>} />
                     <Route path="/merchant/dashboard" element={<SubscriptionGuard><MerchantDashboard /></SubscriptionGuard>} />
                     <Route path="/merchant/stations" element={<SubscriptionGuard><MerchantStations /></SubscriptionGuard>} />
+                    <Route path="/merchant/restaurants" element={<SubscriptionGuard><MerchantRestaurants /></SubscriptionGuard>} />
+                    <Route path="/merchant/restaurants/:id" element={<SubscriptionGuard><RestaurantDetails /></SubscriptionGuard>} />
                     <Route path="/merchant/analytics" element={<SubscriptionGuard><MerchantTransactionsAnalytics /></SubscriptionGuard>} />
                     <Route path="/merchant/settings" element={<SubscriptionGuard><MerchantSettings /></SubscriptionGuard>} />
                     <Route path="/merchant/licensing" element={<LicensingActivation />} />
@@ -113,12 +119,16 @@ function App() {
                     <Route path="/station-login" element={<AuthLayout><StationEmployeeLogin /></AuthLayout>} />
                     <Route path="/station-management/:stationId" element={<StationManagement />} />
                     
+                    {/* Restaurant Management Routes */}
+                    <Route path="/restaurant-management/:restaurantId" element={<RestaurantManagement />} />
+                    
                     {/* Admin Routes */}
                     <Route path="/admin/login" element={<AuthLayout><AdminLogin /></AuthLayout>} />
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     <Route path="/admin/users" element={<AdminUsers />} />
                     <Route path="/admin/vendors" element={<AdminVendors />} />
                     <Route path="/admin/stations" element={<AdminStations />} />
+                    <Route path="/admin/restaurants" element={<AdminRestaurants />} />
                     <Route path="/admin/bookings" element={<AdminBookings />} />
                     <Route path="/admin/payments" element={<AdminPayments />} />
                     <Route path="/admin/refunds" element={<AdminRefunds />} />

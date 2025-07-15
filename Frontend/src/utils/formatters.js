@@ -153,3 +153,90 @@ export const truncateText = (text, maxLength = 100) => {
   if (text.length <= maxLength) return text
   return text.slice(0, maxLength) + '...'
 }
+
+/**
+ * Format restaurant operating hours from backend format to display string
+ * @param {Object} operatingHours - Operating hours object from backend
+ * @param {String} day - Day of the week
+ * @returns {String} Formatted hours string
+ */
+export const formatOperatingHours = (operatingHours, day) => {
+  if (!operatingHours || !operatingHours[day]) {
+    return 'Not available';
+  }
+  
+  const dayHours = operatingHours[day];
+  
+  // Check if the restaurant is closed on this day
+  if (!dayHours.isOpen) {
+    return 'Closed';
+  }
+  
+  // Check if it's 24 hours (open 00:00, close 23:59)
+  if (dayHours.open === '00:00' && dayHours.close === '23:59') {
+    return '24 Hours';
+  }
+  
+  // Format regular hours
+  const formatTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+  
+  return `${formatTime(dayHours.open)} - ${formatTime(dayHours.close)}`;
+};
+
+/**
+ * Get current operating status for a restaurant
+ * @param {Object} operatingHours - Operating hours object from backend
+ * @returns {Object} Status object with isOpen, nextChange, and message
+ */
+export const getRestaurantStatus = (operatingHours) => {
+  if (!operatingHours) {
+    return { isOpen: false, message: 'Hours not available' };
+  }
+  
+  const now = new Date();
+  const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  
+  const todayHours = operatingHours[currentDay];
+  
+  if (!todayHours || !todayHours.isOpen) {
+    return { isOpen: false, message: 'Closed today' };
+  }
+  
+  // Check if it's 24 hours
+  if (todayHours.open === '00:00' && todayHours.close === '23:59') {
+    return { isOpen: true, message: 'Open 24 hours' };
+  }
+  
+  // Check if currently open
+  const isCurrentlyOpen = currentTime >= todayHours.open && currentTime <= todayHours.close;
+  
+  // Helper function for time formatting in status messages
+  const formatTimeForStatus = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+  
+  if (isCurrentlyOpen) {
+    return { 
+      isOpen: true, 
+      message: `Open until ${formatTimeForStatus(todayHours.close)}` 
+    };
+  } else {
+    return { 
+      isOpen: false, 
+      message: `Opens at ${formatTimeForStatus(todayHours.open)}` 
+    };
+  }
+};

@@ -33,6 +33,12 @@ const fileRoutes = require('./routes/files');
 const tripAIRoutes = require('./routes/trip-ai');
 const turnstileRoutes = require('./routes/turnstile');
 
+// Restaurant routes
+const vendorRestaurantRoutes = require('./routes/vendor-restaurants');
+const adminRestaurantRoutes = require('./routes/admin-restaurants');
+const restaurantManagementRoutes = require('./routes/restaurant-management');
+const restaurantRoutes = require('./routes/restaurants'); // Public restaurant routes
+
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { connectRedis } = require('./config/redis');
@@ -113,9 +119,13 @@ app.use('/api/vendor/dashboard', vendorDashboardRoutes);
 app.use('/api/vendor/stations', vendorStationsRoutes);
 app.use('/api/vendor/notifications', vendorNotificationsRoutes);
 app.use('/api/vendor/subscription', vendorSubscriptionsRoutes);
+app.use('/api/vendor/restaurants', vendorRestaurantRoutes);
+app.use('/api/restaurants', restaurantRoutes); // Public restaurant routes
 app.use('/api/station-management', stationManagementRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin', adminManagementRoutes);
+app.use('/api/admin/restaurants', adminRestaurantRoutes);
+app.use('/api/restaurant-management', restaurantManagementRoutes);
 // app.use('/api/test', testRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/location', locationRoutes);

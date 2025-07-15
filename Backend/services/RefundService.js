@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const Refund = require('../models/Refund');
+const Order = require('../models/Order');
 
 class RefundService {
   
@@ -181,6 +182,124 @@ class RefundService {
         hoursBeforeCharge: Math.max(0, hoursBeforeCharge)
       };
 
+      // Cancel associated food order if exists
+      let cancelledOrder = null;
+      if (booking.foodOrder && booking.foodOrder.restaurantId) {
+        try {
+          console.log(`Looking for order associated with booking ${booking.bookingId}:`);
+          console.log(`- Restaurant ID: ${booking.foodOrder.restaurantId}`);
+          console.log(`- Order ID: ${booking.foodOrder.orderId}`);
+          console.log(`- Customer Phone: ${booking.customerDetails.phoneNumber}`);
+          
+          let order = null;
+          
+          // First try to find by direct order ID reference (new approach)
+          if (booking.foodOrder.orderId) {
+            order = await Order.findOne({
+              _id: booking.foodOrder.orderId,
+              status: { $in: ['pending', 'confirmed', 'preparing'] } // Only cancel if not yet served
+            });
+            
+            if (order) {
+              console.log(`Found order via direct reference: ${order.orderNumber}`);
+            }
+          }
+          
+          // Fallback to search by customer details (old approach)
+          if (!order) {
+            console.log(`No direct order reference found, searching by customer details...`);
+            
+            order = await Order.findOne({
+              restaurant: booking.foodOrder.restaurantId,
+              'customer.phoneNumber': booking.customerDetails.phoneNumber,
+              'customer.name': booking.customerDetails.name,
+              // Match by order time (within a reasonable time window of booking creation)
+              orderedAt: {
+                $gte: new Date(booking.createdAt.getTime() - 5 * 60 * 1000), // 5 minutes before booking
+                $lte: new Date(booking.createdAt.getTime() + 5 * 60 * 1000)  // 5 minutes after booking
+              },
+              status: { $in: ['pending', 'confirmed', 'preparing'] } // Only cancel if not yet served
+            }).sort({ orderedAt: -1 }); // Get the most recent order
+            
+            if (order) {
+              console.log(`Found order via customer search: ${order.orderNumber}`);
+            }
+          }
+
+          if (order) {
+            console.log(`Cancelling order ${order.orderNumber} with status: ${order.status}`);
+            
+            // Cancel the order
+            await order.cancel(
+              `Booking cancellation: ${reason}`,
+              'system',
+              refundCalculation.isEligible // Refund eligibility same as booking
+            );
+            
+            cancelledOrder = {
+              orderId: order._id,
+              orderNumber: order.orderNumber,
+              status: order.status,
+              totalAmount: order.totalAmount
+            };
+            
+            console.log(`Successfully cancelled associated order ${order.orderNumber} for booking ${booking.bookingId}`);
+          } else {
+            console.log(`No matching order found for booking ${booking.bookingId}`);
+            
+            // Try broader search - look for orders around the same time as the booking's foodOrder timestamp
+            let alternativeOrder = null;
+            if (booking.foodOrder.orderedAt) {
+              const foodOrderTime = new Date(booking.foodOrder.orderedAt);
+              alternativeOrder = await Order.findOne({
+                restaurant: booking.foodOrder.restaurantId,
+                'customer.phoneNumber': booking.customerDetails.phoneNumber,
+                orderedAt: {
+                  $gte: new Date(foodOrderTime.getTime() - 2 * 60 * 1000), // 2 minutes before
+                  $lte: new Date(foodOrderTime.getTime() + 2 * 60 * 1000)  // 2 minutes after
+                },
+                status: { $in: ['pending', 'confirmed', 'preparing'] }
+              }).sort({ orderedAt: -1 });
+              
+              if (alternativeOrder) {
+                console.log(`Found order via foodOrder timestamp: ${alternativeOrder.orderNumber}`);
+                
+                await alternativeOrder.cancel(
+                  `Booking cancellation: ${reason}`,
+                  'system',
+                  refundCalculation.isEligible
+                );
+                
+                cancelledOrder = {
+                  orderId: alternativeOrder._id,
+                  orderNumber: alternativeOrder.orderNumber,
+                  status: alternativeOrder.status,
+                  totalAmount: alternativeOrder.totalAmount
+                };
+                
+                console.log(`Successfully cancelled order ${alternativeOrder.orderNumber} via alternative search`);
+              }
+            }
+            
+            if (!alternativeOrder) {
+              // Debug: Try to find any orders for this customer and restaurant
+              const debugOrders = await Order.find({
+                restaurant: booking.foodOrder.restaurantId,
+                'customer.phoneNumber': booking.customerDetails.phoneNumber
+              }).sort({ orderedAt: -1 }).limit(3);
+              
+              console.log(`Debug: Found ${debugOrders.length} orders for this customer and restaurant:`);
+              debugOrders.forEach(debugOrder => {
+                console.log(`- Order ${debugOrder.orderNumber}: ${debugOrder.status}, created: ${debugOrder.orderedAt}`);
+              });
+            }
+          }
+        } catch (orderError) {
+          // Log error but don't fail the booking cancellation
+          console.error('Error cancelling associated order:', orderError);
+        }
+      }
+
       await booking.save();
 
       return {
@@ -198,11 +317,12 @@ class RefundService {
             refundStatus: refund.refundStatus,
             processingTime: '3-5 business days'
           } : null,
+          cancelledOrder: cancelledOrder, // Include cancelled order information
           refundCalculation
         },
         message: refundCalculation.isEligible 
-          ? `Booking cancelled successfully. Refund of ₹${refundCalculation.finalRefundAmount} will be processed within 3-5 business days.`
-          : 'Booking cancelled. No refund available due to cancellation policy.'
+          ? `Booking cancelled successfully. ${cancelledOrder ? 'Food order also cancelled. ' : ''}Refund of ₹${refundCalculation.finalRefundAmount} will be processed within 3-5 business days.`
+          : `Booking cancelled successfully. ${cancelledOrder ? 'Food order also cancelled. ' : ''}No refund available due to cancellation policy.`
       };
 
     } catch (error) {

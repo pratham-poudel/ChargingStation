@@ -96,13 +96,24 @@ const MerchantTransactionsAnalytics = () => {
         chartData: {
           revenue: {
             labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            datasets: [{
-              label: 'Revenue',
-              data: [12000, 15000, 8000, 10680],
-              borderColor: 'rgb(59, 130, 246)',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              tension: 0.4
-            }]
+            datasets: [
+              {
+                label: 'Charging Revenue',
+                data: [8000, 11000, 5000, 7000],
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+              },
+              {
+                label: 'Restaurant Revenue',
+                data: [4000, 4000, 3000, 3680],
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                fill: true
+              }
+            ]
           }
         }
       }
@@ -272,12 +283,35 @@ const MerchantTransactionsAnalytics = () => {
           </div>
           
           <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-700">Amount to settle:</span>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-gray-700">Total Amount to settle:</span>
               <span className="text-xl font-bold text-blue-600">
                 ₹{(transactionData?.dailyStats?.pendingSettlement || 0).toLocaleString()}
               </span>
             </div>
+            
+            {/* Revenue Breakdown */}
+            <div className="space-y-2 mb-3 pt-2 border-t border-blue-200">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center">
+                  <Zap className="w-4 h-4 text-blue-500 mr-1" />
+                  <span className="text-gray-600">Charging Revenue:</span>
+                </div>
+                <span className="font-medium text-gray-800">
+                  ₹{((transactionData?.dailyStats?.chargingStationRevenue || 0) - (transactionData?.dailyStats?.paymentSettled || 0)).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center">
+                  <Activity className="w-4 h-4 text-green-500 mr-1" />
+                  <span className="text-gray-600">Restaurant Revenue:</span>
+                </div>
+                <span className="font-medium text-gray-800">
+                  ₹{(transactionData?.dailyStats?.restaurantRevenue || 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+            
             <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
               <span>Transaction date:</span>
               <span className="font-medium">{selectedDate}</span>
@@ -391,7 +425,7 @@ const MerchantTransactionsAnalytics = () => {
             <div className="ml-3 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
               All Time
             </div>
-          </div>          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+          </div>          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
             <StatCard
               title="Total Balance"
               value={transactionData?.overallStats?.totalBalance}
@@ -401,11 +435,19 @@ const MerchantTransactionsAnalytics = () => {
               isInSection={true}
             />
             <StatCard
-              title="Total Withdrawn"
-              value={transactionData?.overallStats?.totalWithdrawn}
-              icon={CreditCard}
+              title="Charging Balance"
+              value={transactionData?.overallStats?.totalChargingStationBalance}
+              icon={Zap}
               prefix="₹"
-              subtitle="Money transferred to bank account"
+              subtitle="EV charging earnings"
+              isInSection={true}
+            />
+            <StatCard
+              title="Restaurant Balance"
+              value={transactionData?.overallStats?.totalRestaurantBalance || 0}
+              icon={Activity}
+              prefix="₹"
+              subtitle="Restaurant earnings"
               isInSection={true}
             />
             <StatCard
@@ -439,13 +481,29 @@ const MerchantTransactionsAnalytics = () => {
             >
               {selectedDate}
             </motion.div>
-          </div><div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border border-orange-200">
+          </div>          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border border-orange-200">
             <StatCard
-              title="Amount to be Received"
+              title="Total Revenue"
               value={transactionData?.dailyStats?.totalToBeReceived}
               icon={CreditCard}
               prefix="₹"
-              subtitle={`Earnings from ${selectedDate}`}
+              subtitle={`Combined earnings from ${selectedDate}`}
+              isInSection={true}
+            />
+            <StatCard
+              title="Charging Revenue"
+              value={transactionData?.dailyStats?.chargingStationRevenue}
+              icon={Zap}
+              prefix="₹"
+              subtitle="EV charging sessions"
+              isInSection={true}
+            />
+            <StatCard
+              title="Restaurant Revenue"
+              value={transactionData?.dailyStats?.restaurantRevenue || 0}
+              icon={Activity}
+              prefix="₹"
+              subtitle="Food orders (100% share)"
               isInSection={true}
             />
             <StatCard
@@ -457,13 +515,6 @@ const MerchantTransactionsAnalytics = () => {
               status="settled"
               isInSection={true}
             />
-            <StatCard
-              title="In Settlement Process"
-              value={transactionData?.dailyStats?.inSettlementProcess}
-              icon={RefreshCw}
-              prefix="₹"
-              subtitle="Currently being processed"
-              isInSection={true}            />
           </div>
         </motion.div>
 
@@ -575,13 +626,16 @@ const MerchantTransactionsAnalytics = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Booking ID
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      ID
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Customer
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Station
+                      Location
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Amount
@@ -597,14 +651,34 @@ const MerchantTransactionsAnalytics = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {transactionData.transactions.map((transaction, index) => (
                     <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {transaction.type === 'charging' ? (
+                            <div className="flex items-center">
+                              <Zap className="w-4 h-4 text-blue-500 mr-2" />
+                              <span className="text-sm font-medium text-blue-700">Charging</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center">
+                              <Activity className="w-4 h-4 text-green-500 mr-2" />
+                              <span className="text-sm font-medium text-green-700">Restaurant</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {transaction.bookingId}
+                        {transaction.bookingId || transaction.orderId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {transaction.customerName}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.stationName}
+                        <div>
+                          <div className="font-medium">{transaction.stationName}</div>
+                          {transaction.restaurantName && (
+                            <div className="text-xs text-gray-500">{transaction.restaurantName}</div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         ₹{transaction.amount.toLocaleString()}
@@ -641,7 +715,7 @@ const MerchantTransactionsAnalytics = () => {
               className="bg-white p-6 rounded-lg border border-gray-200"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Revenue Trend</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Revenue Breakdown</h3>
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="w-5 h-5 text-green-600" />
                   <span className="text-sm text-green-600 font-medium">+12.5%</span>
@@ -663,7 +737,12 @@ const MerchantTransactionsAnalytics = () => {
                     },
                     plugins: {
                       legend: {
-                        display: false
+                        display: true,
+                        position: 'top',
+                        labels: {
+                          usePointStyle: true,
+                          padding: 20
+                        }
                       }
                     }
                   }}

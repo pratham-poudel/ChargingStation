@@ -19,7 +19,8 @@ import {
   LogOut,
   Bell,
   Search,
-  ChevronDown
+  ChevronDown,
+  Store
 } from 'lucide-react'
 import { useAdminAuth } from '../../context/AdminAuthContext'
 import toast from 'react-hot-toast'
@@ -65,6 +66,12 @@ const AdminLayout = ({ children }) => {
       href: '/admin/stations',
       icon: Zap,
       current: location.pathname.startsWith('/admin/stations')
+    },
+    {
+      name: 'Restaurants',
+      href: '/admin/restaurants',
+      icon: Store,
+      current: location.pathname.startsWith('/admin/restaurants')
     },
     {
       name: 'Bookings',

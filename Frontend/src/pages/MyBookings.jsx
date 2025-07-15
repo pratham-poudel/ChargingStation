@@ -23,7 +23,9 @@ import {
   XCircle,
   Timer,
   Star,
-  RotateCcw
+  RotateCcw,
+  UtensilsCrossed,
+  ShoppingBag
 } from 'lucide-react'
 import { usersAPI } from '../services/api'
 import { formatAddress, formatDate, formatTime, formatCurrency } from '../utils/formatters'
@@ -464,6 +466,12 @@ function BookingCard({ booking, statusConfig, onViewDetails, onCancel, canCancel
                 <StatusIcon className="w-3 h-3 mr-1" />
                 {status.label}
               </span>
+              {booking.foodOrder && booking.foodOrder.items?.length > 0 && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                  <UtensilsCrossed className="w-3 h-3 mr-1" />
+                  Food Order
+                </span>
+              )}
               {booking.status === 'confirmed' && (
                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                   Starts in {getTimeUntilStart()}
@@ -516,8 +524,14 @@ function BookingCard({ booking, statusConfig, onViewDetails, onCancel, canCancel
             <div className="text-lg font-semibold text-gray-900">
               {formatCurrency(booking.pricing?.totalAmount)}
             </div>
-            <div className="text-sm text-gray-500">
-              {booking.pricing?.estimatedUnits || 0} kWh estimated
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-1 sm:space-y-0 text-sm text-gray-500">
+              <span>{booking.pricing?.estimatedUnits || 0} kWh estimated</span>
+              {booking.foodOrder && booking.foodOrder.items?.length > 0 && (
+                <span className="flex items-center text-orange-600">
+                  <UtensilsCrossed className="w-3 h-3 mr-1" />
+                  {booking.foodOrder.items.length} food item{booking.foodOrder.items.length > 1 ? 's' : ''} • {formatCurrency(booking.foodOrder.totalAmount)}
+                </span>
+              )}
             </div>
           </div>
           
@@ -695,6 +709,12 @@ function BookingDetailsModal({ booking, onClose, onCancel, statusConfig, canCanc
                   <span className="text-sm text-gray-600">Platform Fee</span>
                   <span className="text-sm text-gray-900 font-medium">{formatCurrency(booking.pricing?.platformFee)}</span>
                 </div>
+                {booking.foodOrder && booking.foodOrder.items?.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Food Order</span>
+                    <span className="text-sm text-gray-900 font-medium">{formatCurrency(booking.foodOrder.totalAmount)}</span>
+                  </div>
+                )}
                 <div className="border-t border-gray-200 pt-2 mt-2">
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-900">Total Amount</span>
@@ -704,6 +724,61 @@ function BookingDetailsModal({ booking, onClose, onCancel, statusConfig, canCanc
               </div>
             </div>
           </div>
+
+          {/* Food Order Details */}
+          {booking.foodOrder && booking.foodOrder.items?.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Food Order Details</h3>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <UtensilsCrossed className="w-5 h-5 text-orange-600 mr-2" />
+                      <span className="font-medium text-gray-900">
+                        {booking.foodOrder.items.length} item{booking.foodOrder.items.length > 1 ? 's' : ''} ordered
+                      </span>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      booking.foodOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      booking.foodOrder.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                      booking.foodOrder.status === 'preparing' ? 'bg-orange-100 text-orange-800' :
+                      booking.foodOrder.status === 'ready' ? 'bg-green-100 text-green-800' :
+                      booking.foodOrder.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {booking.foodOrder.status || 'pending'}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {booking.foodOrder.items.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center py-2 px-3 bg-white rounded-lg">
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-900">{item.name}</span>
+                          <span className="text-sm text-gray-600 ml-2">×{item.quantity}</span>
+                        </div>
+                        <span className="font-medium text-gray-900">
+                          {formatCurrency(item.price * item.quantity)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="border-t border-orange-200 pt-3 mt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-900">Food Total</span>
+                      <span className="font-bold text-gray-900">{formatCurrency(booking.foodOrder.totalAmount)}</span>
+                    </div>
+                    {booking.foodOrder.orderedAt && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        Ordered: {formatDateTime(booking.foodOrder.orderedAt)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Cancellation Info for cancelled bookings */}
           {booking.status === 'cancelled' && booking.cancellation && (

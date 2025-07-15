@@ -236,6 +236,147 @@ const templates = {
         </div>
       </div>
     `
+  },
+
+  'employee-assignment': {
+    subject: '🎉 Welcome to {{restaurantName}} - Your Employee Account',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Welcome to the Team!</h1>
+        </div>
+        
+        <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+          <h2 style="color: #111827; margin-top: 0;">Hello {{employeeName}},</h2>
+          
+          <p style="color: #374151; line-height: 1.6;">
+            Congratulations! You have been assigned as a <strong>{{role}}</strong> at <strong>{{restaurantName}}</strong>. 
+            Below are your login credentials to access the restaurant management system.
+          </p>
+          
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #374151; margin: 0 0 15px 0;">Your Login Credentials</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Employee ID:</td>
+                <td style="padding: 8px 0; color: #111827; font-family: monospace; background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">{{employeeId}}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Password:</td>
+                <td style="padding: 8px 0; color: #111827; font-family: monospace; background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">{{password}}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Role:</td>
+                <td style="padding: 8px 0; color: #111827;">{{role}}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Restaurant:</td>
+                <td style="padding: 8px 0; color: #111827;">{{restaurantName}}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Station:</td>
+                <td style="padding: 8px 0; color: #111827;">{{stationName}}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="color: #1e40af; margin: 0; font-size: 14px;">
+              <strong>Important:</strong> Please change your password after your first login for security purposes.
+              Keep your login credentials secure and do not share them with anyone.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{loginUrl}}" style="background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Login to Dashboard
+            </a>
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6;">
+            If you have any questions or need assistance, please don't hesitate to contact your manager or our support team.
+          </p>
+          
+          <p style="color: #374151; line-height: 1.6;">
+            Welcome aboard and thank you for joining our team!
+          </p>
+        </div>
+        
+        <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; font-size: 12px; color: #6b7280;">
+          <p style="margin: 0;">Need help? Contact us at support@chargingstation.com</p>
+          <p style="margin: 5px 0 0 0;">ChargingStation Nepal - Powering Your Business</p>
+        </div>
+      </div>
+    `
+  },
+
+  'password-change': {
+    subject: '🔐 Password Changed - {{restaurantName}}',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🔐 Password Changed</h1>
+        </div>
+        
+        <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+          <h2 style="color: #111827; margin-top: 0;">Hello {{employeeName}},</h2>
+          
+          <p style="color: #374151; line-height: 1.6;">
+            Your login password for <strong>{{restaurantName}}</strong> has been changed by the restaurant owner. 
+            Below are your updated login credentials.
+          </p>
+          
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #374151; margin: 0 0 15px 0;">Your Updated Login Credentials</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Employee ID:</td>
+                <td style="padding: 8px 0; color: #111827; font-family: monospace; background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">{{employeeId}}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">New Password:</td>
+                <td style="padding: 8px 0; color: #111827; font-family: monospace; background: #fef3c7; padding: 4px 8px; border-radius: 4px; font-weight: bold;">{{newPassword}}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Restaurant:</td>
+                <td style="padding: 8px 0; color: #111827;">{{restaurantName}}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Changed By:</td>
+                <td style="padding: 8px 0; color: #111827;">{{changedBy}}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Changed At:</td>
+                <td style="padding: 8px 0; color: #111827;">{{changedAt}}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background: #fef2f2; border: 1px solid #ef4444; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="color: #dc2626; margin: 0; font-size: 14px;">
+              <strong>Security Notice:</strong> If you didn't request this password change, please contact your manager or support team immediately.
+              Keep your login credentials secure and do not share them with anyone.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{loginUrl}}" style="background: #f59e0b; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Login with New Password
+            </a>
+          </div>
+          
+          <p style="color: #374151; line-height: 1.6;">
+            Please use your new password for all future logins. If you have any questions or need assistance, 
+            please contact your manager or our support team.
+          </p>
+        </div>
+        
+        <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; font-size: 12px; color: #6b7280;">
+          <p style="margin: 0;">Need help? Contact us at support@chargingstation.com</p>
+          <p style="margin: 5px 0 0 0;">ChargingStation Nepal - Powering Your Business</p>
+        </div>
+      </div>
+    `
   }
 };
 

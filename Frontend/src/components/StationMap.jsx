@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import { Star, MapPin, Zap } from 'lucide-react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import EnhancedBookingModal from './EnhancedBookingModal'
+import EnhancedBookingWithRestaurantModal from './EnhancedBookingWithRestaurantModal'
 
 // Fix for default markers
 delete L.Icon.Default.prototype._getIconUrl
@@ -368,7 +368,7 @@ const StationMap = ({ stations = [], userLocation = null, onStationSelect, isLoa
       </MapContainer>
 
       {/* Enhanced Booking Modal */}
-      <EnhancedBookingModal
+      <EnhancedBookingWithRestaurantModal
         station={selectedBookingStation}
         isOpen={isBookingModalOpen}
         onClose={() => {

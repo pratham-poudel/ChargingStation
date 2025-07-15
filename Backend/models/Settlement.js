@@ -23,6 +23,10 @@ const settlementSchema = new mongoose.Schema({  settlementId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking'
   }],
+  orderIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order'
+  }],
   status: {
     type: String,
     enum: ['pending', 'processing', 'completed', 'failed'],

@@ -183,26 +183,73 @@ class EmailService {
     });
     
     const subject = `Booking Confirmation - ${booking.stationName}`;
+    
+    // Prepare food order section if available
+    let foodOrderSection = '';
+    if (booking.foodOrder && booking.foodOrder.items && booking.foodOrder.items.length > 0) {
+      const foodItems = booking.foodOrder.items.map(item => 
+        `<tr>
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">x${item.quantity}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">Rs. ${item.price * item.quantity}</td>
+        </tr>`
+      ).join('');
+      
+      foodOrderSection = `
+        <div style="background: white; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #f59e0b;">
+          <h3 style="color: #1f2937; margin: 0 0 15px 0;">🍽️ Food Order</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background-color: #f9fafb;">
+                <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">Item</th>
+                <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qty</th>
+                <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #e5e7eb;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${foodItems}
+              <tr style="background-color: #f9fafb; font-weight: bold;">
+                <td style="padding: 12px 8px; border-top: 2px solid #e5e7eb;" colspan="2">Food Total:</td>
+                <td style="padding: 12px 8px; border-top: 2px solid #e5e7eb; text-align: right;">Rs. ${booking.foodOrder.totalAmount}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="color: #6b7280; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
+            🕒 Your food will be prepared during your charging session and served at your vehicle or the restaurant area.
+          </p>
+        </div>
+      `;
+    }
+    
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px;">Booking Confirmed!</h1>
+          ${booking.foodOrder ? '<p style="color: white; margin: 10px 0 0 0; font-size: 16px;">🍽️ Including Food Order</p>' : ''}
         </div>
         <div style="padding: 30px; background-color: #f9fafb;">
           <h2 style="color: #1f2937; margin-bottom: 20px;">Hello ${userName}!</h2>
           <p style="color: #6b7280; line-height: 1.6; margin-bottom: 25px;">
-            Your charging session has been successfully booked. Here are your booking details:
+            Your charging session has been successfully booked${booking.foodOrder ? ' along with your food order' : ''}. Here are your booking details:
           </p>
           
           <div style="background: white; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #22c55e;">
-            <h3 style="color: #1f2937; margin: 0 0 15px 0;">Booking Details</h3>
+            <h3 style="color: #1f2937; margin: 0 0 15px 0;">⚡ Charging Details</h3>
             <p style="margin: 8px 0; color: #374151;"><strong>Booking ID:</strong> ${booking.bookingId}</p>
             <p style="margin: 8px 0; color: #374151;"><strong>Station:</strong> ${booking.stationName}</p>
             <p style="margin: 8px 0; color: #374151;"><strong>Location:</strong> ${booking.location}</p>
             <p style="margin: 8px 0; color: #374151;"><strong>Date & Time:</strong> ${booking.dateTime}</p>
             <p style="margin: 8px 0; color: #374151;"><strong>Duration:</strong> ${booking.duration}</p>
             <p style="margin: 8px 0; color: #374151;"><strong>Connector Type:</strong> ${booking.connectorType}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Total Amount:</strong> Rs. ${booking.totalAmount}</p>
+            <p style="margin: 8px 0; color: #374151;"><strong>Charging Cost:</strong> Rs. ${booking.chargingAmount || (booking.totalAmount - (booking.foodOrder?.totalAmount || 0))}</p>
+          </div>
+
+          ${foodOrderSection}
+
+          <div style="background: white; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3b82f6;">
+            <h3 style="color: #1f2937; margin: 0 0 15px 0;">💰 Payment Summary</h3>
+            <p style="margin: 8px 0; color: #374151;"><strong>Total Amount Paid:</strong> Rs. ${booking.totalAmount}</p>
+            <p style="margin: 8px 0; color: #6b7280; font-size: 14px;">Payment Status: ✅ Confirmed</p>
           </div>
 
           <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 25px 0;">
@@ -210,7 +257,9 @@ class EmailService {
             <ul style="color: #92400e; margin: 0; padding-left: 20px;">
               <li>Please arrive 10 minutes before your scheduled time</li>
               <li>Bring your charging cable if required</li>
+              ${booking.foodOrder ? '<li>Your food will be prepared during charging and served to you</li>' : ''}
               <li>Contact the station if you need to modify your booking</li>
+              ${booking.foodOrder ? '<li>For food-related queries, speak with restaurant staff on-site</li>' : ''}
             </ul>
           </div>
 
@@ -220,7 +269,7 @@ class EmailService {
 
           <p style="color: #9ca3af; font-size: 14px; text-align: center; margin-top: 30px;">
             Thank you for choosing ChargingStation Nepal!<br>
-            Safe travels and happy charging!
+            Safe travels and happy charging${booking.foodOrder ? ' & dining' : ''}!
           </p>
         </div>
       </div>
