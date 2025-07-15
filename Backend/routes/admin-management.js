@@ -1914,6 +1914,17 @@ const getVendorsWithPendingSettlements = async (req, res) => {
 
     // Process restaurant orders (vendor gets 100% as per updated requirement)
     completedOrders.forEach(order => {
+      // Skip orders with missing restaurant or vendor data
+      if (!order.restaurant || !order.restaurant.vendor || !order.restaurant.vendor._id) {
+        console.warn(`⚠️ Skipping order ${order._id} - missing restaurant or vendor data:`, {
+          orderId: order._id,
+          hasRestaurant: !!order.restaurant,
+          hasVendor: !!(order.restaurant && order.restaurant.vendor),
+          hasVendorId: !!(order.restaurant && order.restaurant.vendor && order.restaurant.vendor._id)
+        });
+        return;
+      }
+      
       const vendorId = order.restaurant.vendor._id.toString();
       
       if (!vendorSettlements[vendorId]) {
