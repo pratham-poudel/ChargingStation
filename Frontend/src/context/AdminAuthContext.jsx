@@ -82,7 +82,9 @@ const adminAPI = axios.create({
   baseURL: `${API_BASE_URL}/admin`,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'X-API-Key': 'your-super-secret-api-key-2024',
+    'X-Frontend-Request': 'true'
   }
 });
 

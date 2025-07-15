@@ -52,7 +52,9 @@ class DirectS3UploadService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         },
         body: JSON.stringify({
           fileName: file.name,
@@ -89,7 +91,9 @@ class DirectS3UploadService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.getAuthToken()}`
+            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'X-API-Key': 'your-super-secret-api-key-2024',
+            'X-Frontend-Request': 'true'
           },
         body: JSON.stringify({
           objectName: objectName,
@@ -155,7 +159,9 @@ class DirectS3UploadService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         },
         body: JSON.stringify({
           files: filesMetadata,
@@ -200,7 +206,9 @@ class DirectS3UploadService {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.getAuthToken()}`
+              'Authorization': `Bearer ${this.getAuthToken()}`,
+              'X-API-Key': 'your-super-secret-api-key-2024',
+              'X-Frontend-Request': 'true'
             },
           body: JSON.stringify({
             batchId: batchId,

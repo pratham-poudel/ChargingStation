@@ -8,6 +8,8 @@ const api = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
+    'X-API-Key': 'your-super-secret-api-key-2024',
+    'X-Frontend-Request': 'true'
   },
 })
 
@@ -68,7 +70,9 @@ export const authAPI = {
   checkUserExists: (data) => api.post('/auth/check-user', data),
   verifyOTP: (data) => api.post('/auth/verify-otp', data),
   verifyToken: (token) => api.get('/auth/verify-token', {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { 'Content-Type': 'application/json',
+    'X-API-Key': 'your-super-secret-api-key-2024',
+    'X-Frontend-Request': 'true',Authorization: `Bearer ${token}` }
   }),
   refreshToken: () => api.post('/auth/refresh'),
   updateProfile: (data) => api.put('/auth/profile', data),

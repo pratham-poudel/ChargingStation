@@ -92,6 +92,8 @@ class UploadService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true',
         ...(token && { 'Authorization': `Bearer ${token}` })
       },
       body: JSON.stringify(uploadData)
@@ -276,6 +278,8 @@ class UploadService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true',
         ...(token && { 'Authorization': `Bearer ${token}` })
       },
       body: JSON.stringify({

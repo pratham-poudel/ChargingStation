@@ -223,7 +223,9 @@ class UploadQueueManager {
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'X-API-Key': 'your-super-secret-api-key-2024',
+            'X-Frontend-Request': 'true'
           },
           body: formData
         });

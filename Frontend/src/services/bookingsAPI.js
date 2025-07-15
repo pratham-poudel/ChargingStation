@@ -29,7 +29,12 @@ export const bookingsAPI = {
       const params = new URLSearchParams()
       if (date) params.append('date', date)
       
-      const response = await fetch(`${API_BASE_URL}/bookings/ports/${stationId}?${params}`)
+      const response = await fetch(`${API_BASE_URL}/bookings/ports/${stationId}?${params}`,{
+        headers: {
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
+        }
+      })
       
       if (!response.ok) {
         const error = await response.json()
@@ -49,6 +54,8 @@ export const bookingsAPI = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         },
         body: JSON.stringify(bookingData),
       })
@@ -205,8 +212,13 @@ export const bookingsAPI = {
       })
       if (portId) params.append('portId', portId)
       
-      const response = await fetch(`${API_BASE_URL}/bookings/realtime-availability/${stationId}?${params}`)
-      
+      const response = await fetch(`${API_BASE_URL}/bookings/realtime-availability/${stationId}?${params}`,{
+        headers: {
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
+        }
+      })
+
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.message || 'Failed to get real-time availability')
@@ -286,7 +298,12 @@ export const bookingsAPI = {
       
       console.log(`🔄 Fetching bulk slot counts for station ${stationId} - dates: ${datesParam}`)
       
-      const response = await fetch(`${API_BASE_URL}/bookings/bulk-slot-counts/${stationId}?${params}`)
+      const response = await fetch(`${API_BASE_URL}/bookings/bulk-slot-counts/${stationId}?${params}`,{
+        headers: {
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
+        }
+      })
       
       if (!response.ok) {
         const error = await response.json()
@@ -314,6 +331,8 @@ export const bookingsAPI = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         },
         body: JSON.stringify(bookingData),
       })
@@ -337,6 +356,8 @@ export const bookingsAPI = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         },
         body: JSON.stringify({ additionalDuration }),
       })
@@ -360,6 +381,8 @@ export const bookingsAPI = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         },
       })
       

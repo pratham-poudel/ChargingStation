@@ -14,9 +14,9 @@ const connectRedis = async () => {
       password: process.env.REDIS_PASSWORD || undefined,
     };
 
-    // Only enable TLS if explicitly set in environment
     if (process.env.REDIS_TLS === 'true') {
       redisConfig.socket.tls = true;
+      redisConfig.socket.rejectUnauthorized = false; // ✅ Ignore invalid/self-signed cert
     }
 
     redisClient = redis.createClient(redisConfig);
@@ -37,7 +37,7 @@ const connectRedis = async () => {
       console.log('❌ Redis client disconnected');
     });
 
-    await redisClient.connect(); // required in redis@4+
+    await redisClient.connect();
     return redisClient;
   } catch (error) {
     console.error('❌ Failed to connect to Redis:', error);

@@ -109,7 +109,9 @@ const StationManagement = () => {
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const response = await fetch(`${API_BASE_URL}/vendor/subscription/status`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('merchantToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('merchantToken')}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       });
       

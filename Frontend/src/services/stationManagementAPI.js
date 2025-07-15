@@ -8,6 +8,8 @@ const stationManagementAPI = axios.create({
   baseURL: `${API_BASE_URL}/station-management`,
   headers: {
     'Content-Type': 'application/json',
+    'X-API-Key': 'your-super-secret-api-key-2024',
+    'X-Frontend-Request': 'true'
   },
 });
 
@@ -169,7 +171,10 @@ export const stationManagementService = {
       };
       
       return stationManagementAPI.put(`/${stationId}/update`, finalData, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
+         }
       });
     } catch (error) {
       throw error;

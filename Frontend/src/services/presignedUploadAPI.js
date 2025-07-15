@@ -6,6 +6,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const presignedAPI = axios.create({
   baseURL: `${API_BASE_URL}/presigned-upload`,
   timeout: 30000,
+  headers: {
+    'X-API-Key': 'your-super-secret-api-key-2024',
+    'X-Frontend-Request': 'true'
+  }
 })
 
 // Add auth token to requests

@@ -7,6 +7,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000, // 30 seconds timeout for file uploads
+  headers: {
+    'X-API-Key': 'your-super-secret-api-key-2024',
+    'X-Frontend-Request': 'true'
+  }
 })
 
 // Add auth token to requests
@@ -105,7 +109,9 @@ export const restaurantAPI = {
       // Send the data as JSON (no FormData needed)
       const response = await api.post('/vendor/restaurants', processedData, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       })
       return response.data
@@ -169,7 +175,9 @@ export const restaurantAPI = {
       // Send the data as JSON (no FormData needed)
       const response = await api.put(`/vendor/restaurants/${restaurantId}`, processedData, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       })
       return response.data
@@ -210,7 +218,9 @@ export const restaurantAPI = {
 
     const response = await api.post(`/vendor/restaurants/${restaurantId}/menu`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
+        'Content-Type': 'multipart/form-data',
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -232,7 +242,9 @@ export const restaurantAPI = {
 
     const response = await api.put(`/vendor/restaurants/${restaurantId}/menu/${itemId}`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
+        'Content-Type': 'multipart/form-data',
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -264,7 +276,9 @@ export const restaurantAPI = {
   getRestaurantDashboard: async (restaurantId, token) => {
     const response = await axios.get(`${API_BASE_URL}/restaurant-management/${restaurantId}/dashboard`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -275,7 +289,9 @@ export const restaurantAPI = {
     const response = await axios.get(`${API_BASE_URL}/restaurant-management/${restaurantId}/orders`, {
       params,
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -288,7 +304,9 @@ export const restaurantAPI = {
       statusData,
       {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -302,7 +320,9 @@ export const restaurantAPI = {
       assignmentData,
       {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -313,7 +333,9 @@ export const restaurantAPI = {
   getRestaurantMenu: async (restaurantId, token) => {
     const response = await axios.get(`${API_BASE_URL}/restaurant-management/${restaurantId}/menu`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -326,7 +348,9 @@ export const restaurantAPI = {
       { isAvailable },
       {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -337,7 +361,9 @@ export const restaurantAPI = {
   getRestaurantEmployees: async (restaurantId, token) => {
     const response = await axios.get(`${API_BASE_URL}/restaurant-management/${restaurantId}/employees`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -347,7 +373,9 @@ export const restaurantAPI = {
   assignRestaurantEmployee: async (restaurantId, employeeData, token) => {
     const response = await axios.post(`${API_BASE_URL}/restaurant-management/${restaurantId}/assign-employee`, employeeData, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -357,7 +385,9 @@ export const restaurantAPI = {
   deleteRestaurantEmployee: async (restaurantId, employeeId, token) => {
     const response = await axios.delete(`${API_BASE_URL}/restaurant-management/${restaurantId}/employees/${employeeId}`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -369,7 +399,9 @@ export const restaurantAPI = {
       newPassword
     }, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -382,7 +414,9 @@ export const restaurantAPI = {
       otp
     }, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -393,7 +427,9 @@ export const restaurantAPI = {
     const response = await axios.get(`${API_BASE_URL}/restaurant-management/${restaurantId}/analytics`, {
       params,
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -406,7 +442,9 @@ export const restaurantAPI = {
       menuData,
       {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -420,7 +458,9 @@ export const restaurantAPI = {
       menuData,
       {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -433,7 +473,9 @@ export const restaurantAPI = {
       `${API_BASE_URL}/restaurant-management/${restaurantId}/menu/${itemId}`,
       {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -447,7 +489,9 @@ export const restaurantAPI = {
       { acceptingOrders },
       {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -461,7 +505,9 @@ export const restaurantAPI = {
     const response = await axios.get(`${API_BASE_URL}/admin/restaurants`, {
       params,
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        'Authorization': `Bearer ${adminToken}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -471,7 +517,9 @@ export const restaurantAPI = {
   getAdminRestaurantDetails: async (restaurantId, adminToken) => {
     const response = await axios.get(`${API_BASE_URL}/admin/restaurants/${restaurantId}`, {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        'Authorization': `Bearer ${adminToken}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -484,7 +532,9 @@ export const restaurantAPI = {
       verificationData,
       {
         headers: {
-          'Authorization': `Bearer ${adminToken}`
+          'Authorization': `Bearer ${adminToken}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -498,7 +548,9 @@ export const restaurantAPI = {
       statusData,
       {
         headers: {
-          'Authorization': `Bearer ${adminToken}`
+          'Authorization': `Bearer ${adminToken}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -512,7 +564,9 @@ export const restaurantAPI = {
       reviewData,
       {
         headers: {
-          'Authorization': `Bearer ${adminToken}`
+          'Authorization': `Bearer ${adminToken}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       }
     )
@@ -524,7 +578,9 @@ export const restaurantAPI = {
     const response = await axios.delete(`${API_BASE_URL}/admin/restaurants/${restaurantId}`, {
       data: deleteData,
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        'Authorization': `Bearer ${adminToken}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -534,7 +590,9 @@ export const restaurantAPI = {
   getRestaurantStats: async (adminToken) => {
     const response = await axios.get(`${API_BASE_URL}/admin/restaurants/stats/overview`, {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        'Authorization': `Bearer ${adminToken}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
       }
     })
     return response.data
@@ -545,7 +603,12 @@ export const restaurantAPI = {
   // Get restaurant by charging station ID (public access)
   getRestaurantByStation: async (stationId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/restaurants/station/${stationId}`)
+      const response = await fetch(`${API_BASE_URL}/restaurants/station/${stationId}`,{
+        headers: {
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
+        }
+      })
       
       if (!response.ok) {
         const error = await response.json()
@@ -562,7 +625,12 @@ export const restaurantAPI = {
   // Get menu items for a restaurant (public access)
   getMenuItems: async (restaurantId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/restaurants/${restaurantId}/menu`)
+      const response = await fetch(`${API_BASE_URL}/restaurants/${restaurantId}/menu`,{
+        headers: {
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
+        }
+      })
       
       if (!response.ok) {
         const error = await response.json()

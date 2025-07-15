@@ -61,6 +61,101 @@ app.use(helmet({
 }));
 app.use(compression());
 
+// Frontend-Only Security Middleware
+const frontendOnlyMiddleware = (req, res, next) => {
+  // Skip security checks for health endpoint and sitemap
+  if (req.path === '/health' || req.path.startsWith('/sitemap')) {
+    return next();
+  }
+
+  // 1. Block common API testing tools by User-Agent
+  const userAgent = req.headers['user-agent'] || '';
+  const blockedTools = [
+    'postman', 'insomnia', 'thunder client', 'rest client', 'curl', 'wget', 
+    'httpie', 'apache-httpclient', 'okhttp', 'axios', 'fetch', 'python-requests',
+    'go-http-client', 'ruby', 'php', 'java', 'c#', 'dotnet', 'swagger'
+  ];
+
+  const isBlockedTool = blockedTools.some(tool => 
+    userAgent.toLowerCase().includes(tool.toLowerCase())
+  );
+
+  if (isBlockedTool) {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'This API cannot be accessed from this client'
+    });
+  }
+
+  // 2. Require a secret API key
+  const apiKey = req.headers['x-api-key'] || req.headers['authorization'];
+  const expectedKey = process.env.FRONTEND_API_KEY || 'your-secret-frontend-key-2024';
+  
+  if (!apiKey || apiKey !== expectedKey) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Invalid or missing API key'
+    });
+  }
+
+  // 3. Require a custom frontend header
+  const frontendHeader = req.headers['x-frontend-request'];
+  if (!frontendHeader || frontendHeader !== 'true') {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Request must come from authorized frontend'
+    });
+  }
+
+  // 4. Validate referer/origin (additional protection)
+  const referer = req.headers.referer || req.headers.origin || '';
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'https://dockit.dallytech.com',
+    'https://0d50xtj3-5173.inc1.devtunnels.ms',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:8080'
+  ];
+
+  const isAllowedOrigin = allowedOrigins.some(origin => 
+    referer.startsWith(origin) || referer === origin
+  );
+
+  if (!isAllowedOrigin && referer) {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Invalid referer/origin'
+    });
+  }
+
+  next();
+};
+
+// CORS configuration - Must come BEFORE security middleware
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'https://dockit.dallytech.com',
+    'https://0d50xtj3-5173.inc1.devtunnels.ms',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:8080'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-API-Key', 
+    'X-Frontend-Request',
+    'X-Requested-With'
+  ]
+}));
+
+// Apply security middleware to all API routes
+app.use('/api/', frontendOnlyMiddleware);
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
@@ -70,21 +165,6 @@ const limiter = rateLimit({
   }
 });
 app.use('/api/', limiter);
-
-// CORS configuration
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'https://dockit.dallytech.com',
-    'https://dockit.dallytech.com/',
-    'https://0d50xtj3-5173.inc1.devtunnels.ms',
-    'https://0d50xtj3-5173.inc1.devtunnels.ms/',
-    'http://localhost:5173', // Vite dev server
-    'http://localhost:3000', // Create React Appd
-    'http://localhost:8080',
-  ],
-  credentials: true
-}));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

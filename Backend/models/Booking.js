@@ -314,58 +314,61 @@ const bookingSchema = new mongoose.Schema({
   },
   // Food order details if this booking includes food
   foodOrder: {
-    restaurantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Restaurant'
-    },
-    orderId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Order',
-      required: false // Optional since it's set after order creation
-    },
-    items: [{
-      menuItemId: {
+    type: {
+      restaurantId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true
+        ref: 'Restaurant'
       },
-      name: {
-        type: String,
-        required: true
+      orderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order',
+        required: false // Optional since it's set after order creation
       },
-      quantity: {
-        type: Number,
-        required: true,
-        min: 1,
-        max: 10
-      },
-      price: {
+      items: [{
+        menuItemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true
+        },
+        name: {
+          type: String,
+          required: true
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 10
+        },
+        price: {
+          type: Number,
+          required: true,
+          min: 0
+        }
+      }],
+      totalAmount: {
         type: Number,
         required: true,
         min: 0
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
+        default: 'pending'
+      },
+      orderedAt: {
+        type: Date,
+        default: Date.now
+      },
+      estimatedDeliveryTime: {
+        type: Date
+      },
+      specialInstructions: {
+        type: String,
+        trim: true,
+        maxlength: 300
       }
-    }],
-    totalAmount: {
-      type: Number,
-      required: true,
-      min: 0
     },
-    status: {
-      type: String,
-      enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
-      default: 'pending'
-    },
-    orderedAt: {
-      type: Date,
-      default: Date.now
-    },
-    estimatedDeliveryTime: {
-      type: Date
-    },
-    specialInstructions: {
-      type: String,
-      trim: true,
-      maxlength: 300
-    }
+    required: false // Make the entire foodOrder optional
   },
   isFlexible: {
     type: Boolean,

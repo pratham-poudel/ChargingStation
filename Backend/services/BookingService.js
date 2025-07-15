@@ -396,14 +396,16 @@ class BookingService {// Generate time slots for a given date respecting station
           transactionId: `TXN${Date.now()}`,
           paidAt: new Date()
         },
-        // Add food order if provided
-        foodOrder: bookingData.foodOrder ? {
-          restaurantId: bookingData.foodOrder.restaurantId,
-          items: bookingData.foodOrder.items,
-          totalAmount: bookingData.foodOrder.totalAmount,
-          status: 'pending',
-          orderedAt: new Date()
-        } : null,
+        // Add food order only if provided and has items
+        ...(bookingData.foodOrder && bookingData.foodOrder.items && bookingData.foodOrder.items.length > 0 ? {
+          foodOrder: {
+            restaurantId: bookingData.foodOrder.restaurantId,
+            items: bookingData.foodOrder.items,
+            totalAmount: bookingData.foodOrder.totalAmount,
+            status: 'pending',
+            orderedAt: new Date()
+          }
+        } : {}),
         isFlexible: bookingData.isFlexible || false
       })
 

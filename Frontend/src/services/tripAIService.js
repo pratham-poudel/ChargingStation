@@ -5,7 +5,11 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 // Create axios instance for Trip AI
 const tripAIAPI = axios.create({
   baseURL: `${API_URL}/trip-ai`,
-  timeout: 30000, // 30 seconds for complex calculations
+  timeout: 30000, 
+  headers: {
+    'X-API-Key': 'your-super-secret-api-key-2024',
+    'X-Frontend-Request': 'true'
+  }
 })
 
 // Add auth token to requests

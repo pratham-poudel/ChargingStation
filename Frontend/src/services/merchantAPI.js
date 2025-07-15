@@ -9,6 +9,8 @@ const merchantApiClient = axios.create({
   baseURL: `${API_BASE_URL}/vendor`,
   headers: {
     'Content-Type': 'application/json',
+    'X-API-Key': 'your-super-secret-api-key-2024',
+    'X-Frontend-Request': 'true'
   },
 })
 
@@ -216,6 +218,8 @@ export const merchantAPI = {
       const response = await merchantApiClient.post('/dashboard/upload-document', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
         }
       });
       
@@ -324,7 +328,10 @@ export const merchantAPI = {
       };
       
       return merchantApiClient.post('/stations', finalData, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
+         }
       });
     } catch (error) {
       throw error;
@@ -389,7 +396,10 @@ export const merchantAPI = {
       };
       
       return merchantApiClient.put(`/stations/${stationId}`, finalData, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json',
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true'
+         }
       });
     } catch (error) {
       throw error;
