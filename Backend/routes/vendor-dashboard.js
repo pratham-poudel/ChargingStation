@@ -5,6 +5,7 @@ const ChargingStation = require('../models/ChargingStation');
 const Booking = require('../models/Booking');
 const Settlement = require('../models/Settlement');
 const Restaurant = require('../models/Restaurant');
+const Order = require('../models/Order');
 const { protect } = require('../middleware/auth');
 const { checkVendorSubscription } = require('../middleware/subscriptionCheck');
 // Using optimized upload service for RAM-efficient uploads
@@ -126,6 +127,10 @@ const getDashboardStats = async (req, res) => {
     });
     console.log('Completed bookings count for vendor:', completedBookingsCount);
 
+    // Get vendor's restaurant IDs for monthly calculations
+    const vendorRestaurants = await Restaurant.find({ vendor: vendorId }).select('_id');
+    const restaurantIds = vendorRestaurants.map(r => r._id);
+
     // Get completed bookings for this month with payment adjustments
     const monthlyCompletedBookings = await Booking.find({
       vendor: vendorId,
@@ -133,9 +138,22 @@ const getDashboardStats = async (req, res) => {
       createdAt: { $gte: currentMonth }
     }).lean();
 
-    const monthlyRevenue = monthlyCompletedBookings.reduce((total, booking) => {
+    const monthlyChargingRevenue = monthlyCompletedBookings.reduce((total, booking) => {
       return total + calculateMerchantRevenue(booking);
     }, 0);
+
+    // Get completed restaurant orders for this month
+    const monthlyCompletedOrders = await Order.find({
+      restaurant: { $in: restaurantIds },
+      status: 'completed',
+      completedAt: { $gte: currentMonth }
+    }).lean();
+
+    const monthlyRestaurantRevenue = monthlyCompletedOrders.reduce((total, order) => {
+      return total + order.totalAmount; // 100% to vendor (annual service charge model)
+    }, 0);
+
+    const monthlyRevenue = monthlyChargingRevenue + monthlyRestaurantRevenue;
 
     // Get confirmed revenue (confirmed bookings that are paid)
     const confirmedRevenue = await Booking.aggregate([
@@ -202,11 +220,23 @@ const getDashboardStats = async (req, res) => {
       status: 'completed'
     }).lean();
 
-    const totalRevenue = allCompletedBookings.reduce((total, booking) => {
+    const totalChargingRevenue = allCompletedBookings.reduce((total, booking) => {
       return total + calculateMerchantRevenue(booking);
     }, 0);
 
-    console.log('Total revenue calculated with adjustments:', totalRevenue);// Get recent bookings
+    // Get all completed restaurant orders for total revenue calculation
+    const allCompletedOrders = await Order.find({
+      restaurant: { $in: restaurantIds },
+      status: 'completed'
+    }).lean();
+
+    const totalRestaurantRevenue = allCompletedOrders.reduce((total, order) => {
+      return total + order.totalAmount; // 100% to vendor (annual service charge model)
+    }, 0);
+
+    const totalRevenue = totalChargingRevenue + totalRestaurantRevenue;
+
+    console.log('Total revenue calculated with adjustments and restaurant orders:', totalRevenue);// Get recent bookings
     const recentBookings = await Booking.find({ 
       vendor: vendorId 
     })
@@ -218,7 +248,10 @@ const getDashboardStats = async (req, res) => {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-    // Daily completed revenue
+    // ============== RESTAURANT ORDERS INCLUSION ==============
+    // Use the already declared restaurantIds from above
+
+    // Daily completed revenue from charging station bookings
     const dailyStats = await Booking.aggregate([
       {
         $match: {
@@ -250,6 +283,31 @@ const getDashboardStats = async (req, res) => {
               else: { $subtract: ['$totalAmountFallback', { $multiply: ['$totalBookings', 5] }] }
             }
           }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 }
+      }
+    ]);
+
+    // Daily restaurant revenue from standalone orders (not part of bookings)
+    const dailyRestaurantStats = await Order.aggregate([
+      {
+        $match: {
+          restaurant: { $in: restaurantIds },
+          status: 'completed', // Only completed orders contribute to actual revenue
+          completedAt: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$completedAt' },
+            month: { $month: '$completedAt' },
+            day: { $dayOfMonth: '$completedAt' }
+          },
+          restaurantRevenue: { $sum: '$totalAmount' }, // 100% to vendor (annual service charge model)
+          totalOrders: { $sum: 1 }
         }
       },
       {
@@ -293,6 +351,31 @@ const getDashboardStats = async (req, res) => {
       }
     ]);
 
+    // Daily estimated restaurant revenue from all paid orders
+    const dailyEstimatedRestaurantStats = await Order.aggregate([
+      {
+        $match: {
+          restaurant: { $in: restaurantIds },
+          'payment.status': 'paid', // All paid orders contribute to estimated revenue
+          orderedAt: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$orderedAt' },
+            month: { $month: '$orderedAt' },
+            day: { $dayOfMonth: '$orderedAt' }
+          },
+          estimatedRestaurantRevenue: { $sum: '$totalAmount' },
+          totalPaidOrders: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 }
+      }
+    ]);
+
     // Also get total bookings for daily stats (including all statuses)
     const dailyBookingStats = await Booking.aggregate([
       {
@@ -316,60 +399,110 @@ const getDashboardStats = async (req, res) => {
       }
     ]);
 
-    // Merge the booking counts with revenue stats and estimated revenue
-    const mergedDailyStats = dailyStats.map(revenueStat => {
-      const bookingStat = dailyBookingStats.find(
-        b => b._id.year === revenueStat._id.year && b._id.month === revenueStat._id.month && b._id.day === revenueStat._id.day
-      );
-      const estimatedStat = dailyEstimatedStats.find(
-        e => e._id.year === revenueStat._id.year && e._id.month === revenueStat._id.month && e._id.day === revenueStat._id.day
-      );
-      return {        ...revenueStat,
-        totalBookings: bookingStat ? bookingStat.totalBookings : 0,
-        // Estimated revenue should be from all paid bookings, actual revenue only from completed
-        estimatedRevenue: estimatedStat ? estimatedStat.estimatedRevenue : revenueStat.revenue,
-        // Include both for comparison
-        actualRevenue: revenueStat.revenue
-      };
-    });
+    // Get total orders for daily stats (including all statuses)
+    const dailyOrderStats = await Order.aggregate([
+      {
+        $match: {
+          restaurant: { $in: restaurantIds },
+          orderedAt: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$orderedAt' },
+            month: { $month: '$orderedAt' },
+            day: { $dayOfMonth: '$orderedAt' }
+          },
+          totalOrders: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 }
+      }
+    ]);
 
-    // Add days with estimated revenue but no completed bookings
-    dailyEstimatedStats.forEach(estimatedStat => {
-      const hasRevenueStat = mergedDailyStats.find(
-        r => r._id.year === estimatedStat._id.year && r._id.month === estimatedStat._id.month && r._id.day === estimatedStat._id.day
-      );
-      if (!hasRevenueStat) {
-        const bookingStat = dailyBookingStats.find(
-          b => b._id.year === estimatedStat._id.year && b._id.month === estimatedStat._id.month && b._id.day === estimatedStat._id.day
-        );
-        mergedDailyStats.push({
-          _id: estimatedStat._id,
-          revenue: 0, // No completed bookings
-          actualRevenue: 0,
-          totalBookings: bookingStat ? bookingStat.totalBookings : 0,
-          estimatedRevenue: estimatedStat.estimatedRevenue
+    // Merge all stats together: bookings + restaurant orders
+    const mergedDailyStats = [];
+    
+    // Create a map to organize all days
+    const daysMap = new Map();
+    
+    // Helper function to get date key
+    const getDateKey = (dateObj) => `${dateObj.year}-${dateObj.month}-${dateObj.day}`;
+    
+    // Initialize days from all data sources
+    [...dailyStats, ...dailyRestaurantStats, ...dailyEstimatedStats, ...dailyEstimatedRestaurantStats, ...dailyBookingStats, ...dailyOrderStats].forEach(stat => {
+      const key = getDateKey(stat._id);
+      if (!daysMap.has(key)) {
+        daysMap.set(key, {
+          _id: stat._id,
+          revenue: 0, // Charging station revenue (completed)
+          restaurantRevenue: 0, // Restaurant revenue (completed)
+          totalBookings: 0,
+          totalOrders: 0,
+          estimatedRevenue: 0, // Estimated charging revenue
+          estimatedRestaurantRevenue: 0, // Estimated restaurant revenue
+          actualRevenue: 0 // Combined actual revenue
         });
       }
     });
-
-    // Add days with bookings but no revenue (neither completed nor paid)
-    dailyBookingStats.forEach(bookingStat => {
-      const hasAnyStat = mergedDailyStats.find(
-        r => r._id.year === bookingStat._id.year && r._id.month === bookingStat._id.month && r._id.day === bookingStat._id.day
-      );
-      if (!hasAnyStat) {
-        mergedDailyStats.push({
-          _id: bookingStat._id,
-          revenue: 0,
-          actualRevenue: 0,
-          totalBookings: bookingStat.totalBookings,
-          estimatedRevenue: 0
-        });
-      }
+    
+    // Populate charging station revenue data
+    dailyStats.forEach(stat => {
+      const key = getDateKey(stat._id);
+      const dayData = daysMap.get(key);
+      dayData.revenue = stat.revenue;
+      dayData.actualRevenue += stat.revenue;
     });
-
+    
+    // Populate restaurant revenue data
+    dailyRestaurantStats.forEach(stat => {
+      const key = getDateKey(stat._id);
+      const dayData = daysMap.get(key);
+      dayData.restaurantRevenue = stat.restaurantRevenue;
+      dayData.actualRevenue += stat.restaurantRevenue;
+    });
+    
+    // Populate estimated charging revenue
+    dailyEstimatedStats.forEach(stat => {
+      const key = getDateKey(stat._id);
+      const dayData = daysMap.get(key);
+      dayData.estimatedRevenue = stat.estimatedRevenue;
+    });
+    
+    // Populate estimated restaurant revenue
+    dailyEstimatedRestaurantStats.forEach(stat => {
+      const key = getDateKey(stat._id);
+      const dayData = daysMap.get(key);
+      dayData.estimatedRestaurantRevenue = stat.estimatedRestaurantRevenue;
+    });
+    
+    // Populate booking counts
+    dailyBookingStats.forEach(stat => {
+      const key = getDateKey(stat._id);
+      const dayData = daysMap.get(key);
+      dayData.totalBookings = stat.totalBookings;
+    });
+    
+    // Populate order counts
+    dailyOrderStats.forEach(stat => {
+      const key = getDateKey(stat._id);
+      const dayData = daysMap.get(key);
+      dayData.totalOrders = stat.totalOrders;
+    });
+    
+    // Convert map to array and sort
+    const finalMergedStats = Array.from(daysMap.values()).map(dayData => ({
+      ...dayData,
+      // Calculate combined totals
+      totalCombinedRevenue: dayData.revenue + dayData.restaurantRevenue,
+      totalEstimatedRevenue: dayData.estimatedRevenue + dayData.estimatedRestaurantRevenue,
+      totalTransactions: dayData.totalBookings + dayData.totalOrders
+    }));
+    
     // Sort the merged stats
-    mergedDailyStats.sort((a, b) => {
+    finalMergedStats.sort((a, b) => {
       if (a._id.year !== b._id.year) return a._id.year - b._id.year;
       if (a._id.month !== b._id.month) return a._id.month - b._id.month;
       return a._id.day - b._id.day;
@@ -384,13 +517,20 @@ const getDashboardStats = async (req, res) => {
           confirmedBookings,
           pendingBookings,
           monthlyRevenue: monthlyRevenue,
+          monthlyChargingRevenue: monthlyChargingRevenue,
+          monthlyRestaurantRevenue: monthlyRestaurantRevenue,
           totalRevenue: totalRevenue,
+          totalChargingRevenue: totalChargingRevenue,
+          totalRestaurantRevenue: totalRestaurantRevenue,
+          // For frontend compatibility - add separate fields
+          chargingRevenue: totalChargingRevenue,
+          restaurantRevenue: totalRestaurantRevenue,
           confirmedRevenue: confirmedRevenue[0]?.merchantRevenue || 0,
           pendingRevenue: pendingRevenue[0]?.merchantRevenue || 0,
           estimatedRevenue: (confirmedRevenue[0]?.merchantRevenue || 0) + (pendingRevenue[0]?.merchantRevenue || 0),
           conversionRate: totalBookings > 0 ? (completedBookings / totalBookings * 100).toFixed(1) : 0        },
         recentBookings,
-        dailyStats: mergedDailyStats,
+        dailyStats: finalMergedStats,
         vendor: {
           name: vendor.name,
           businessName: vendor.businessName,
@@ -1319,9 +1459,6 @@ const getTransactionAnalytics = async (req, res) => {
     }, 0);
 
     // ============== RESTAURANT ORDER REVENUE ==============
-    // Import the Order model
-    const Order = require('../models/Order');
-    
     // Get completed orders for the vendor's restaurants on the selected date
     const vendorRestaurants = await Restaurant.find({ vendor: vendorId }).select('_id');
     const restaurantIds = vendorRestaurants.map(r => r._id);
@@ -1618,8 +1755,6 @@ const requestUrgentSettlement = async (req, res) => {
     }, 0);
 
     // ============== GET PENDING RESTAURANT ORDERS ==============
-    const Order = require('../models/Order');
-    
     // Get vendor's restaurants
     const vendorRestaurants = await Restaurant.find({ vendor: vendorId }).select('_id');
     const restaurantIds = vendorRestaurants.map(r => r._id);

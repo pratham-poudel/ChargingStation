@@ -180,6 +180,7 @@ const BookingsModal = ({ isOpen, onClose, getMerchantRevenue }) => {
   const BookingCalculationSummary = ({ booking }) => {
     const originalAmount = booking.pricing?.totalAmount || 0
     const merchantAmount = booking.pricing?.merchantAmount || Math.max(0, originalAmount - 5)
+    const restaurantAmount = booking.pricing?.restaurantAmount || 0
     const platformFee = 5
 
     const additionalCharges = booking.paymentAdjustments
@@ -190,7 +191,7 @@ const BookingsModal = ({ isOpen, onClose, getMerchantRevenue }) => {
       ?.filter(adj => adj.type === 'refund' && adj.status === 'processed')
       ?.reduce((total, adj) => total + adj.amount, 0) || 0
 
-    const finalMerchantRevenue = getMerchantRevenue ? getMerchantRevenue(booking) : merchantAmount + additionalCharges - refunds
+    const finalMerchantRevenue = getMerchantRevenue ? getMerchantRevenue(booking) : merchantAmount + restaurantAmount + additionalCharges - refunds
 
     return (      <motion.div
         initial={{ opacity: 0, height: 0 }}
@@ -220,6 +221,17 @@ const BookingsModal = ({ isOpen, onClose, getMerchantRevenue }) => {
             <span className="text-gray-600">Base Merchant Amount</span>
             <span className="font-medium">{formatCurrency(merchantAmount)}</span>
           </div>
+
+          {/* Restaurant Revenue */}
+          {restaurantAmount > 0 && (
+            <div className="flex justify-between items-center py-1 border-b border-gray-200 pb-2">
+              <span className="text-green-600 flex items-center">
+                <User className="w-3 h-3 mr-1" />
+                Restaurant Revenue
+              </span>
+              <span className="text-green-600 font-medium">+{formatCurrency(restaurantAmount)}</span>
+            </div>
+          )}
 
           {/* Payment Adjustments */}
           {(additionalCharges > 0 || refunds > 0) && (
@@ -384,7 +396,20 @@ const BookingsModal = ({ isOpen, onClose, getMerchantRevenue }) => {
                         <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-4 flex-shrink-0">
                           <div className="text-right min-w-0">
                             <div className="text-xs sm:text-sm font-semibold text-gray-900">
-                              {formatCurrency(booking.pricing?.merchantAmount || 0)}
+                              {/* Total Expected Revenue */}
+                              {formatCurrency((booking.pricing?.merchantAmount || 0) + (booking.pricing?.restaurantAmount || 0))}
+                              {booking.pricing?.restaurantAmount > 0 && (
+                                <div className="text-xs text-gray-500 mt-0.5 space-y-0.5">
+                                  <div className="flex items-center justify-end">
+                                    <Zap className="w-2.5 h-2.5 mr-1 text-blue-500" />
+                                    <span>₹{(booking.pricing?.merchantAmount || 0).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex items-center justify-end">
+                                    <User className="w-2.5 h-2.5 mr-1 text-green-500" />
+                                    <span>₹{(booking.pricing?.restaurantAmount || 0).toLocaleString()}</span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             {booking.status === 'completed' && (
                               <div className="text-xs text-green-600 font-medium truncate">
@@ -397,7 +422,26 @@ const BookingsModal = ({ isOpen, onClose, getMerchantRevenue }) => {
                           </div>
                           
                           <div className="flex items-center space-x-2">
-                            <StatusBadge status={booking.status} />
+                            <div className="flex flex-col space-y-1">
+                              <StatusBadge status={booking.status} />
+                              {booking.status === 'completed' && (
+                                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  booking.settlementStatus === 'settled' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : booking.settlementStatus === 'included_in_settlement'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  <DollarSign className="w-3 h-3 mr-1" />
+                                  {booking.settlementStatus === 'settled' 
+                                    ? 'Settled' 
+                                    : booking.settlementStatus === 'included_in_settlement'
+                                    ? 'In Settlement'
+                                    : 'Pending Settlement'
+                                  }
+                                </div>
+                              )}
+                            </div>
                             
                             <button
                               onClick={() => toggleExpanded(booking._id)}

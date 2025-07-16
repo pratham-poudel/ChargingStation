@@ -1284,6 +1284,14 @@ router.post('/:stationId/bookings/:bookingId/payment-adjustment', [
       });
     }
 
+    // Check if payment has been settled - prevent adjustments for settled bookings
+    if (booking.settlementStatus === 'settled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment adjustments cannot be made for bookings that have already been settled'
+      });
+    }
+
     // Get adjuster information
     let adjustedBy, adjustedById, adjustedByName;
     if (req.accessType === 'vendor') {

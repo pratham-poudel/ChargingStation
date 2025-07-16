@@ -102,7 +102,7 @@ const MerchantDashboard = () => {
     )
   }
 
-  // Helper function to calculate merchant revenue including payment adjustments
+  // Helper function to calculate merchant revenue including payment adjustments and restaurant revenue
   const getMerchantRevenue = (booking) => {
     // Start with the base merchant amount (excluding platform fee)
     let baseMerchantAmount = 0;
@@ -116,6 +116,9 @@ const MerchantDashboard = () => {
       baseMerchantAmount = Math.max(0, totalAmount - 5);
     }
     
+    // Add restaurant revenue if food order exists
+    const restaurantRevenue = booking.pricing?.restaurantAmount || 0;
+    
     // Calculate adjustment amounts (these are pure merchant gains/losses)
     const additionalCharges = booking.paymentAdjustments
       ?.filter(adj => adj.type === 'additional_charge' && adj.status === 'processed')
@@ -125,14 +128,14 @@ const MerchantDashboard = () => {
       ?.filter(adj => adj.type === 'refund' && adj.status === 'processed')
       ?.reduce((total, adj) => total + adj.amount, 0) || 0;
     
-    // Final merchant revenue = base merchant amount + adjustments
-    return baseMerchantAmount + additionalCharges - refunds;
+    // Final merchant revenue = base merchant amount + restaurant revenue + adjustments
+    return baseMerchantAmount + restaurantRevenue + additionalCharges - refunds;
   };
 
   // Debug: Log daily stats to see what data is available
   console.log('Daily Stats:', dailyStats)
   
-  // Chart data for revenue trends with both estimated and actual revenue
+  // Chart data for revenue trends with charging and restaurant revenue breakdown
   const revenueChartData = {
     labels: dailyStats.map(stat => 
       new Date(stat._id.year, stat._id.month - 1, stat._id.day).toLocaleDateString('en-US', { 
@@ -142,28 +145,37 @@ const MerchantDashboard = () => {
     ),
     datasets: [
       {
-        label: 'Actual Revenue (₹)',
+        label: 'Charging Revenue (₹)',
         data: dailyStats.map(stat => stat.revenue || 0),
-        borderColor: 'rgb(34, 197, 94)',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
         tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Restaurant Revenue (₹)',
+        data: dailyStats.map(stat => stat.restaurantRevenue || 0),
+        borderColor: 'rgb(16, 185, 129)',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        tension: 0.4,
+        fill: true
       },
       {
         label: 'Total Estimated Revenue (₹)',
         data: dailyStats.map(stat => {
-          // Use the estimatedRevenue field provided by backend
-          // This represents total revenue from all paid bookings (confirmed + pending + completed)
-          return stat.estimatedRevenue || 0;
+          // Use the new combined estimated revenue field provided by backend
+          // This represents total estimated revenue from all paid bookings and orders
+          return stat.totalEstimatedRevenue || stat.estimatedRevenue || 0;
         }),
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: 'rgb(245, 158, 11)',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
         tension: 0.4,
         borderDash: [5, 5],
       },
     ],
   }
 
-  // Chart data for bookings
+  // Chart data for bookings and orders
   const bookingsChartData = {
     labels: dailyStats.map(stat => 
       new Date(stat._id.year, stat._id.month - 1, stat._id.day).toLocaleDateString('en-US', { 
@@ -173,8 +185,15 @@ const MerchantDashboard = () => {
     ),
     datasets: [
       {
-        label: 'Total Bookings',
-        data: dailyStats.map(stat => stat.totalBookings),
+        label: 'Charging Bookings',
+        data: dailyStats.map(stat => stat.totalBookings || 0),
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+        borderColor: 'rgb(59, 130, 246)',
+        borderWidth: 1,
+      },
+      {
+        label: 'Restaurant Orders',
+        data: dailyStats.map(stat => stat.totalOrders || 0),
         backgroundColor: 'rgba(16, 185, 129, 0.8)',
         borderColor: 'rgb(16, 185, 129)',
         borderWidth: 1,
@@ -327,6 +346,62 @@ const MerchantDashboard = () => {
                 </>
               )}
             </div>
+
+            {/* Revenue Breakdown Section */}
+            {!isInitialLoading && (stats.totalRevenue > 0 || stats.chargingRevenue > 0 || stats.restaurantRevenue > 0) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <div className="p-3 bg-blue-500 rounded-lg">
+                        <Zap className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-semibold text-blue-900">Charging Revenue</h3>
+                        <p className="text-sm text-blue-700">From EV charging services</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-3xl font-bold text-blue-900">₹{(stats.chargingRevenue || (stats.totalRevenue - stats.restaurantRevenue) || 0).toLocaleString()}</p>
+                    <p className="text-sm text-blue-700">Primary revenue stream</p>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <div className="p-3 bg-green-500 rounded-lg">
+                        <Users className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-semibold text-green-900">Restaurant Revenue</h3>
+                        <p className="text-sm text-green-700">From food order commissions</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-3xl font-bold text-green-900">₹{(stats.restaurantRevenue || 0).toLocaleString()}</p>
+                    <p className="text-sm text-green-700">
+                      {stats.restaurantRevenue > 0 
+                        ? `${((stats.restaurantRevenue / (stats.totalRevenue || 1)) * 100).toFixed(1)}% of total revenue`
+                        : 'No restaurant orders yet'
+                      }
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+            )}
 
             {/* Secondary Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -838,7 +913,20 @@ const MerchantDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="space-y-1">
                             <div className="text-sm font-semibold text-gray-900">
-                              ₹{booking.pricing?.merchantAmount?.toLocaleString() || 0}
+                              {/* Total Amount Display */}
+                              ₹{((booking.pricing?.merchantAmount || 0) + (booking.pricing?.restaurantAmount || 0)).toLocaleString()}
+                              {booking.pricing?.restaurantAmount > 0 && (
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  <div className="flex items-center">
+                                    <Zap className="w-3 h-3 mr-1 text-blue-500" />
+                                    <span>Charging: ₹{(booking.pricing?.merchantAmount || 0).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Users className="w-3 h-3 mr-1 text-green-500" />
+                                    <span>Restaurant: ₹{(booking.pricing?.restaurantAmount || 0).toLocaleString()}</span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             {booking.status === 'completed' ? (
                               <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -857,7 +945,26 @@ const MerchantDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <StatusBadge status={booking.status} />
+                          <div className="space-y-1">
+                            <StatusBadge status={booking.status} />
+                            {booking.status === 'completed' && (
+                              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                booking.settlementStatus === 'settled' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : booking.settlementStatus === 'included_in_settlement'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                <DollarSign className="w-3 h-3 mr-1" />
+                                {booking.settlementStatus === 'settled' 
+                                  ? 'Settled' 
+                                  : booking.settlementStatus === 'included_in_settlement'
+                                  ? 'In Settlement'
+                                  : 'Pending Settlement'
+                                }
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))

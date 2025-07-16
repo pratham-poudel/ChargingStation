@@ -234,6 +234,12 @@ const StationManagement = () => {
   };
 
   const openPaymentAdjustment = (booking) => {
+    // Check if booking is settled
+    if (booking.settlementStatus === 'settled') {
+      toast.error('Payment adjustments cannot be made for bookings that have already been settled');
+      return;
+    }
+    
     setSelectedBookingForAdjustment(booking);
     setShowPaymentAdjustment(true);
   };
@@ -918,8 +924,17 @@ const StationManagement = () => {
                           {/* Payment Adjustment Button */}
                           <button
                             onClick={() => openPaymentAdjustment(booking)}
-                            className="bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium flex items-center"
-                            title="Adjust payment if needed"
+                            disabled={booking.settlementStatus === 'settled'}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center transition-colors ${
+                              booking.settlementStatus === 'settled'
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-orange-500 text-white hover:bg-orange-600'
+                            }`}
+                            title={
+                              booking.settlementStatus === 'settled'
+                                ? 'Payment adjustment not allowed - booking has been settled'
+                                : 'Adjust payment if needed'
+                            }
                           >
                             <Calculator className="w-4 h-4 mr-1" />
                             Adjust
@@ -1271,8 +1286,17 @@ const StationManagement = () => {
                                     <>
                                       <button
                                         onClick={() => openPaymentAdjustment(booking)}
-                                        className="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600 flex items-center"
-                                        title="Adjust payment before completion"
+                                        disabled={booking.settlementStatus === 'settled'}
+                                        className={`px-3 py-1 rounded text-xs flex items-center ${
+                                          booking.settlementStatus === 'settled'
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-orange-500 text-white hover:bg-orange-600'
+                                        }`}
+                                        title={
+                                          booking.settlementStatus === 'settled'
+                                            ? 'Payment adjustment not allowed - booking has been settled'
+                                            : 'Adjust payment before completion'
+                                        }
                                       >
                                         <Calculator className="w-3 h-3 mr-1" />
                                         Adjust Payment
@@ -1302,8 +1326,17 @@ const StationManagement = () => {
                                   {booking.status === 'completed' && (
                                     <button
                                       onClick={() => openPaymentAdjustment(booking)}
-                                      className="bg-purple-500 text-white px-3 py-1 rounded text-xs hover:bg-purple-600 flex items-center"
-                                      title="Post-completion payment adjustment"
+                                      disabled={booking.settlementStatus === 'settled'}
+                                      className={`px-3 py-1 rounded text-xs flex items-center ${
+                                        booking.settlementStatus === 'settled'
+                                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                          : 'bg-purple-500 text-white hover:bg-purple-600'
+                                      }`}
+                                      title={
+                                        booking.settlementStatus === 'settled'
+                                          ? 'Payment adjustment not allowed - booking has been settled'
+                                          : 'Post-completion payment adjustment'
+                                      }
                                     >
                                       <Calculator className="w-3 h-3 mr-1" />
                                       Payment Adjustment

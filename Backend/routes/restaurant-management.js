@@ -1660,4 +1660,180 @@ router.post('/:restaurantId/employees/:employeeId/change-password-verify', [
   }
 });
 
+// @desc    Create offline order (for walk-in customers)
+// @route   POST /api/restaurant-management/:restaurantId/create-order
+// @access  Private (Restaurant Employee with order management permission)
+router.post('/:restaurantId/create-order', [
+  protectRestaurantAccess,
+  requireRestaurantPermission(['manage_orders', 'all']),
+  body('customer.name').notEmpty().withMessage('Customer name is required'),
+  body('customer.phoneNumber').matches(/^[0-9]{10}$/).withMessage('Valid 10-digit phone number is required'),
+  body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
+  body('items.*.menuItemId').isMongoId().withMessage('Valid menu item ID is required'),
+  body('items.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+  body('orderType').isIn(['dine_in', 'takeaway']).withMessage('Valid order type is required'),
+  body('payment.method').isIn(['cash', 'card', 'upi', 'wallet']).withMessage('Valid payment method is required'),
+  body('tableInfo.tableNumber').optional().isString(),
+  body('notes.customer').optional().isString().isLength({ max: 500 }),
+  body('notes.restaurant').optional().isString().isLength({ max: 500 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const {
+      customer,
+      items,
+      orderType,
+      payment,
+      tableInfo,
+      notes
+    } = req.body;
+
+    const restaurant = req.restaurant;
+    const employee = req.user;
+
+    // Validate menu items and get their details
+    const menuItems = [];
+    let subtotal = 0;
+
+    for (const item of items) {
+      const menuItem = restaurant.menu.id(item.menuItemId);
+      
+      if (!menuItem) {
+        return res.status(400).json({
+          success: false,
+          message: `Menu item with ID ${item.menuItemId} not found`
+        });
+      }
+
+      if (!menuItem.isAvailable) {
+        return res.status(400).json({
+          success: false,
+          message: `Menu item "${menuItem.name}" is currently unavailable`
+        });
+      }
+
+      const itemTotal = menuItem.price * item.quantity;
+      subtotal += itemTotal;
+
+      menuItems.push({
+        menuItem: item.menuItemId,
+        menuItemSnapshot: {
+          name: menuItem.name,
+          description: menuItem.description,
+          price: menuItem.price,
+          category: menuItem.category,
+          image: menuItem.images && menuItem.images.length > 0 ? menuItem.images[0].url : null
+        },
+        quantity: item.quantity,
+        unitPrice: menuItem.price,
+        totalPrice: itemTotal,
+        specialInstructions: item.specialInstructions || ''
+      });
+    }
+
+    // Calculate service charge (no tax for offline orders)
+    const serviceChargeAmount = (subtotal * restaurant.serviceCharge?.percentage || 0) / 100;
+    const totalAmount = subtotal + serviceChargeAmount;
+
+    // Create the order
+    const Order = require('../models/Order');
+    const newOrder = new Order({
+      restaurant: restaurant._id,
+      chargingStation: restaurant.chargingStation,
+      vendor: restaurant.vendor,
+      customer: {
+        name: customer.name,
+        phoneNumber: customer.phoneNumber,
+        email: customer.email || null
+      },
+      items: menuItems,
+      subtotal,
+      tax: {
+        percentage: 0,
+        amount: 0
+      },
+      serviceCharge: {
+        percentage: restaurant.serviceCharge?.percentage || 0,
+        amount: serviceChargeAmount
+      },
+      totalAmount,
+      orderType,
+      tableInfo: tableInfo || null,
+      payment: {
+        method: payment.method,
+        status: 'paid', // For offline orders, assume paid immediately
+        paidAt: new Date()
+      },
+      notes: notes || {},
+      status: 'confirmed', // Start as confirmed since it's an offline order
+      confirmedAt: new Date(),
+      createdBy: employee._id,
+      lastUpdatedBy: employee._id,
+      estimatedPreparationTime: Math.max(...menuItems.map(item => 
+        restaurant.menu.id(item.menuItem).preparationTime || 15
+      ))
+    });
+
+    await newOrder.save();
+
+    // Populate the order for response
+    await newOrder.populate([
+      { path: 'restaurant', select: 'name' },
+      { path: 'chargingStation', select: 'name address' },
+      { path: 'createdBy', select: 'employeeName' }
+    ]);
+
+    // Send SMS notification to customer
+    try {
+      const itemNames = menuItems.map(item => item.menuItemSnapshot.name).join(', ');
+      const message = `🍽️ Thank you for your order at ${restaurant.name}! Order #${newOrder.orderNumber} - ${itemNames} - Total: ₹${totalAmount}. Your order is being prepared.`;
+      
+      await smsService.sendSMS(customer.phoneNumber, message);
+      console.log(`📱 SMS sent to ${customer.phoneNumber} for offline order: ${newOrder.orderNumber}`);
+    } catch (smsError) {
+      console.error('SMS notification error:', smsError);
+      // Don't fail the order creation if SMS fails
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Offline order created successfully',
+      data: {
+        order: newOrder,
+        printData: {
+          orderNumber: newOrder.orderNumber,
+          customerName: customer.name,
+          customerPhone: customer.phoneNumber,
+          items: menuItems,
+          subtotal,
+          taxAmount: 0,
+          serviceChargeAmount,
+          totalAmount,
+          orderType,
+          tableNumber: tableInfo?.tableNumber,
+          createdAt: newOrder.orderedAt,
+          restaurantName: restaurant.name,
+          restaurantAddress: newOrder.chargingStation.address,
+          restaurantPhone: restaurant.contactInfo?.phoneNumber || ''
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Create offline order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create offline order'
+    });
+  }
+});
+
 module.exports = router;

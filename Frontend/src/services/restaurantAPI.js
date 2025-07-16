@@ -297,6 +297,18 @@ export const restaurantAPI = {
     return response.data
   },
 
+  // Create offline order
+  createOfflineOrder: async (restaurantId, orderData, token) => {
+    const response = await axios.post(`${API_BASE_URL}/restaurant-management/${restaurantId}/create-order`, orderData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': 'your-super-secret-api-key-2024',
+        'X-Frontend-Request': 'true'
+      }
+    })
+    return response.data
+  },
+
   // Update order status
   updateOrderStatus: async (restaurantId, orderId, statusData, token) => {
     const response = await axios.patch(
