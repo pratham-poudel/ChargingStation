@@ -118,27 +118,27 @@ const AdminRestaurants = () => {
 
       switch (action) {
         case 'verify':
-          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/verify`
+          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/verify`
           body = { approved: true }
           break
         case 'reject':
-          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/verify`
+          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/verify`
           body = { approved: false, rejectionReason: additionalData.reason }
           break
         case 'activate':
-          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/toggle-status`
+          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/toggle-status`
           body = { isActive: true }
           break
         case 'deactivate':
-          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/toggle-status`
+          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/toggle-status`
           body = { isActive: false, reason: additionalData.reason }
           break
         case 'review':
-          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/review`
+          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/review`
           body = { notes: additionalData.notes }
           break
         case 'delete':
-          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}`
+          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}`
           method = 'DELETE'
           body = { reason: additionalData.reason }
           break
