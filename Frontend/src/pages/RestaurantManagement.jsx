@@ -125,6 +125,9 @@ const RestaurantManagement = () => {
   const [changingPassword, setChangingPassword] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
 
+  // Accepting orders toggle state
+  const [togglingAcceptingOrders, setTogglingAcceptingOrders] = useState(false)
+
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authMode, setAuthMode] = useState('checking') // 'checking', 'merchant', 'employee'
@@ -352,6 +355,50 @@ const RestaurantManagement = () => {
       setError('Failed to update menu item availability')
     } finally {
       setMenuLoading(false)
+    }
+  }
+
+  const toggleAcceptingOrders = async () => {
+    try {
+      setTogglingAcceptingOrders(true)
+      setError('')
+      
+      const token = getCurrentToken()
+      const newAcceptingStatus = !restaurant.acceptingOrders
+      
+      const response = await restaurantAPI.toggleAcceptingOrders(
+        restaurantId, 
+        newAcceptingStatus, 
+        token
+      )
+      
+      if (response.success) {
+        // Update local restaurant state
+        setRestaurant(prev => ({
+          ...prev,
+          acceptingOrders: newAcceptingStatus
+        }))
+        
+        // Update dashboard data if available
+        if (dashboardData) {
+          setDashboardData(prev => ({
+            ...prev,
+            restaurant: {
+              ...prev.restaurant,
+              acceptingOrders: newAcceptingStatus
+            }
+          }))
+        }
+        
+        // Show success message
+        const statusText = newAcceptingStatus ? 'accepting' : 'not accepting'
+        alert(`Restaurant is now ${statusText} orders!`)
+      }
+    } catch (error) {
+      console.error('Error toggling accepting orders:', error)
+      setError(`Failed to update accepting orders status: ${error.response?.data?.message || error.message}`)
+    } finally {
+      setTogglingAcceptingOrders(false)
     }
   }
 
@@ -1406,6 +1453,62 @@ const RestaurantManagement = () => {
 
           {activeTab === 'dashboard' && dashboardData && (
             <div className="space-y-6">
+              {/* Restaurant Status Control */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Restaurant Status</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Control whether your restaurant is accepting new orders
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        restaurant?.acceptingOrders 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          restaurant?.acceptingOrders ? 'bg-green-500' : 'bg-red-500'
+                        }`}></div>
+                        {restaurant?.acceptingOrders ? 'Accepting Orders' : 'Not Accepting Orders'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={toggleAcceptingOrders}
+                      disabled={togglingAcceptingOrders}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        restaurant?.acceptingOrders ? 'bg-green-600' : 'bg-gray-200'
+                      } ${togglingAcceptingOrders ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span className="sr-only">Toggle accepting orders</span>
+                      {togglingAcceptingOrders ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent"></div>
+                        </div>
+                      ) : (
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            restaurant?.acceptingOrders ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                {!restaurant?.acceptingOrders && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
+                      <p className="text-sm text-yellow-800">
+                        Your restaurant will not appear in customer searches and cannot receive new orders while this is disabled.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Stats Grid */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
