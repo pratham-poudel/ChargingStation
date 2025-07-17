@@ -34,10 +34,12 @@ const MerchantRestaurants = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingRestaurant, setEditingRestaurant] = useState(null)
   const [selectedStation, setSelectedStation] = useState('')
   const [stations, setStations] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState({ image: 0, license: 0 })
+  const [uploadProgress, setUploadProgress] = useState({ images: [], license: 0 })
   const { merchant } = useMerchant()
 
   // Cuisine options matching the database enum
@@ -58,7 +60,7 @@ const MerchantRestaurants = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    cuisine: '',
+    cuisine: [], // Changed to array for multiple selection
     phoneNumber: '',
     operatingHours: {
       monday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
@@ -69,7 +71,9 @@ const MerchantRestaurants = () => {
       saturday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
       sunday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false }
     },
-    imageFile: null,
+    imageFiles: [], // Changed to support multiple images
+    existingImages: [], // For managing existing images in edit mode
+    imagesToRemove: [], // Track images to be removed
     licenseNumber: '',
     licenseFile: null
   })
@@ -152,56 +156,144 @@ const MerchantRestaurants = () => {
   }
 
   const handleFileChange = (e, fileType) => {
-    const file = e.target.files[0]
-    if (file) {
+    if (fileType === 'imageFiles') {
+      const files = Array.from(e.target.files)
+      // Calculate how many more images we can add
+      const currentTotal = formData.existingImages.length + formData.imageFiles.length
+      const remainingSlots = Math.max(0, 10 - currentTotal)
+      const limitedFiles = files.slice(0, remainingSlots)
+      
       setFormData(prev => ({
         ...prev,
-        [fileType]: file
+        imageFiles: [...prev.imageFiles, ...limitedFiles]
       }))
+    } else {
+      const file = e.target.files[0]
+      if (file) {
+        setFormData(prev => ({
+          ...prev,
+          [fileType]: file
+        }))
+      }
     }
+  }
+
+  const removeImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      imageFiles: prev.imageFiles.filter((_, i) => i !== index)
+    }))
+  }
+
+  // Handle cuisine selection (multiple)
+  const handleCuisineChange = (cuisineValue) => {
+    setFormData(prev => ({
+      ...prev,
+      cuisine: prev.cuisine.includes(cuisineValue)
+        ? prev.cuisine.filter(c => c !== cuisineValue)
+        : [...prev.cuisine, cuisineValue]
+    }))
+  }
+
+  // Handle existing image removal in edit mode
+  const removeExistingImage = (index) => {
+    const imageToRemove = formData.existingImages[index]
+    setFormData(prev => ({
+      ...prev,
+      existingImages: prev.existingImages.filter((_, i) => i !== index),
+      imagesToRemove: [...prev.imagesToRemove, imageToRemove]
+    }))
+  }
+
+  const openEditModal = (restaurant) => {
+    setEditingRestaurant(restaurant)
+    setFormData({
+      name: restaurant.name || '',
+      description: restaurant.description || '',
+      cuisine: restaurant.cuisine || [], // Keep as array
+      phoneNumber: restaurant.contactInfo?.phoneNumber || '',
+      operatingHours: restaurant.operatingHours || {
+        monday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
+        tuesday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
+        wednesday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
+        thursday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
+        friday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
+        saturday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
+        sunday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false }
+      },
+      imageFiles: [],
+      existingImages: restaurant.images || [], // Load existing images
+      imagesToRemove: [], // Reset images to remove
+      licenseNumber: restaurant.licenses?.fssaiLicense?.number || '',
+      licenseFile: null
+    })
+    setSelectedStation(restaurant.chargingStation?._id || '')
+    setIsEditModalOpen(true)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!selectedStation) {
+    if (!selectedStation && !editingRestaurant) {
       setError('Please select a charging station')
+      return
+    }
+
+    if (formData.cuisine.length === 0) {
+      setError('Please select at least one cuisine type')
       return
     }
 
     try {
       setIsSubmitting(true)
       setError('')
-      setUploadProgress({ image: 0, license: 0 })
+      // Initialize progress for multiple images
+      setUploadProgress({ 
+        images: formData.imageFiles.map(() => 0), 
+        license: 0 
+      })
 
-      // Track upload progress for the files
-      const handleImageProgress = (progress) => {
-        setUploadProgress(prev => ({ ...prev, image: progress.percentage }))
+      // Track upload progress for multiple images
+      const handleImageProgress = (index, progress) => {
+        setUploadProgress(prev => ({
+          ...prev,
+          images: prev.images.map((p, i) => i === index ? progress.percentage : p)
+        }))
       }
 
       const handleLicenseProgress = (progress) => {
         setUploadProgress(prev => ({ ...prev, license: progress.percentage }))
       }
 
-      // Pass progress handlers to the restaurant creation
-      const response = await restaurantAPI.createRestaurant({
+      const requestData = {
         ...formData,
         chargingStation: selectedStation,
         imageProgressCallback: handleImageProgress,
         licenseProgressCallback: handleLicenseProgress
-      })
+      }
+
+      let response
+      if (editingRestaurant) {
+        response = await restaurantAPI.updateRestaurant(editingRestaurant._id, requestData)
+      } else {
+        response = await restaurantAPI.createRestaurant(requestData)
+      }
 
       if (response.success) {
         setIsCreateModalOpen(false)
+        setIsEditModalOpen(false)
+        setEditingRestaurant(null)
         resetForm()
         await loadRestaurants()
-        await loadStations()
+        if (!editingRestaurant) {
+          await loadStations()
+        }
       }
     } catch (error) {
-      console.error('Error creating restaurant:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to create restaurant')
+      console.error('Error saving restaurant:', error)
+      setError(error.response?.data?.message || error.message || 'Failed to save restaurant')
     } finally {
       setIsSubmitting(false)
-      setUploadProgress({ image: 0, license: 0 })
+      setUploadProgress({ images: [], license: 0 })
     }
   }
 
@@ -209,7 +301,7 @@ const MerchantRestaurants = () => {
     setFormData({
       name: '',
       description: '',
-      cuisine: '',
+      cuisine: [], // Reset to empty array
       phoneNumber: '',
       operatingHours: {
         monday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
@@ -220,13 +312,16 @@ const MerchantRestaurants = () => {
         saturday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false },
         sunday: { open: '09:00', close: '22:00', isClosed: false, is24Hours: false }
       },
-      imageFile: null,
+      imageFiles: [],
+      existingImages: [], // Reset existing images
+      imagesToRemove: [], // Reset images to remove
       licenseNumber: '',
       licenseFile: null
     })
     setSelectedStation('')
+    setEditingRestaurant(null)
     setError('')
-    setUploadProgress({ image: 0, license: 0 })
+    setUploadProgress({ images: [], license: 0 })
   }
 
   const getStatusColor = (status) => {
@@ -364,12 +459,24 @@ const MerchantRestaurants = () => {
 
                     {/* Cuisine & Status */}
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                        {restaurant.cuisine?.length > 0 
-                          ? cuisineOptions.find(c => c.value === restaurant.cuisine[0])?.label || restaurant.cuisine[0]
-                          : 'Not specified'
-                        }
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {restaurant.cuisine?.length > 0 ? (
+                          restaurant.cuisine.slice(0, 2).map((cuisineType, index) => (
+                            <span key={index} className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                              {cuisineOptions.find(c => c.value === cuisineType)?.label || cuisineType}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                            Not specified
+                          </span>
+                        )}
+                        {restaurant.cuisine?.length > 2 && (
+                          <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                            +{restaurant.cuisine.length - 2} more
+                          </span>
+                        )}
+                      </div>
                       {restaurant.isActive ? (
                         <span className="text-xs text-green-600 flex items-center gap-1">
                           <div className="w-2 h-2 bg-green-600 rounded-full"></div>
@@ -407,13 +514,13 @@ const MerchantRestaurants = () => {
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                      <Link
-                        to={`/merchant/restaurants/${restaurant._id}`}
+                      <button
+                        onClick={() => openEditModal(restaurant)}
                         className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Edit className="w-4 h-4" />
                         Manage
-                      </Link>
+                      </button>
                       <Link
                         to={`/restaurant-management/${restaurant._id}`}
                         className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
@@ -528,22 +635,24 @@ const MerchantRestaurants = () => {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Cuisine Type *
+                            Cuisine Types *
                           </label>
-                          <select
-                            name="cuisine"
-                            value={formData.cuisine}
-                            onChange={handleInputChange}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select cuisine type</option>
+                          <div className="grid grid-cols-2 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
                             {cuisineOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
+                              <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.cuisine.includes(option.value)}
+                                  onChange={() => handleCuisineChange(option.value)}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm text-gray-700">{option.label}</span>
+                              </label>
                             ))}
-                          </select>
+                          </div>
+                          {formData.cuisine.length === 0 && (
+                            <p className="text-sm text-red-500 mt-1">Please select at least one cuisine type</p>
+                          )}
                         </div>
 
                         <div>
@@ -646,33 +755,44 @@ const MerchantRestaurants = () => {
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Restaurant Image
+                            Restaurant Images (Max 10)
                           </label>
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => handleFileChange(e, 'imageFile')}
+                            multiple
+                            onChange={(e) => handleFileChange(e, 'imageFiles')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled={formData.imageFiles.length >= 10}
                           />
-                          {formData.imageFile && (
-                            <div className="mt-2">
-                              <div className="text-xs text-gray-600">
-                                {formData.imageFile.name} ({Math.round(formData.imageFile.size / 1024)} KB)
-                              </div>
-                              {isSubmitting && uploadProgress.image > 0 && (
-                                <div className="mt-1">
-                                  <div className="flex justify-between text-xs text-gray-600">
-                                    <span>Uploading image...</span>
-                                    <span>{Math.round(uploadProgress.image)}%</span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                    <div 
-                                      className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
-                                      style={{ width: `${uploadProgress.image}%` }}
-                                    ></div>
-                                  </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Select up to 10 images for your restaurant ({formData.imageFiles.length}/10)
+                          </p>
+                          
+                          {/* Image Preview Grid */}
+                          {formData.imageFiles.length > 0 && (
+                            <div className="mt-3 grid grid-cols-3 gap-2">
+                              {formData.imageFiles.map((file, index) => (
+                                <div key={index} className="relative">
+                                  <img
+                                    src={URL.createObjectURL(file)}
+                                    alt={`Preview ${index + 1}`}
+                                    className="w-full h-20 object-cover rounded-lg"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeImage(index)}
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                  {isSubmitting && uploadProgress.images[index] > 0 && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg">
+                                      {Math.round(uploadProgress.images[index])}%
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              ))}
                             </div>
                           )}
                         </div>
@@ -750,6 +870,349 @@ const MerchantRestaurants = () => {
                         </div>
                       ) : (
                         'Create Restaurant'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Edit Restaurant Modal */}
+        <AnimatePresence>
+          {isEditModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              >
+                <form onSubmit={handleSubmit} className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900">Edit Restaurant</h2>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditModalOpen(false)
+                        setEditingRestaurant(null)
+                        resetForm()
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2"
+                    >
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      <span className="text-red-700">{error}</span>
+                    </motion.div>
+                  )}
+
+                  <div className="space-y-6">
+                    {/* Basic Information */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Restaurant Name *
+                          </label>
+                          <input
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            required
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter restaurant name"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Cuisine Types *
+                          </label>
+                          <div className="grid grid-cols-2 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+                            {cuisineOptions.map((option) => (
+                              <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.cuisine.includes(option.value)}
+                                  onChange={() => handleCuisineChange(option.value)}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm text-gray-700">{option.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                          {formData.cuisine.length === 0 && (
+                            <p className="text-sm text-red-500 mt-1">Please select at least one cuisine type</p>
+                          )}
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Description
+                          </label>
+                          <textarea
+                            name="description"
+                            value={formData.description}
+                            onChange={handleInputChange}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Describe your restaurant..."
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Contact Number
+                          </label>
+                          <input
+                            type="tel"
+                            name="phoneNumber"
+                            value={formData.phoneNumber}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter contact number"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Charging Station
+                          </label>
+                          <input
+                            type="text"
+                            value={editingRestaurant?.chargingStation?.name || 'N/A'}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Charging station cannot be changed after creation
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Operating Hours */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Operating Hours</h3>
+                      <div className="space-y-3">
+                        {Object.entries(formData.operatingHours).map(([day, hours]) => (
+                          <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="w-20 font-medium text-gray-700 capitalize">
+                              {day}
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={hours.isClosed}
+                                onChange={() => handleDayToggle(day, 'isClosed')}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-600">Closed</span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={hours.is24Hours}
+                                onChange={() => handleDayToggle(day, 'is24Hours')}
+                                disabled={hours.isClosed}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                              />
+                              <span className="text-sm text-gray-600">24 Hours</span>
+                            </div>
+
+                            {!hours.isClosed && !hours.is24Hours && (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="time"
+                                  value={hours.open}
+                                  onChange={(e) => handleTimeChange(day, 'open', e.target.value)}
+                                  className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <span className="text-gray-500">to</span>
+                                <input
+                                  type="time"
+                                  value={hours.close}
+                                  onChange={(e) => handleTimeChange(day, 'close', e.target.value)}
+                                  className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Documents */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Documents & Images</h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Restaurant Images (Max 10)
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => handleFileChange(e, 'imageFiles')}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled={(formData.existingImages.length + formData.imageFiles.length) >= 10}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Add new images (total: {formData.existingImages.length + formData.imageFiles.length}/10)
+                          </p>
+                          
+                          {/* Current Images from Database */}
+                          {formData.existingImages && formData.existingImages.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-sm font-medium text-gray-700 mb-2">Current Images:</p>
+                              <div className="grid grid-cols-3 gap-2">
+                                {formData.existingImages.map((image, index) => (
+                                  <div key={index} className="relative">
+                                    <img
+                                      src={image.url}
+                                      alt={`Current ${index + 1}`}
+                                      className="w-full h-20 object-cover rounded-lg"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeExistingImage(index)}
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                      title="Remove image"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* New Image Previews */}
+                          {formData.imageFiles.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-sm font-medium text-gray-700 mb-2">New Images:</p>
+                              <div className="grid grid-cols-3 gap-2">
+                                {formData.imageFiles.map((file, index) => (
+                                  <div key={index} className="relative">
+                                    <img
+                                      src={URL.createObjectURL(file)}
+                                      alt={`Preview ${index + 1}`}
+                                      className="w-full h-20 object-cover rounded-lg"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeImage(index)}
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                    {isSubmitting && uploadProgress.images[index] > 0 && (
+                                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg">
+                                        {Math.round(uploadProgress.images[index])}%
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            License Number
+                          </label>
+                          <input
+                            type="text"
+                            name="licenseNumber"
+                            value={formData.licenseNumber}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter license number"
+                          />
+
+                          <label className="block text-sm font-medium text-gray-700 mt-4 mb-2">
+                            License Document (Optional - Update)
+                          </label>
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.jpg,.jpeg,.png"
+                            onChange={(e) => handleFileChange(e, 'licenseFile')}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Upload new license document to replace current one
+                          </p>
+                          {formData.licenseFile && (
+                            <div className="mt-2">
+                              <div className="text-xs text-gray-600">
+                                {formData.licenseFile.name} ({Math.round(formData.licenseFile.size / 1024)} KB)
+                              </div>
+                              {isSubmitting && uploadProgress.license > 0 && (
+                                <div className="mt-1">
+                                  <div className="flex justify-between text-xs text-gray-600">
+                                    <span>Uploading license...</span>
+                                    <span>{Math.round(uploadProgress.license)}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                    <div 
+                                      className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                                      style={{ width: `${uploadProgress.license}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditModalOpen(false)
+                        setEditingRestaurant(null)
+                        resetForm()
+                      }}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <LoadingSpinner size="sm" />
+                          Updating...
+                        </div>
+                      ) : (
+                        'Update Restaurant'
                       )}
                     </button>
                   </div>

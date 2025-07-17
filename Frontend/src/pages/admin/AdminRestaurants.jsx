@@ -118,11 +118,11 @@ const AdminRestaurants = () => {
 
       switch (action) {
         case 'verify':
-          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/verify`
+          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/admin/restaurants/${restaurantId}/verify`
           body = { approved: true }
           break
         case 'reject':
-          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/verify`
+          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/admin/restaurants/${restaurantId}/verify`
           body = { approved: false, rejectionReason: additionalData.reason }
           break
         case 'activate':

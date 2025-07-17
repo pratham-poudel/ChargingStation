@@ -126,6 +126,52 @@ class DirectS3UploadService {
   }
 
   /**
+   * Upload multiple files using batch upload (alias for uploadBatchFiles)
+   * @param {Array} fileObjects - Array of file objects with {file, fileName, fileType, fileSize}
+   * @param {Function} onProgress - Progress callback (index, progress)
+   * @param {Object} options - Upload options
+   * @returns {Promise} Upload results
+   */
+  async uploadMultipleFiles(fileObjects, onProgress, options = {}) {
+    try {
+      const files = fileObjects.map(fileObj => fileObj.file || fileObj);
+      
+      // Wrapper to adapt the progress callback for the expected format
+      const adaptedProgress = (progress) => {
+        if (onProgress && progress.currentFile !== undefined) {
+          // Convert the batch progress format to individual file progress format
+          const fileIndex = progress.currentFile - 1;
+          onProgress(fileIndex, { 
+            percentage: progress.fileProgress?.percentage || 0 
+          });
+        }
+      };
+
+      const batchResult = await this.uploadBatchFiles(files, adaptedProgress, options);
+      
+      // Check if batch upload was successful
+      if (!batchResult.success) {
+        throw new Error(`Batch upload failed: ${batchResult.errors?.[0]?.error || 'Unknown error'}`);
+      }
+      
+      // Transform the confirmed files to match expected format
+      const confirmedFiles = batchResult.images || [];
+      
+      return confirmedFiles.map((file) => ({
+        url: file.url,
+        objectName: file.objectName,
+        originalName: file.originalName,
+        size: file.size,
+        mimetype: file.mimetype
+      }));
+
+    } catch (error) {
+      console.error('❌ Error in uploadMultipleFiles:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Upload multiple files in batch using presigned URLs
    * @param {FileList|Array} files - Files to upload
    * @param {Function} onProgress - Progress callback
@@ -472,6 +518,13 @@ const directUploadAPI = {
    */
   async uploadSingleFile(file, onProgress, options = {}) {
     return await directS3UploadService.uploadSingleFile(file, onProgress, options);
+  },
+
+  /**
+   * Upload multiple files directly to S3
+   */
+  async uploadMultipleFiles(fileObjects, onProgress, options = {}) {
+    return await directS3UploadService.uploadMultipleFiles(fileObjects, onProgress, options);
   }
 };
 

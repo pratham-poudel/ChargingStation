@@ -143,7 +143,31 @@ router.post('/', [
   body('name').notEmpty().trim().isLength({ max: 100 }),
   body('description').optional().isLength({ max: 500 }),
   body('chargingStation').isMongoId(),
-  body('cuisine').optional().isIn(['indian', 'chinese', 'continental', 'italian', 'mexican', 'thai', 'japanese', 'american', 'mediterranean', 'local']),
+  body('cuisine').optional().custom((value) => {
+    // Allow single string or array of strings
+    const validCuisines = ['indian', 'chinese', 'continental', 'italian', 'mexican', 'thai', 'japanese', 'american', 'mediterranean', 'local'];
+    
+    if (typeof value === 'string') {
+      if (!validCuisines.includes(value)) {
+        throw new Error(`Invalid cuisine type: ${value}`);
+      }
+      return true;
+    }
+    
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        throw new Error('At least one cuisine type is required');
+      }
+      for (const cuisine of value) {
+        if (!validCuisines.includes(cuisine)) {
+          throw new Error(`Invalid cuisine type: ${cuisine}`);
+        }
+      }
+      return true;
+    }
+    
+    throw new Error('Cuisine must be a string or array of strings');
+  }),
   body('phoneNumber').optional().matches(/^[0-9+\-\s()]{7,15}$/),
   body('licenseNumber').optional().isString(),
   body('operatingHours').optional().isObject()
@@ -194,14 +218,29 @@ router.post('/', [
     // Process uploaded images from presigned upload
     let processedImages = [];
     if (images && Array.isArray(images)) {
-      processedImages = images.map((url, index) => ({
-        url: url,
-        caption: `Restaurant image ${index + 1}`,
-        isPrimary: index === 0,
-        objectName: imageMetadata?.objectName || null,
-        originalName: imageMetadata?.originalName || `image_${index + 1}`,
-        uploadedAt: new Date()
-      }));
+      processedImages = images.map((imageObj, index) => {
+        // Handle both string URLs (legacy) and object format (new)
+        if (typeof imageObj === 'string') {
+          return {
+            url: imageObj,
+            caption: `Restaurant image ${index + 1}`,
+            isPrimary: index === 0,
+            objectName: imageMetadata?.objectName || null,
+            originalName: imageMetadata?.originalName || `image_${index + 1}`,
+            uploadedAt: new Date()
+          };
+        } else {
+          // New object format from direct upload
+          return {
+            url: imageObj.url,
+            caption: `Restaurant image ${index + 1}`,
+            isPrimary: index === 0,
+            objectName: imageObj.objectName || null,
+            originalName: imageObj.originalName || `image_${index + 1}`,
+            uploadedAt: imageObj.uploadedAt || new Date()
+          };
+        }
+      });
     }
     
     // Process operating hours from frontend format to backend format
@@ -268,7 +307,7 @@ router.post('/', [
       description,
       chargingStation,
       vendor: vendorId,
-      cuisine: cuisine ? [cuisine] : [], // Convert single cuisine to array
+      cuisine: Array.isArray(cuisine) ? cuisine : (cuisine ? [cuisine] : []), // Handle both array and single value
       images: processedImages,
       contactInfo: {
         phoneNumber: phoneNumber || '',
@@ -328,7 +367,31 @@ router.put('/:id', [
   param('id').isMongoId(),
   body('name').optional().notEmpty().trim().isLength({ max: 100 }),
   body('description').optional().isLength({ max: 500 }),
-  body('cuisine').optional().isString(),
+  body('cuisine').optional().custom((value) => {
+    // Allow single string or array of strings
+    const validCuisines = ['indian', 'chinese', 'continental', 'italian', 'mexican', 'thai', 'japanese', 'american', 'mediterranean', 'local'];
+    
+    if (typeof value === 'string') {
+      if (!validCuisines.includes(value)) {
+        throw new Error(`Invalid cuisine type: ${value}`);
+      }
+      return true;
+    }
+    
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        throw new Error('At least one cuisine type is required');
+      }
+      for (const cuisine of value) {
+        if (!validCuisines.includes(cuisine)) {
+          throw new Error(`Invalid cuisine type: ${cuisine}`);
+        }
+      }
+      return true;
+    }
+    
+    throw new Error('Cuisine must be a string or array of strings');
+  }),
   body('phoneNumber').optional().matches(/^[0-9+\-\s()]{7,15}$/)
 ], handleValidationErrors, async (req, res) => {
   try {
@@ -350,6 +413,7 @@ router.put('/:id', [
     // Process new images if uploaded
     let newImages = [];
     if (req.files && req.files.images) {
+      // Legacy file upload format
       newImages = req.files.images.map((file, index) => ({
         url: file.location,
         caption: `Restaurant image ${index + 1}`,
@@ -358,11 +422,21 @@ router.put('/:id', [
         originalName: file.originalname,
         uploadedAt: new Date()
       }));
+    } else if (req.body.newImages && Array.isArray(req.body.newImages)) {
+      // New direct upload format
+      newImages = req.body.newImages.map((imageObj, index) => ({
+        url: imageObj.url,
+        caption: `Restaurant image ${restaurant.images.length + index + 1}`,
+        isPrimary: index === 0 && restaurant.images.length === 0,
+        objectName: imageObj.objectName || null,
+        originalName: imageObj.originalName || `image_${index + 1}`,
+        uploadedAt: imageObj.uploadedAt || new Date()
+      }));
     }
     
     // Update restaurant fields
     const updateFields = [
-      'name', 'description', 'cuisine', 'contactInfo', 
+      'name', 'description', 'contactInfo', 
       'manager', 'licenses'
     ];
     
@@ -371,6 +445,11 @@ router.put('/:id', [
         restaurant[field] = req.body[field];
       }
     });
+
+    // Handle cuisine separately to ensure it's always an array
+    if (req.body.cuisine !== undefined) {
+      restaurant.cuisine = Array.isArray(req.body.cuisine) ? req.body.cuisine : (req.body.cuisine ? [req.body.cuisine] : []);
+    }
     
     // Handle operating hours separately with proper processing
     if (req.body.operatingHours !== undefined) {
@@ -417,6 +496,17 @@ router.put('/:id', [
       });
       
       restaurant.operatingHours = processedOperatingHours;
+    }
+    
+    // Handle image removal if specified
+    if (req.body.imagesToRemove && Array.isArray(req.body.imagesToRemove) && req.body.imagesToRemove.length > 0) {
+      const imagesToRemove = req.body.imagesToRemove;
+      restaurant.images = restaurant.images.filter(image => {
+        // Remove images that match the ones to be removed (compare by URL or objectName)
+        return !imagesToRemove.some(removeImg => 
+          removeImg.url === image.url || removeImg.objectName === image.objectName
+        );
+      });
     }
     
     // Add new images to existing ones

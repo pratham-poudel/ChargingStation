@@ -59,27 +59,36 @@ export const restaurantAPI = {
     try {
       const processedData = { ...restaurantData }
       
-      // Handle file uploads with your existing directS3Upload service
-      if (restaurantData.imageFile) {
-        console.log('Uploading restaurant image...')
-        const imageUpload = await directUploadAPI.uploadSingleFile(
-          restaurantData.imageFile,
-          restaurantData.imageProgressCallback || ((progress) => {
-            console.log(`Image upload progress: ${progress.percentage}%`)
+      // Handle multiple image uploads with batch upload
+      if (restaurantData.imageFiles && restaurantData.imageFiles.length > 0) {
+        console.log(`Uploading ${restaurantData.imageFiles.length} restaurant images...`)
+        
+        // Prepare files for batch upload
+        const imageFiles = restaurantData.imageFiles.map(file => ({
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          file: file
+        }))
+        
+        const batchImageUpload = await directUploadAPI.uploadMultipleFiles(
+          imageFiles,
+          restaurantData.imageProgressCallback || ((index, progress) => {
+            console.log(`Image ${index + 1} upload progress: ${progress.percentage}%`)
           }),
           { folder: 'Images' }
         )
         
-        processedData.images = [imageUpload.url]
-        processedData.imageMetadata = {
-          objectName: imageUpload.objectName,
-          originalName: imageUpload.originalName,
-          size: imageUpload.size,
-          mimetype: imageUpload.mimetype
-        }
+        // Transform to match Restaurant schema format
+        processedData.images = batchImageUpload.map(upload => ({
+          url: upload.url,
+          objectName: upload.objectName,
+          originalName: upload.originalName,
+          uploadedAt: new Date()
+        }))
         
-        // Remove the file and callback from the data
-        delete processedData.imageFile
+        // Remove the files and callback from the data
+        delete processedData.imageFiles
         delete processedData.imageProgressCallback
       }
       
@@ -127,36 +136,55 @@ export const restaurantAPI = {
     try {
       const processedData = { ...restaurantData }
       
-      // Handle file uploads with your existing directS3Upload service
-      if (restaurantData.imageFile) {
-        console.log('Uploading updated restaurant image...')
-        const imageUpload = await directUploadAPI.uploadSingleFile(
-          restaurantData.imageFile,
-          (progress) => {
-            console.log(`Image upload progress: ${progress.percentage}%`)
-          },
+      // Handle multiple image uploads with batch upload
+      if (restaurantData.imageFiles && restaurantData.imageFiles.length > 0) {
+        console.log(`Uploading ${restaurantData.imageFiles.length} updated restaurant images...`)
+        
+        // Prepare files for batch upload
+        const imageFiles = restaurantData.imageFiles.map(file => ({
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          file: file
+        }))
+        
+        const batchImageUpload = await directUploadAPI.uploadMultipleFiles(
+          imageFiles,
+          restaurantData.imageProgressCallback || ((index, progress) => {
+            console.log(`Image ${index + 1} upload progress: ${progress.percentage}%`)
+          }),
           { folder: 'Images' }
         )
         
-        processedData.images = [imageUpload.url]
-        processedData.imageMetadata = {
-          objectName: imageUpload.objectName,
-          originalName: imageUpload.originalName,
-          size: imageUpload.size,
-          mimetype: imageUpload.mimetype
-        }
+        // Add new images to existing ones (append mode) - Transform to match Restaurant schema
+        processedData.newImages = batchImageUpload.map(upload => ({
+          url: upload.url,
+          objectName: upload.objectName,
+          originalName: upload.originalName,
+          uploadedAt: new Date()
+        }))
         
-        // Remove the file from the data
-        delete processedData.imageFile
+        // Remove the files and callback from the data
+        delete processedData.imageFiles
+        delete processedData.imageProgressCallback
+      }
+
+      // Handle existing images and images to remove
+      if (restaurantData.existingImages) {
+        processedData.existingImages = restaurantData.existingImages
+      }
+      
+      if (restaurantData.imagesToRemove && restaurantData.imagesToRemove.length > 0) {
+        processedData.imagesToRemove = restaurantData.imagesToRemove
       }
       
       if (restaurantData.licenseFile) {
         console.log('Uploading updated license document...')
         const licenseUpload = await directUploadAPI.uploadSingleFile(
           restaurantData.licenseFile,
-          (progress) => {
+          restaurantData.licenseProgressCallback || ((progress) => {
             console.log(`License upload progress: ${progress.percentage}%`)
-          },
+          }),
           { folder: 'Documents' }
         )
         
@@ -168,8 +196,9 @@ export const restaurantAPI = {
           mimetype: licenseUpload.mimetype
         }
         
-        // Remove the file from the data
+        // Remove the file and callback from the data
         delete processedData.licenseFile
+        delete processedData.licenseProgressCallback
       }
 
       // Send the data as JSON (no FormData needed)

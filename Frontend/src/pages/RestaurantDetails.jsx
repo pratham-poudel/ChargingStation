@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   Star,
@@ -19,12 +19,18 @@ import {
   Calendar,
   Users,
   Zap,
-  Info
+  Info,
+  ImageIcon,
+  Camera,
+  QrCode,
+  CalendarDays,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { restaurantsAPI } from '../services/api'
 import SEOHead from '../components/SEOHead'
 import RestaurantOrderModal from '../components/modals/RestaurantOrderModal'
-import ImageGallery from '../components/common/ImageGallery'
 
 function RestaurantDetails() {
   const { id: restaurantId } = useParams()
@@ -278,53 +284,208 @@ function RestaurantDetails() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-6 lg:py-8">
+          {/* Pinterest-style Image Gallery */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 sm:mb-8"
+          >
+            {images.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 h-[300px] sm:h-[400px] lg:h-[500px]">
+                
+                {/* Main Featured Image */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="relative col-span-2 row-span-2 sm:col-span-2 sm:row-span-2 rounded-xl lg:rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 cursor-pointer group"
+                  onClick={() => {
+                    setActiveImageIndex(0)
+                    setShowImageModal(true)
+                  }}
+                >
+                  <img
+                    src={images[0]?.url}
+                    alt={`${restaurant.name} - Main image`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    onError={(e) => {
+                      e.target.src = '/api/placeholder/800/600'
+                    }}
+                  />
+                  
+                  {/* Tinder-style gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-80 group-hover:opacity-90 transition-all duration-300" />
+                  
+                  {/* Restaurant details overlay */}
+                  <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 lg:p-8 text-white">
+                    <div className="space-y-2 sm:space-y-3">
+                      <h1 className="font-bold text-lg sm:text-2xl lg:text-3xl leading-tight drop-shadow-lg">
+                        {restaurant.name}
+                      </h1>
+                      
+                      <div className="flex items-start text-white/95">
+                        <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm sm:text-base">
+                          {restaurant.chargingStation?.address?.street}, {restaurant.chargingStation?.address?.city}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          {restaurant.rating && restaurant.rating.average > 0 && (
+                            <div className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                              <Star className="h-4 w-4 text-yellow-400 fill-current mr-1.5" />
+                              <span className="font-bold text-sm">
+                                {restaurant.rating.average.toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                            <Utensils className="h-4 w-4 mr-1.5 text-green-400" />
+                            <span className="font-bold text-sm">
+                              {restaurant.cuisine?.slice(0, 2).map(c => formatCuisine(c)).join(', ')}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowOrderModal(true)
+                          }}
+                          disabled={!restaurant.acceptingOrders || !currentlyOpen}
+                          className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-600 text-white px-4 py-2 lg:px-6 lg:py-3 rounded-lg font-bold text-sm transition-all duration-200 shadow-lg hover:shadow-xl"
+                        >
+                          {restaurant.acceptingOrders && currentlyOpen ? 'Order Now' : 'Closed'}
+                        </button>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center text-xs text-white/80">
+                          <Clock className="h-4 w-4 mr-1.5" />
+                          <span>
+                            {currentlyOpen ? 'Open Now' : 'Currently Closed'}
+                          </span>
+                        </div>
+                        
+                        {restaurant.dockitRecommended && (
+                          <div className="flex items-center bg-primary-600/80 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                            <BadgeCheck className="h-4 w-4 text-white mr-1.5" />
+                            <span className="font-bold text-xs text-white">Dockit Choice</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {images.length > 1 && (
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
+                      1 of {images.length}
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* Small Images */}
+                {images.slice(1, 5).map((image, index) => (
+                  <motion.div
+                    key={index + 1}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: (index + 1) * 0.1 }}
+                    className="relative rounded-lg lg:rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group"
+                    onClick={() => {
+                      setActiveImageIndex(index + 1)
+                      setShowImageModal(true)
+                    }}
+                  >
+                    <img
+                      src={image?.url}
+                      alt={`${restaurant.name} - Image ${index + 2}`}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      onError={(e) => {
+                        e.target.src = '/api/placeholder/400/300'
+                      }}
+                    />
+                    
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+                    
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
+                        <ImageIcon className="h-4 w-4 text-gray-700" />
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* Show More Images Button */}
+                {images.length > 4 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="relative rounded-lg lg:rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group"
+                    onClick={() => {
+                      setActiveImageIndex(4)
+                      setShowImageModal(true)
+                    }}
+                  >
+                    <img
+                      src={images[4]?.url}
+                      alt={`${restaurant.name} - More images`}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      onError={(e) => {
+                        e.target.src = '/api/placeholder/400/300'
+                      }}
+                    />
+                    
+                    <div className="absolute inset-0 bg-black/60 group-hover:bg-black/70 transition-all duration-300 flex items-center justify-center">
+                      <div className="text-white text-center">
+                        <ImageIcon className="h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2" />
+                        <p className="font-bold text-base lg:text-lg">+{images.length - 4}</p>
+                        <p className="text-xs opacity-90">more photos</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Order Quick Access Card */}
+                {images.length < 5 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 rounded-lg lg:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group flex items-center justify-center border-2 border-dashed border-primary-300"
+                    onClick={() => setShowOrderModal(true)}
+                  >
+                    <div className="text-center text-primary-700 group-hover:scale-110 transition-transform">
+                      <QrCode className="h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2" />
+                      <p className="text-xs font-bold">Quick Order</p>
+                      <p className="text-xs opacity-75">Menu & Book</p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            ) : (
+              <div className="h-[320px] sm:h-[420px] lg:h-[500px] bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200 rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-lg">
+                <div className="text-center text-gray-500">
+                  <Camera className="h-12 w-12 lg:h-16 lg:w-16 mx-auto mb-3 opacity-50" />
+                  <p className="text-lg lg:text-xl font-medium">No images available</p>
+                  <p className="text-sm opacity-75">Photos will be added soon</p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Image Gallery */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <ImageGallery
-                  images={images}
-                  activeIndex={activeImageIndex}
-                  onImageClick={(index) => {
-                    setActiveImageIndex(index)
-                    setShowImageModal(true)
-                  }}
-                  className="h-64 md:h-80"
-                />
-                
-                {/* Badges on image */}
-                <div className="absolute top-4 left-4 flex flex-col space-y-2">
-                  {restaurant.dockitRecommended && (
-                    <span className="px-3 py-1 bg-primary-600 text-white text-sm font-medium rounded-full flex items-center">
-                      <BadgeCheck className="h-4 w-4 mr-1" />
-                      Dockit Choice
-                    </span>
-                  )}
-                  {currentlyOpen && (
-                    <span className="px-3 py-1 bg-green-600 text-white text-sm font-medium rounded-full">
-                      Open Now
-                    </span>
-                  )}
-                </div>
-              </div>
-
               {/* Restaurant Info */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">{restaurant.name}</h2>
                     <p className="text-gray-600 mb-3">{restaurant.description}</p>
-                    
-                    {/* Cuisine Tags */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {restaurant.cuisine?.map((cuisine) => (
-                        <span key={cuisine} className="px-3 py-1 bg-primary-50 text-primary-700 text-sm rounded-full">
-                          {formatCuisine(cuisine)}
-                        </span>
-                      ))}
-                    </div>
                   </div>
 
                   {/* Rating */}
@@ -568,6 +729,65 @@ function RestaurantDetails() {
         isOpen={showOrderModal}
         onClose={() => setShowOrderModal(false)}
       />
+
+      {/* Image Modal */}
+      <AnimatePresence>
+        {showImageModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setShowImageModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-4xl max-h-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowImageModal(false)}
+                className="absolute top-4 right-4 z-10 bg-white/20 hover:bg-white/30 text-white rounded-full p-2 backdrop-blur-sm transition-all"
+              >
+                <X className="h-6 w-6" />
+              </button>
+              
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setActiveImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1)}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 text-white rounded-full p-2 backdrop-blur-sm transition-all"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </button>
+                  <button
+                    onClick={() => setActiveImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 text-white rounded-full p-2 backdrop-blur-sm transition-all"
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </button>
+                </>
+              )}
+              
+              <img
+                src={images[activeImageIndex]?.url}
+                alt={`${restaurant.name} - Image ${activeImageIndex + 1}`}
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+              
+              {images.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                  <span className="text-white text-sm font-medium">
+                    {activeImageIndex + 1} / {images.length}
+                  </span>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }
