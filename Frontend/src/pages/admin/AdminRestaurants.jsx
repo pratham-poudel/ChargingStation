@@ -85,6 +85,8 @@ const AdminRestaurants = () => {
       const response = await fetch(`http://localhost:5000/api/admin/restaurants?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'X-API-Key':'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true',
           'Content-Type': 'application/json'
         }
       })
@@ -116,27 +118,27 @@ const AdminRestaurants = () => {
 
       switch (action) {
         case 'verify':
-          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/verify`
+          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/verify`
           body = { approved: true }
           break
         case 'reject':
-          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/verify`
+          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/verify`
           body = { approved: false, rejectionReason: additionalData.reason }
           break
         case 'activate':
-          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/toggle-status`
+          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/toggle-status`
           body = { isActive: true }
           break
         case 'deactivate':
-          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/toggle-status`
+          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/toggle-status`
           body = { isActive: false, reason: additionalData.reason }
           break
         case 'review':
-          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}/review`
+          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}/review`
           body = { notes: additionalData.notes }
           break
         case 'delete':
-          endpoint = `http://localhost:5000/api/admin/restaurants/${restaurantId}`
+          endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/restaurants/${restaurantId}`
           method = 'DELETE'
           body = { reason: additionalData.reason }
           break
@@ -146,6 +148,8 @@ const AdminRestaurants = () => {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
+          'X-API-Key': 'your-super-secret-api-key-2024',
+          'X-Frontend-Request': 'true',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)

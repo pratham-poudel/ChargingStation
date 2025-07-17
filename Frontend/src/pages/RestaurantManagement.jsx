@@ -52,6 +52,8 @@ const RestaurantManagement = () => {
   const [employees, setEmployees] = useState([])
   const [menuLoading, setMenuLoading] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [employeesLoading, setEmployeesLoading] = useState(false)
   const [error, setError] = useState('')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -122,6 +124,9 @@ const RestaurantManagement = () => {
   const [passwordChangeStep, setPasswordChangeStep] = useState('password') // 'password' or 'otp'
   const [changingPassword, setChangingPassword] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
+
+  // Order acceptance toggle state
+  const [togglingOrderAcceptance, setTogglingOrderAcceptance] = useState(false)
 
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -271,6 +276,8 @@ const RestaurantManagement = () => {
 
   const loadOrders = async () => {
     try {
+      setOrdersLoading(true)
+      setError('')
       const token = getCurrentToken()
       const response = await restaurantAPI.getRestaurantOrders(restaurantId, {}, token)
       
@@ -280,11 +287,15 @@ const RestaurantManagement = () => {
     } catch (error) {
       console.error('Error loading orders:', error)
       setError('Failed to load orders')
+    } finally {
+      setOrdersLoading(false)
     }
   }
 
   const loadEmployees = async () => {
     try {
+      setEmployeesLoading(true)
+      setError('')
       const token = getCurrentToken()
       const response = await restaurantAPI.getRestaurantEmployees(restaurantId, token)
       
@@ -294,6 +305,8 @@ const RestaurantManagement = () => {
     } catch (error) {
       console.error('Error loading employees:', error)
       setError('Failed to load employees')
+    } finally {
+      setEmployeesLoading(false)
     }
   }
 
@@ -647,6 +660,39 @@ const RestaurantManagement = () => {
       } finally {
         setChangingPassword(false)
       }
+    }
+  }
+
+  // Toggle accepting orders status
+  const toggleAcceptingOrders = async () => {
+    try {
+      setTogglingOrderAcceptance(true)
+      const token = getCurrentToken()
+      
+      const response = await restaurantAPI.updateAcceptingOrders(
+        restaurant._id,
+        !restaurant.acceptingOrders,
+        token
+      )
+      
+      if (response.success) {
+        // Update the restaurant state
+        setRestaurant(prev => ({
+          ...prev,
+          acceptingOrders: !prev.acceptingOrders
+        }))
+        
+        // Show success message
+        const message = restaurant.acceptingOrders 
+          ? 'Restaurant is now not accepting orders' 
+          : 'Restaurant is now accepting orders'
+        alert(message)
+      }
+    } catch (error) {
+      console.error('Error toggling order acceptance:', error)
+      setError(`Failed to update order acceptance: ${error.response?.data?.message || error.message}`)
+    } finally {
+      setTogglingOrderAcceptance(false)
     }
   }
 
@@ -1369,8 +1415,8 @@ const RestaurantManagement = () => {
                   key={tab.id}
                   onClick={() => {
                     setActiveTab(tab.id)
-                    if (tab.id === 'orders') loadOrders()
-                    if (tab.id === 'employees') loadEmployees()
+                    if (tab.id === 'orders' && orders.length === 0) loadOrders()
+                    if (tab.id === 'employees' && employees.length === 0) loadEmployees()
                   }}
                   className={`flex items-center gap-2 px-1 py-4 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === tab.id
@@ -1455,6 +1501,64 @@ const RestaurantManagement = () => {
                 </div>
               </div>
 
+              {/* Order Acceptance Toggle */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className={`p-3 rounded-lg ${restaurant?.acceptingOrders ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <Package className={`w-6 h-6 ${restaurant?.acceptingOrders ? 'text-green-600' : 'text-red-600'}`} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Order Status</h3>
+                      <p className="text-sm text-gray-600">
+                        {restaurant?.acceptingOrders 
+                          ? 'Your restaurant is currently accepting new orders' 
+                          : 'Your restaurant is not accepting new orders'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      restaurant?.acceptingOrders 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {restaurant?.acceptingOrders ? 'Accepting Orders' : 'Not Accepting Orders'}
+                    </span>
+                    
+                    <button
+                      onClick={toggleAcceptingOrders}
+                      disabled={togglingOrderAcceptance}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        restaurant?.acceptingOrders ? 'bg-green-600' : 'bg-gray-200'
+                      } ${togglingOrderAcceptance ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          restaurant?.acceptingOrders ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+                
+                {!restaurant?.acceptingOrders && (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex">
+                      <AlertCircle className="w-5 h-5 text-amber-600 mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-800">Orders are currently disabled</p>
+                        <p className="text-sm text-amber-700 mt-1">
+                          Customers won't be able to place new orders from your restaurant. Existing orders can still be managed.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Recent Orders */}
               <div className="bg-white rounded-lg border border-gray-200">
                 <div className="p-6 border-b border-gray-200">
@@ -1508,16 +1612,33 @@ const RestaurantManagement = () => {
                     </button>
                     <button
                       onClick={loadOrders}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      disabled={ordersLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                     >
-                      <TrendingUp className="w-4 h-4" />
-                      Refresh Orders
+                      {ordersLoading ? (
+                        <>
+                          <LoadingSpinner size="sm" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp className="w-4 h-4" />
+                          Refresh Orders
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
               </div>
               <div className="p-6">
-                {orders.length > 0 ? (
+                {ordersLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <LoadingSpinner size="lg" />
+                      <p className="mt-4 text-gray-600">Loading orders...</p>
+                    </div>
+                  </div>
+                ) : orders.length > 0 ? (
                   <div className="space-y-4">
                     {orders.map((order) => {
                       const isExpanded = expandedOrders.has(order._id)
@@ -2122,7 +2243,14 @@ const RestaurantManagement = () => {
                 </div>
               </div>
               <div className="p-6">
-                {employees.length > 0 ? (
+                {employeesLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <LoadingSpinner size="lg" />
+                      <p className="mt-4 text-gray-600">Loading employees...</p>
+                    </div>
+                  </div>
+                ) : employees.length > 0 ? (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {employees.map((emp) => (
                       <div key={emp._id} className="border border-gray-200 rounded-lg p-4">

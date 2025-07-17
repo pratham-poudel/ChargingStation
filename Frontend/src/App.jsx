@@ -27,6 +27,8 @@ import AdminSettings from './pages/admin/AdminSettings'
 import Home from './pages/Home'
 import StationSearch from './pages/StationSearch'
 import StationDetails from './pages/StationDetails'
+import RestaurantSearch from './pages/RestaurantSearch'
+import RestaurantDetails from './pages/RestaurantDetails'
 import BookingFlow from './pages/BookingFlow'
 import MyBookings from './pages/MyBookings'
 import MyOrders from './pages/MyOrders'
@@ -44,7 +46,7 @@ import MerchantRegistration from './pages/merchant/MerchantRegistration'
 import MerchantDashboard from './pages/merchant/MerchantDashboard'
 import MerchantStations from './pages/merchant/MerchantStations'
 import MerchantRestaurants from './pages/merchant/MerchantRestaurants'
-import RestaurantDetails from './pages/merchant/RestaurantDetails'
+import MerchantRestaurantDetails from './pages/merchant/RestaurantDetails'
 import MerchantTransactionsAnalytics from './pages/merchant/MerchantAnalytics'
 import MerchantSettings from './pages/merchant/MerchantSettings'
 import LicensingActivation from './pages/merchant/LicensingActivation'
@@ -94,6 +96,9 @@ function App() {
                     <Route path="/search" element={<Layout><StationSearch /></Layout>} />
                     <Route path="/station/:id" element={<StationDetails />} />
                     <Route path="/station/:slug/:id" element={<StationDetails />} />
+                    <Route path="/restaurants/search" element={<Layout><RestaurantSearch /></Layout>} />
+                    <Route path="/restaurants/:id" element={<RestaurantDetails />} />
+                    <Route path="/restaurants/:id/:slug" element={<RestaurantDetails />} />
                     <Route path="/blog" element={<Layout><Blog /></Layout>} />
                     <Route path="/faq" element={<Layout><FAQ /></Layout>} />
                     
@@ -110,7 +115,7 @@ function App() {
                     <Route path="/merchant/dashboard" element={<SubscriptionGuard><MerchantDashboard /></SubscriptionGuard>} />
                     <Route path="/merchant/stations" element={<SubscriptionGuard><MerchantStations /></SubscriptionGuard>} />
                     <Route path="/merchant/restaurants" element={<SubscriptionGuard><MerchantRestaurants /></SubscriptionGuard>} />
-                    <Route path="/merchant/restaurants/:id" element={<SubscriptionGuard><RestaurantDetails /></SubscriptionGuard>} />
+                    <Route path="/merchant/restaurants/:id" element={<SubscriptionGuard><MerchantRestaurantDetails /></SubscriptionGuard>} />
                     <Route path="/merchant/analytics" element={<SubscriptionGuard><MerchantTransactionsAnalytics /></SubscriptionGuard>} />
                     <Route path="/merchant/settings" element={<SubscriptionGuard><MerchantSettings /></SubscriptionGuard>} />
                     <Route path="/merchant/licensing" element={<LicensingActivation />} />

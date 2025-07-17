@@ -670,6 +670,61 @@ router.patch('/:restaurantId/menu/:itemId/availability', [
   }
 });
 
+// @desc    Update restaurant accepting orders status
+// @route   PATCH /api/restaurant-management/:restaurantId/accepting-orders
+// @access  Private (Restaurant Employee or Vendor)
+router.patch('/:restaurantId/accepting-orders', [
+  protectRestaurantAccess,
+  requireRestaurantPermission(['manage_restaurant', 'all']),
+  body('acceptingOrders').isBoolean().withMessage('acceptingOrders must be a boolean')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const { restaurantId } = req.params;
+    const { acceptingOrders } = req.body;
+
+    // Update the restaurant
+    const restaurant = await Restaurant.findByIdAndUpdate(
+      restaurantId,
+      { acceptingOrders },
+      { new: true, runValidators: true }
+    );
+
+    if (!restaurant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Restaurant not found'
+      });
+    }
+
+    console.log(`Restaurant ${restaurant.name} accepting orders status updated to: ${acceptingOrders}`);
+
+    res.status(200).json({
+      success: true,
+      message: `Restaurant is now ${acceptingOrders ? 'accepting' : 'not accepting'} orders`,
+      data: {
+        acceptingOrders: restaurant.acceptingOrders,
+        restaurantId: restaurant._id
+      }
+    });
+
+  } catch (error) {
+    console.error('Update accepting orders status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update accepting orders status'
+    });
+  }
+});
+
 // @desc    Add menu item
 // @route   POST /api/restaurant-management/:restaurantId/menu
 // @access  Private (Restaurant Employee or Vendor)

@@ -10,7 +10,8 @@ import {
   User, 
   LogOut,
   Bell,
-  MapPin
+  MapPin,
+  ChefHat
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -25,6 +26,7 @@ export default function Layout({ children }) {
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Find Stations', href: '/search', icon: Search },
+    { name: 'Find Restaurants', href: '/restaurants/search', icon: ChefHat },
     ...(isAuthenticated 
       ? [
           { name: 'My Bookings', href: '/my-bookings', icon: Calendar },

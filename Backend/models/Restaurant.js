@@ -244,6 +244,10 @@ const restaurantSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Delivery radius cannot be negative']
   },
+  dockitRecommended: {
+    type: Boolean,
+    default: false
+  },
   
   // Metadata
   createdBy: {
@@ -304,6 +308,11 @@ restaurantSchema.methods.isCurrentlyOpen = function() {
   
   const daySchedule = this.operatingHours[currentDay];
   if (!daySchedule || !daySchedule.isOpen) return false;
+  
+  // Check if it's 24 hours (open and close both 00:00)
+  if (daySchedule.open === '00:00' && daySchedule.close === '00:00') {
+    return true;
+  }
   
   return currentTime >= daySchedule.open && currentTime <= daySchedule.close;
 };

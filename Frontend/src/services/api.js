@@ -108,6 +108,18 @@ export const stationsAPI = {
   searchStations: (params) => api.get('/stations/search', { params }),
   getNearestStationInfo: (params) => api.get('/stations/nearest-info', { params }),
   getAvailableSlots: (stationId, portId) => api.get(`/stations/${stationId}/ports/${portId}/slots`),
+  getEnums: () => api.get('/stations/enums'),
+}
+
+// Restaurants API
+export const restaurantsAPI = {
+  getRestaurants: (params) => api.get('/restaurants/search', { params }),
+  getRestaurantById: (id) => api.get(`/restaurants/public/${id}`),
+  getRestaurantByStation: (stationId) => api.get(`/restaurants/station/${stationId}`),
+  getRestaurantMenu: (restaurantId) => api.get(`/restaurants/${restaurantId}/menu`),
+  getNearbyRestaurants: (params) => api.get('/restaurants/nearby', { params }),
+  searchRestaurants: (params) => api.get('/restaurants/search', { params }),
+  getEnums: () => api.get('/restaurants/enums'),
 }
 
 // Location API (wrapping mapping service)
@@ -149,6 +161,34 @@ export const ratingsAPI = {
   getRatingStatus: (bookingId) => api.get(`/ratings/booking/${bookingId}`),
   submitRating: (bookingId, data) => api.post(`/ratings/booking/${bookingId}`, data),
   getStationReviews: (stationId, params) => api.get(`/ratings/station/${stationId}/reviews`, { params })
+}
+
+// Orders API (for restaurant orders)
+export const ordersAPI = {
+  createOrder: async (data) => {
+    const response = await api.post('/restaurants/orders', data)
+    return response.data
+  },
+  getMyOrders: async (params) => {
+    const response = await api.get('/restaurants/orders/my-orders', { params })
+    return response.data
+  },
+  getUserOrders: async (identifier, params = {}) => {
+    const response = await api.get(`/restaurants/orders/user/${identifier}`, { params })
+    return response.data
+  },
+  getOrderById: async (id) => {
+    const response = await api.get(`/restaurants/orders/${id}`)
+    return response.data
+  },
+  cancelOrder: async (id) => {
+    const response = await api.patch(`/restaurants/orders/${id}/cancel`)
+    return response.data
+  },
+  getOrderStatus: async (id) => {
+    const response = await api.get(`/restaurants/orders/${id}/status`)
+    return response.data
+  },
 }
 
 export default api
