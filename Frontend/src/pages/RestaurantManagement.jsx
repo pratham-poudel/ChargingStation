@@ -125,9 +125,6 @@ const RestaurantManagement = () => {
   const [changingPassword, setChangingPassword] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
 
-  // Order acceptance toggle state
-  const [togglingOrderAcceptance, setTogglingOrderAcceptance] = useState(false)
-
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authMode, setAuthMode] = useState('checking') // 'checking', 'merchant', 'employee'
@@ -660,39 +657,6 @@ const RestaurantManagement = () => {
       } finally {
         setChangingPassword(false)
       }
-    }
-  }
-
-  // Toggle accepting orders status
-  const toggleAcceptingOrders = async () => {
-    try {
-      setTogglingOrderAcceptance(true)
-      const token = getCurrentToken()
-      
-      const response = await restaurantAPI.updateAcceptingOrders(
-        restaurant._id,
-        !restaurant.acceptingOrders,
-        token
-      )
-      
-      if (response.success) {
-        // Update the restaurant state
-        setRestaurant(prev => ({
-          ...prev,
-          acceptingOrders: !prev.acceptingOrders
-        }))
-        
-        // Show success message
-        const message = restaurant.acceptingOrders 
-          ? 'Restaurant is now not accepting orders' 
-          : 'Restaurant is now accepting orders'
-        alert(message)
-      }
-    } catch (error) {
-      console.error('Error toggling order acceptance:', error)
-      setError(`Failed to update order acceptance: ${error.response?.data?.message || error.message}`)
-    } finally {
-      setTogglingOrderAcceptance(false)
     }
   }
 
@@ -1499,64 +1463,6 @@ const RestaurantManagement = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Order Acceptance Toggle */}
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-lg ${restaurant?.acceptingOrders ? 'bg-green-50' : 'bg-red-50'}`}>
-                      <Package className={`w-6 h-6 ${restaurant?.acceptingOrders ? 'text-green-600' : 'text-red-600'}`} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Order Status</h3>
-                      <p className="text-sm text-gray-600">
-                        {restaurant?.acceptingOrders 
-                          ? 'Your restaurant is currently accepting new orders' 
-                          : 'Your restaurant is not accepting new orders'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      restaurant?.acceptingOrders 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {restaurant?.acceptingOrders ? 'Accepting Orders' : 'Not Accepting Orders'}
-                    </span>
-                    
-                    <button
-                      onClick={toggleAcceptingOrders}
-                      disabled={togglingOrderAcceptance}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                        restaurant?.acceptingOrders ? 'bg-green-600' : 'bg-gray-200'
-                      } ${togglingOrderAcceptance ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          restaurant?.acceptingOrders ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-                
-                {!restaurant?.acceptingOrders && (
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex">
-                      <AlertCircle className="w-5 h-5 text-amber-600 mr-2 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-amber-800">Orders are currently disabled</p>
-                        <p className="text-sm text-amber-700 mt-1">
-                          Customers won't be able to place new orders from your restaurant. Existing orders can still be managed.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Recent Orders */}

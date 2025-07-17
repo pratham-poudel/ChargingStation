@@ -369,22 +369,6 @@ export const restaurantAPI = {
     return response.data
   },
 
-  // Update restaurant accepting orders status
-  updateAcceptingOrders: async (restaurantId, acceptingOrders, token) => {
-    const response = await axios.patch(
-      `${API_BASE_URL}/restaurant-management/${restaurantId}/accepting-orders`,
-      { acceptingOrders },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-API-Key': 'your-super-secret-api-key-2024',
-          'X-Frontend-Request': 'true'
-        }
-      }
-    )
-    return response.data
-  },
-
   // Get restaurant employees
   getRestaurantEmployees: async (restaurantId, token) => {
     const response = await axios.get(`${API_BASE_URL}/restaurant-management/${restaurantId}/employees`, {

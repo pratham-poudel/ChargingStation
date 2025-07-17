@@ -165,11 +165,30 @@ export const ratingsAPI = {
 
 // Orders API (for restaurant orders)
 export const ordersAPI = {
-  createOrder: (data) => api.post('/restaurants/orders', data),
-  getMyOrders: (params) => api.get('/restaurants/orders/my-orders', { params }),
-  getOrderById: (id) => api.get(`/restaurants/orders/${id}`),
-  cancelOrder: (id) => api.patch(`/restaurants/orders/${id}/cancel`),
-  getOrderStatus: (id) => api.get(`/restaurants/orders/${id}/status`),
+  createOrder: async (data) => {
+    const response = await api.post('/restaurants/orders', data)
+    return response.data
+  },
+  getMyOrders: async (params) => {
+    const response = await api.get('/restaurants/orders/my-orders', { params })
+    return response.data
+  },
+  getUserOrders: async (identifier, params = {}) => {
+    const response = await api.get(`/restaurants/orders/user/${identifier}`, { params })
+    return response.data
+  },
+  getOrderById: async (id) => {
+    const response = await api.get(`/restaurants/orders/${id}`)
+    return response.data
+  },
+  cancelOrder: async (id) => {
+    const response = await api.patch(`/restaurants/orders/${id}/cancel`)
+    return response.data
+  },
+  getOrderStatus: async (id) => {
+    const response = await api.get(`/restaurants/orders/${id}/status`)
+    return response.data
+  },
 }
 
 export default api
