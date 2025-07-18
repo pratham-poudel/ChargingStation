@@ -343,3 +343,49 @@
     height: 20px;
   }
 }
+
+/* Navigation improvements */
+@layer utilities {
+  .nav-compact {
+    @apply flex items-center space-x-1 xl:space-x-4;
+  }
+  
+  .nav-item-compact {
+    @apply flex items-center gap-1 xl:gap-2 px-2 xl:px-3 py-2 rounded-md text-xs xl:text-sm font-medium transition-colors whitespace-nowrap;
+  }
+  
+  .nav-icon-compact {
+    @apply h-4 w-4 flex-shrink-0;
+  }
+  
+  .nav-text-responsive {
+    @apply hidden xl:inline;
+  }
+  
+  .nav-text-truncated {
+    @apply xl:hidden text-xs truncate max-w-16;
+  }
+  
+  .header-compact {
+    @apply flex items-center justify-between h-16 px-4 lg:px-6;
+  }
+  
+  .logo-compact {
+    @apply flex items-center space-x-2 xl:space-x-3 min-w-0;
+  }
+  
+  .notification-dropdown {
+    @apply relative;
+  }
+  
+  .profile-compact {
+    @apply flex items-center space-x-1 xl:space-x-3;
+  }
+  
+  /* Responsive breakpoints for navigation */
+  @media (min-width: 1024px) and (max-width: 1279px) {
+    .nav-item-compact {
+      @apply px-2 py-1 text-xs;
+    }
+  }
+}

@@ -58,60 +58,64 @@ export default function Layout({ children }) {
                 <h1 className="text-lg xl:text-xl font-bold text-gray-900 truncate">ChargEase</h1>
                 <p className="text-xs text-gray-500 truncate hidden sm:block">Nepal's EV Network</p>
               </div>
-            </Link>            {/* Desktop Navigation - Only for extra large screens */}
-            <nav className="hidden xl:flex space-x-8">
+            </Link>            {/* Desktop Navigation - Show from large screens */}
+            <nav className="hidden lg:flex space-x-1 xl:space-x-4">
               {navigation.map((item) => {
                 const Icon = item.icon
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                    className={`flex items-center gap-1 xl:gap-2 px-2 xl:px-3 py-2 rounded-md text-xs xl:text-sm font-medium transition-colors whitespace-nowrap ${
                       isActive(item.href)
                         ? 'text-primary-600 bg-primary-50'
                         : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100'
                     }`}
+                    title={item.name}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
-                    <span>{item.name}</span>
+                    <span className="hidden xl:inline">{item.name}</span>
+                    <span className="xl:hidden text-xs truncate max-w-16">{item.name.split(' ')[0]}</span>
                   </Link>
                 )
               })}
-            </nav>            {/* Desktop Auth - Only for extra large screens */}
-            <div className="hidden xl:flex items-center gap-4">
+            </nav>            {/* Desktop Auth - Show from large screens */}
+            <div className="hidden lg:flex items-center gap-2 xl:gap-4">
               {isAuthenticated ? (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 xl:gap-3">
                   <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                    <Bell className="h-5 w-5" />
+                    <Bell className="h-4 xl:h-5 w-4 xl:w-5" />
                   </button>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-8 w-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="h-4 w-4 text-primary-600" />
+                  <div className="flex items-center gap-1 xl:gap-2 min-w-0">
+                    <div className="h-6 xl:h-8 w-6 xl:w-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="h-3 xl:h-4 w-3 xl:w-4 text-primary-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700 truncate max-w-24">
+                    <span className="text-xs xl:text-sm font-medium text-gray-700 truncate max-w-16 xl:max-w-24 hidden xl:inline">
                       {user?.name}
                     </span>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-red-600 transition-colors whitespace-nowrap"
+                    className="flex items-center gap-1 px-2 xl:px-3 py-1 xl:py-2 text-xs xl:text-sm text-gray-600 hover:text-red-600 transition-colors whitespace-nowrap"
+                    title="Logout"
                   >
-                    <LogOut className="h-4 w-4 flex-shrink-0" />
-                    <span>Logout</span>
+                    <LogOut className="h-3 xl:h-4 w-3 xl:w-4 flex-shrink-0" />
+                    <span className="hidden xl:inline">Logout</span>
                   </button>
                 </div>
               ) : (
                 <Link
                   to="/auth"
-                  className="btn btn-primary btn-md whitespace-nowrap text-sm px-4"
+                  className="btn btn-primary text-xs xl:text-sm px-2 xl:px-4 py-1 xl:py-2 whitespace-nowrap"
                 >
-                  Login / Register
+                  <span className="hidden xl:inline">Login / Register</span>
+                  <span className="xl:hidden">Login</span>
                 </Link>
               )}
-            </div>            {/* Mobile menu button - Show for all screens except extra large */}
+            </div>            {/* Mobile menu button - Show for screens smaller than large */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="xl:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              className="lg:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             >
               {isMobileMenuOpen ? (
                 <X className="h-6 w-6" />
@@ -128,7 +132,7 @@ export default function Layout({ children }) {
             <motion.div
               initial={{ opacity: 0, height: 0 }}              animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="xl:hidden bg-white border-t border-gray-200"
+              className="lg:hidden bg-white border-t border-gray-200"
             >
               <div className="px-2 pt-2 pb-3 space-y-1">
                 {navigation.map((item) => {

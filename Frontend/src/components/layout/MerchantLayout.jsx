@@ -158,51 +158,53 @@ const MerchantLayout = ({ children }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <div className="flex items-center">
-              <Link to="/merchant/dashboard" className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
+            <div className="flex items-center min-w-0">
+              <Link to="/merchant/dashboard" className="flex items-center space-x-2 xl:space-x-3 min-w-0">
+                <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0">
                   <Zap className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-light text-gray-900 tracking-tight">
+                <span className="text-lg xl:text-xl font-light text-gray-900 tracking-tight truncate">
                   Dockit
                 </span>
-                <span className="text-sm font-light text-gray-400 ml-2 hidden sm:inline">
+                <span className="text-sm font-light text-gray-400 ml-2 hidden sm:inline xl:inline">
                   Merchant
                 </span>
               </Link>
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center space-x-8">
+            <nav className="hidden lg:flex items-center space-x-1 xl:space-x-4">
               {navigation.map((item) => {
                 const Icon = item.icon
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`flex items-center space-x-2 px-3 py-2 text-sm font-light transition-colors duration-200 ${
+                    className={`flex items-center space-x-1 xl:space-x-2 px-2 xl:px-3 py-2 text-xs xl:text-sm font-light transition-colors duration-200 rounded-md whitespace-nowrap ${
                       item.current
-                        ? 'text-gray-900'
-                        : 'text-gray-500 hover:text-gray-900'
+                        ? 'text-gray-900 bg-gray-50'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                     }`}
+                    title={item.name}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.name}</span>
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="hidden xl:inline">{item.name}</span>
+                    <span className="xl:hidden text-xs truncate max-w-16">{item.name.split(' ')[0]}</span>
                   </Link>
                 )
               })}
             </nav>            {/* Right side */}
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-1 xl:space-x-2">
               {/* Notifications */}
               <div className="relative notification-dropdown">
                 <button 
                   onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                  className="relative p-2.5 sm:p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 touch-manipulation"
+                  className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 touch-manipulation"
                   aria-label="Toggle notifications"
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-4 xl:w-5 h-4 xl:h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                    <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full h-4 xl:h-5 w-4 xl:w-5 flex items-center justify-center font-medium">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -306,23 +308,23 @@ const MerchantLayout = ({ children }) => {
               </div>
 
               {/* Help */}
-              <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                <HelpCircle className="w-5 h-5" />
+              <button className="hidden xl:block p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                <HelpCircle className="w-4 xl:w-5 h-4 xl:h-5" />
               </button>
 
               {/* Profile Dropdown */}
               <div className="relative">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium text-gray-900 truncate max-w-24 lg:max-w-none">
+                <div className="flex items-center space-x-1 xl:space-x-3">
+                  <div className="text-right hidden xl:block">
+                    <p className="text-sm font-medium text-gray-900 truncate max-w-24 xl:max-w-none">
                       {merchant?.name}
                     </p>
-                    <p className="text-xs text-gray-500 truncate max-w-24 lg:max-w-none">
+                    <p className="text-xs text-gray-500 truncate max-w-24 xl:max-w-none">
                       {merchant?.businessName}
                     </p>
                   </div>
-                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-gray-600" />
+                  <div className="w-6 xl:w-8 h-6 xl:h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                    <User className="w-3 xl:w-4 h-3 xl:h-4 text-gray-600" />
                   </div>
                 </div>
               </div>
@@ -333,7 +335,7 @@ const MerchantLayout = ({ children }) => {
                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                 title="Logout"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 xl:w-5 h-4 xl:h-5" />
               </button>
 
               {/* Mobile menu button */}
@@ -342,9 +344,9 @@ const MerchantLayout = ({ children }) => {
                 className="lg:hidden p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
               >
                 {isMobileMenuOpen ? (
-                  <X className="w-5 h-5" />
+                  <X className="w-4 xl:w-5 h-4 xl:h-5" />
                 ) : (
-                  <Menu className="w-5 h-5" />
+                  <Menu className="w-4 xl:w-5 h-4 xl:h-5" />
                 )}
               </button>
             </div>
