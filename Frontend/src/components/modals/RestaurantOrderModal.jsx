@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -47,6 +47,70 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
 
   const menu = menuData?.data?.data || []
 
+  // Memoize expensive computations
+  const menuCategories = useMemo(() => {
+    if (!menu || menu.length === 0) return []
+    const categories = [...new Set(menu.map(item => item.category))]
+    return ['all', ...categories]
+  }, [menu])
+
+  const filteredMenu = useMemo(() => {
+    if (!menu) return []
+    
+    let filteredItems = menu
+    
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filteredItems = filteredItems.filter(item => item.category === selectedCategory)
+    }
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filteredItems = filteredItems.filter(item => 
+        item.name.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query)
+      )
+    }
+    
+    return filteredItems
+  }, [menu, selectedCategory, searchQuery])
+
+  const groupedMenu = useMemo(() => {
+    if (!menu) return {}
+    
+    let filteredItems = menu
+    
+    // Filter by search query first
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filteredItems = filteredItems.filter(item => 
+        item.name.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query)
+      )
+    }
+    
+    // Group by category
+    const grouped = filteredItems.reduce((acc, item) => {
+      const category = item.category
+      if (!acc[category]) acc[category] = []
+      acc[category].push(item)
+      return acc
+    }, {})
+    
+    return grouped
+  }, [menu, searchQuery])
+
+  const cartTotal = useMemo(() => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+  }, [cart])
+
+  const cartItemCount = useMemo(() => {
+    return cart.reduce((total, item) => total + item.quantity, 0)
+  }, [cart])
+
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
@@ -76,66 +140,8 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
     }
   }, [isOpen, user])
 
-  // Get unique categories from menu
-  const getMenuCategories = () => {
-    if (!menu || menu.length === 0) return []
-    const categories = [...new Set(menu.map(item => item.category))]
-    return ['all', ...categories]
-  }
-
-  // Filter menu by category and search
-  const getFilteredMenu = () => {
-    if (!menu) return []
-    
-    let filteredItems = menu
-    
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filteredItems = filteredItems.filter(item => item.category === selectedCategory)
-    }
-    
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      filteredItems = filteredItems.filter(item => 
-        item.name.toLowerCase().includes(query) ||
-        item.description?.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
-      )
-    }
-    
-    return filteredItems
-  }
-
-  // Group menu items by category for search results
-  const getGroupedFilteredMenu = () => {
-    if (!menu) return {}
-    
-    let filteredItems = menu
-    
-    // Filter by search query first
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      filteredItems = filteredItems.filter(item => 
-        item.name.toLowerCase().includes(query) ||
-        item.description?.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
-      )
-    }
-    
-    // Group by category
-    const grouped = filteredItems.reduce((acc, item) => {
-      const category = item.category
-      if (!acc[category]) acc[category] = []
-      acc[category].push(item)
-      return acc
-    }, {})
-    
-    return grouped
-  }
-
-  // Cart functions
-  const addToCart = (menuItem) => {
+  // Cart functions - use useCallback for performance
+  const addToCart = useCallback((menuItem) => {
     setCart(prev => {
       const existingItem = prev.find(item => item._id === menuItem._id)
       if (existingItem) {
@@ -148,13 +154,13 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
         return [...prev, { ...menuItem, quantity: 1 }]
       }
     })
-  }
+  }, [])
 
-  const removeFromCart = (itemId) => {
+  const removeFromCart = useCallback((itemId) => {
     setCart(prev => prev.filter(item => item._id !== itemId))
-  }
+  }, [])
 
-  const updateQuantity = (itemId, newQuantity) => {
+  const updateQuantity = useCallback((itemId, newQuantity) => {
     if (newQuantity === 0) {
       removeFromCart(itemId)
       return
@@ -167,39 +173,36 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
           : item
       )
     )
-  }
+  }, [removeFromCart])
 
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0)
-  }
-
-  const getCartItemCount = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0)
-  }
-
-  // Format functions
-  const formatPrice = (price) => `Rs. ${price}`
+  // Format functions - use useCallback for performance
+  const formatPrice = useCallback((price) => `Rs. ${price}`, [])
   
-  const formatCategory = (category) => {
+  const formatCategory = useCallback((category) => {
     return category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' ')
-  }
+  }, [])
 
-  const getItemImage = (item) => {
+  const getItemImage = useCallback((item) => {
     if (!item.images || item.images.length === 0) {
       return '/api/placeholder/80/80'
     }
     return item.images[0].url
-  }
+  }, [])
 
-  // Get user location when modal opens
+  // Get user location when modal opens - optimize to avoid repeated calls
   useEffect(() => {
     if (isOpen && !userLocation) {
-      getCurrentLocation()
+      // Use a timeout to avoid blocking the modal rendering
+      const timeout = setTimeout(() => {
+        getCurrentLocation()
+      }, 100)
+      
+      return () => clearTimeout(timeout)
     }
-  }, [isOpen])
+  }, [isOpen, userLocation])
 
-  // Function to get current location
-  const getCurrentLocation = () => {
+  // Function to get current location - use useCallback
+  const getCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       console.log('Geolocation is not supported')
       return
@@ -236,7 +239,7 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
         maximumAge: 300000 // 5 minutes
       }
     )
-  }
+  }, [])
 
   // Function to reverse geocode coordinates to address
   const reverseGeocode = async (latitude, longitude) => {
@@ -390,33 +393,30 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
 
   if (!isOpen || !restaurant) return null
 
-  const menuCategories = getMenuCategories()
-  const groupedMenu = getGroupedFilteredMenu()
-  const cartTotal = getCartTotal()
-  const cartItemCount = getCartItemCount()
-
   return (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+          transition={{ duration: 0.2 }}
+          className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-md sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-primary-600 text-white p-6">
+          <div className="bg-primary-600 text-white p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">{restaurant.name}</h2>
-                <p className="text-primary-100 mt-1">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl sm:text-2xl font-bold truncate">{restaurant.name}</h2>
+                <p className="text-primary-100 mt-1 text-sm sm:text-base">
                   {currentStep === 'menu' && 'Choose your items'}
                   {currentStep === 'cart' && 'Review your order'}
                   {currentStep === 'details' && 'Enter your details'}
@@ -426,17 +426,17 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-primary-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-primary-700 rounded-lg transition-colors ml-4 flex-shrink-0"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
             {/* Progress Steps */}
-            <div className="flex items-center space-x-4 mt-6">
+            <div className="flex items-center justify-center space-x-2 sm:space-x-4 mt-4 sm:mt-6 overflow-x-auto">
               {['menu', 'cart', 'details', 'payment', 'confirmation'].map((step, index) => (
-                <div key={step} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                <div key={step} className="flex items-center flex-shrink-0">
+                  <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
                     currentStep === step 
                       ? 'bg-white text-primary-600' 
                       : ['menu', 'cart', 'details', 'payment'].indexOf(currentStep) > index
@@ -446,7 +446,7 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
                     {index + 1}
                   </div>
                   {index < 4 && (
-                    <div className={`w-8 h-0.5 mx-2 ${
+                    <div className={`w-4 sm:w-8 h-0.5 mx-1 sm:mx-2 ${
                       ['menu', 'cart', 'details', 'payment'].indexOf(currentStep) > index
                         ? 'bg-primary-400'
                         : 'bg-primary-500'
@@ -467,7 +467,7 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
                 setSelectedCategory={setSelectedCategory}
                 menuCategories={menuCategories}
                 groupedMenu={groupedMenu}
-                getFilteredMenu={getFilteredMenu}
+                filteredMenu={filteredMenu}
                 addToCart={addToCart}
                 cart={cart}
                 formatPrice={formatPrice}
@@ -524,8 +524,24 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
 
           {/* Footer */}
           {currentStep !== 'confirmation' && (
-            <div className="bg-gray-50 p-6 border-t border-gray-200">
-              <div className="flex items-center justify-between">
+            <div className="bg-gray-50 p-4 sm:p-6 border-t border-gray-200">
+              {/* Cart Summary - Show on mobile above buttons */}
+              {cartItemCount > 0 && (
+                <div className="flex flex-col sm:hidden mb-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-primary-600">
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      <span className="font-medium text-sm">{cartItemCount} items</span>
+                    </div>
+                    <div className="text-lg font-bold text-gray-900">
+                      Total: {formatPrice(cartTotal)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop Layout */}
+              <div className="hidden sm:flex items-center justify-between">
                 <div>
                   {cartItemCount > 0 && (
                     <div className="flex items-center space-x-4">
@@ -582,6 +598,54 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
                   )}
                 </div>
               </div>
+
+              {/* Mobile Layout */}
+              <div className="sm:hidden">
+                <div className="flex flex-col space-y-3">
+                  {/* Action Buttons */}
+                  <div className="flex space-x-3">
+                    {currentStep !== 'menu' && (
+                      <button
+                        onClick={() => {
+                          if (currentStep === 'cart') setCurrentStep('menu')
+                          else if (currentStep === 'details') setCurrentStep('cart')
+                          else if (currentStep === 'payment') setCurrentStep('details')
+                        }}
+                        className="btn btn-outline flex-1"
+                      >
+                        Back
+                      </button>
+                    )}
+                    
+                    {currentStep === 'menu' && cartItemCount > 0 && (
+                      <button
+                        onClick={() => setCurrentStep('cart')}
+                        className="btn btn-primary flex-1"
+                      >
+                        Review Order
+                      </button>
+                    )}
+                    
+                    {currentStep === 'cart' && cart.length > 0 && (
+                      <button
+                        onClick={() => setCurrentStep('details')}
+                        className="btn btn-primary flex-1"
+                      >
+                        Proceed to Details
+                      </button>
+                    )}
+                    
+                    {currentStep === 'details' && isCustomerDetailsValid() && (
+                      <button
+                        onClick={() => setCurrentStep('payment')}
+                        className="btn btn-primary flex-1"
+                      >
+                        Proceed to Payment
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </motion.div>
@@ -590,15 +654,15 @@ export default function RestaurantOrderModal({ restaurant, isOpen, onClose, user
   )
 }
 
-// Menu Step Component
-function MenuStep({ 
+// Menu Step Component - Memoized for performance
+const MenuStep = React.memo(function MenuStep({ 
   menu, 
   menuLoading, 
   selectedCategory, 
   setSelectedCategory, 
   menuCategories, 
   groupedMenu, 
-  getFilteredMenu,
+  filteredMenu,
   addToCart, 
   cart, 
   formatPrice, 
@@ -607,12 +671,11 @@ function MenuStep({
   searchQuery,
   setSearchQuery
 }) {
-  const getItemQuantityInCart = (itemId) => {
+  const getItemQuantityInCart = useCallback((itemId) => {
     const cartItem = cart.find(item => item._id === itemId)
     return cartItem ? cartItem.quantity : 0
-  }
+  }, [cart])
 
-  const filteredMenu = getFilteredMenu()
   const hasSearchResults = searchQuery.trim() && filteredMenu.length > 0
   const hasSearchQuery = searchQuery.trim()
 
@@ -621,41 +684,41 @@ function MenuStep({
       {menuLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader className="h-6 w-6 animate-spin text-primary-600" />
-          <span className="ml-2 text-gray-600">Loading menu...</span>
+          <span className="ml-2 text-gray-600 text-sm sm:text-base">Loading menu...</span>
         </div>
       ) : menu && menu.length > 0 ? (
         <div>
           {/* Search Bar */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 z-10">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search menu items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full pl-9 sm:pl-10 pr-10 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             {/* Category Filter - Hide when searching */}
             {!hasSearchQuery && (
-              <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
+              <div className="flex space-x-2 mb-4 sm:mb-6 overflow-x-auto pb-2">
                 {menuCategories.map(category => (
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
                       selectedCategory === category
                         ? 'bg-primary-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -669,7 +732,7 @@ function MenuStep({
 
             {/* Search Results Info */}
             {hasSearchQuery && (
-              <div className="mb-4 text-sm text-gray-600">
+              <div className="mb-4 text-xs sm:text-sm text-gray-600">
                 {filteredMenu.length > 0 
                   ? `Found ${filteredMenu.length} item${filteredMenu.length === 1 ? '' : 's'} for "${searchQuery}"`
                   : `No items found for "${searchQuery}"`
@@ -678,13 +741,13 @@ function MenuStep({
             )}
 
             {/* Menu Items */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {hasSearchQuery ? (
                 // Show search results grouped by category
                 filteredMenu.length > 0 ? (
                   Object.entries(groupedMenu).map(([category, items]) => (
                     <div key={category}>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3 capitalize">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 capitalize">
                         {formatCategory(category)}
                       </h3>
                       <div className="grid gap-3">
@@ -703,11 +766,11 @@ function MenuStep({
                   ))
                 ) : (
                   <div className="text-center py-12">
-                    <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No items found matching your search</p>
+                    <Search className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-sm sm:text-base text-gray-600">No items found matching your search</p>
                     <button 
                       onClick={() => setSearchQuery('')}
-                      className="text-primary-600 hover:text-primary-700 mt-2"
+                      className="text-primary-600 hover:text-primary-700 mt-2 text-sm sm:text-base"
                     >
                       Clear search
                     </button>
@@ -718,7 +781,7 @@ function MenuStep({
                 selectedCategory === 'all' ? (
                   Object.entries(groupedMenu).map(([category, items]) => (
                     <div key={category}>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3 capitalize">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 capitalize">
                         {formatCategory(category)}
                       </h3>
                       <div className="grid gap-3">
@@ -737,7 +800,7 @@ function MenuStep({
                   ))
                 ) : (
                   <div className="grid gap-3">
-                    {getFilteredMenu().map(item => (
+                    {filteredMenu.map(item => (
                       <MenuItemCard 
                         key={item._id} 
                         item={item} 
@@ -755,16 +818,16 @@ function MenuStep({
         </div>
       ) : (
         <div className="text-center py-12">
-          <Utensils className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No menu items available</p>
+          <Utensils className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-sm sm:text-base text-gray-600">No menu items available</p>
         </div>
       )}
     </div>
   )
-}
+})
 
-// Menu Item Card
-function MenuItemCard({ item, onAddToCart, quantityInCart, formatPrice, getItemImage }) {
+// Menu Item Card - Memoized for performance
+const MenuItemCard = React.memo(function MenuItemCard({ item, onAddToCart, quantityInCart, formatPrice, getItemImage }) {
   return (
     <div className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
       <img
@@ -822,56 +885,56 @@ function MenuItemCard({ item, onAddToCart, quantityInCart, formatPrice, getItemI
       </div>
     </div>
   )
-}
+})
 
-// Cart Step Component
-function CartStep({ cart, updateQuantity, removeFromCart, cartTotal, formatPrice, getItemImage, restaurant }) {
+// Cart Step Component - Memoized for performance
+const CartStep = React.memo(function CartStep({ cart, updateQuantity, removeFromCart, cartTotal, formatPrice, getItemImage, restaurant }) {
   if (cart.length === 0) {
     return (
       <div className="h-96 flex items-center justify-center">
         <div className="text-center">
-          <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">Your cart is empty</p>
+          <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-sm sm:text-base text-gray-600">Your cart is empty</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-96 overflow-y-auto p-6">
-      <div className="space-y-4">
+    <div className="h-96 overflow-y-auto p-3 sm:p-6">
+      <div className="space-y-3 sm:space-y-4">
         {cart.map(item => (
-          <div key={item._id} className="flex items-center space-x-4 p-4 rounded-lg border border-gray-200">
+          <div key={item._id} className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg border border-gray-200">
             <img
               src={getItemImage(item)}
               alt={item.name}
-              className="w-16 h-16 rounded-lg object-cover"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
             />
             
-            <div className="flex-1">
-              <h4 className="font-medium text-gray-900">{item.name}</h4>
-              <p className="text-sm text-gray-600">{formatPrice(item.price)} each</p>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-gray-900 text-sm sm:text-base truncate">{item.name}</h4>
+              <p className="text-xs sm:text-sm text-gray-600">{formatPrice(item.price)} each</p>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row items-end sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => updateQuantity(item._id, item.quantity - 1)}
                   className="p-1 hover:bg-gray-100 rounded"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                 </button>
-                <span className="w-8 text-center font-medium">{item.quantity}</span>
+                <span className="w-6 sm:w-8 text-center font-medium text-sm sm:text-base">{item.quantity}</span>
                 <button
                   onClick={() => updateQuantity(item._id, item.quantity + 1)}
                   className="p-1 hover:bg-gray-100 rounded"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                 </button>
               </div>
               
               <div className="text-right">
-                <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
+                <p className="font-medium text-sm sm:text-base">{formatPrice(item.price * item.quantity)}</p>
                 <button
                   onClick={() => removeFromCart(item._id)}
                   className="text-xs text-red-600 hover:text-red-700"
@@ -885,42 +948,42 @@ function CartStep({ cart, updateQuantity, removeFromCart, cartTotal, formatPrice
       </div>
       
       {/* Order Summary */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+      <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-600">Subtotal</span>
-          <span className="font-medium">{formatPrice(cartTotal)}</span>
+          <span className="text-sm sm:text-base text-gray-600">Subtotal</span>
+          <span className="font-medium text-sm sm:text-base">{formatPrice(cartTotal)}</span>
         </div>
         {restaurant.minimumOrderAmount > 0 && cartTotal < restaurant.minimumOrderAmount && (
-          <div className="text-sm text-orange-600 mt-2">
-            <AlertCircle className="h-4 w-4 inline mr-1" />
+          <div className="text-xs sm:text-sm text-orange-600 mt-2">
+            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
             Minimum order amount: {formatPrice(restaurant.minimumOrderAmount)}
           </div>
         )}
       </div>
     </div>
   )
-}
+})
 
-// Details Step Component
-function DetailsStep({ customerDetails, setCustomerDetails, restaurant, user = null }) {
+// Details Step Component - Memoized for performance
+const DetailsStep = React.memo(function DetailsStep({ customerDetails, setCustomerDetails, restaurant, user = null }) {
   return (
-    <div className="h-96 overflow-y-auto p-6">
-      <div className="max-w-md mx-auto space-y-6">
+    <div className="h-96 overflow-y-auto p-3 sm:p-6">
+      <div className="max-w-md mx-auto space-y-4 sm:space-y-6">
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Customer Details</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 sm:mb-0">Customer Details</h3>
             {user && (customerDetails.name || customerDetails.phoneNumber) && (
-              <span className="text-sm text-green-600 bg-green-50 px-2 py-1 rounded">
+              <span className="text-xs sm:text-sm text-green-600 bg-green-50 px-2 py-1 rounded">
                 Auto-filled from profile
               </span>
             )}
             {user && !(customerDetails.name || customerDetails.phoneNumber) && (
-              <span className="text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded">
+              <span className="text-xs sm:text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded">
                 Auto-fill available but no data
               </span>
             )}
             {!user && (
-              <span className="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">
+              <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">
                 Not logged in
               </span>
             )}
@@ -928,16 +991,16 @@ function DetailsStep({ customerDetails, setCustomerDetails, restaurant, user = n
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Full Name *
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <User className="absolute left-3 top-3 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 <input
                   type="text"
                   value={customerDetails.name}
                   onChange={(e) => setCustomerDetails(prev => ({ ...prev, name: e.target.value }))}
-                  className="input pl-10"
+                  className="input pl-9 sm:pl-10 text-sm sm:text-base"
                   placeholder="Enter your full name"
                   required
                 />
@@ -945,16 +1008,16 @@ function DetailsStep({ customerDetails, setCustomerDetails, restaurant, user = n
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Phone Number *
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Phone className="absolute left-3 top-3 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 <input
                   type="tel"
                   value={customerDetails.phoneNumber}
                   onChange={(e) => setCustomerDetails(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                  className="input pl-10"
+                  className="input pl-9 sm:pl-10 text-sm sm:text-base"
                   placeholder="9800000000"
                   pattern="[0-9]{10}"
                   required
@@ -963,29 +1026,29 @@ function DetailsStep({ customerDetails, setCustomerDetails, restaurant, user = n
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Email (Optional)
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 <input
                   type="email"
                   value={customerDetails.email}
                   onChange={(e) => setCustomerDetails(prev => ({ ...prev, email: e.target.value }))}
-                  className="input pl-10"
+                  className="input pl-9 sm:pl-10 text-sm sm:text-base"
                   placeholder="your@email.com"
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Special Instructions (Optional)
               </label>
               <textarea
                 value={customerDetails.specialInstructions}
                 onChange={(e) => setCustomerDetails(prev => ({ ...prev, specialInstructions: e.target.value }))}
-                className="input"
+                className="input text-sm sm:text-base"
                 rows={3}
                 placeholder="Any special requests for your order..."
               />
@@ -994,15 +1057,15 @@ function DetailsStep({ customerDetails, setCustomerDetails, restaurant, user = n
         </div>
         
         {/* Restaurant Info */}
-        <div className="bg-primary-50 rounded-lg p-4">
+        <div className="bg-primary-50 rounded-lg p-3 sm:p-4">
           <div className="flex items-start">
-            <Info className="h-5 w-5 text-primary-600 mr-3 mt-0.5" />
+            <Info className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" />
             <div>
-              <h4 className="font-medium text-primary-900 mb-1">Pickup Location</h4>
-              <p className="text-sm text-primary-700">
+              <h4 className="font-medium text-primary-900 mb-1 text-sm sm:text-base">Pickup Location</h4>
+              <p className="text-xs sm:text-sm text-primary-700">
                 {restaurant.name} at {restaurant.chargingStation?.name}
               </p>
-              <p className="text-sm text-primary-600 mt-1">
+              <p className="text-xs sm:text-sm text-primary-600 mt-1">
                 You'll receive a call when your order is ready for pickup.
               </p>
             </div>
@@ -1011,28 +1074,28 @@ function DetailsStep({ customerDetails, setCustomerDetails, restaurant, user = n
       </div>
     </div>
   )
-}
+})
 
-// Payment Step Component
-function PaymentStep({ cart, cartTotal, customerDetails, restaurant, formatPrice, isProcessing, handlePlaceOrder }) {
+// Payment Step Component - Memoized for performance
+const PaymentStep = React.memo(function PaymentStep({ cart, cartTotal, customerDetails, restaurant, formatPrice, isProcessing, handlePlaceOrder }) {
   return (
-    <div className="h-96 overflow-y-auto p-6">
-      <div className="max-w-md mx-auto space-y-6">
+    <div className="h-96 overflow-y-auto p-3 sm:p-6">
+      <div className="max-w-md mx-auto space-y-4 sm:space-y-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment</h3>
           
           {/* Order Summary */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-gray-900 mb-3">Order Summary</h4>
-            <div className="space-y-2 text-sm">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+            <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Order Summary</h4>
+            <div className="space-y-2 text-xs sm:text-sm">
               {cart.map(item => (
                 <div key={item._id} className="flex justify-between">
-                  <span>{item.name} x {item.quantity}</span>
-                  <span>{formatPrice(item.price * item.quantity)}</span>
+                  <span className="truncate pr-2">{item.name} x {item.quantity}</span>
+                  <span className="flex-shrink-0">{formatPrice(item.price * item.quantity)}</span>
                 </div>
               ))}
               <div className="border-t border-gray-200 pt-2 mt-2">
-                <div className="flex justify-between font-medium">
+                <div className="flex justify-between font-medium text-sm sm:text-base">
                   <span>Total</span>
                   <span>{formatPrice(cartTotal)}</span>
                 </div>
@@ -1041,24 +1104,24 @@ function PaymentStep({ cart, cartTotal, customerDetails, restaurant, formatPrice
           </div>
           
           {/* Customer Details Summary */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-gray-900 mb-2">Customer Details</h4>
-            <div className="text-sm space-y-1">
-              <p><strong>Name:</strong> {customerDetails.name}</p>
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+            <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Customer Details</h4>
+            <div className="text-xs sm:text-sm space-y-1">
+              <p><strong>Name:</strong> <span className="truncate">{customerDetails.name}</span></p>
               <p><strong>Phone:</strong> {customerDetails.phoneNumber}</p>
               {customerDetails.email && (
-                <p><strong>Email:</strong> {customerDetails.email}</p>
+                <p><strong>Email:</strong> <span className="truncate">{customerDetails.email}</span></p>
               )}
             </div>
           </div>
           
           {/* Payment Method */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
             <div className="flex items-start">
-              <CreditCard className="h-5 w-5 text-yellow-600 mr-3 mt-0.5" />
+              <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="font-medium text-yellow-900 mb-1">Payment Method</h4>
-                <p className="text-sm text-yellow-700">
+                <h4 className="font-medium text-yellow-900 mb-1 text-sm sm:text-base">Payment Method</h4>
+                <p className="text-xs sm:text-sm text-yellow-700">
                   For now, we're using dummy payment processing. In production, this would integrate with actual payment providers.
                 </p>
               </div>
@@ -1069,17 +1132,17 @@ function PaymentStep({ cart, cartTotal, customerDetails, restaurant, formatPrice
           <button
             onClick={handlePlaceOrder}
             disabled={isProcessing}
-            className="w-full btn btn-primary btn-lg mt-6"
+            className="w-full btn btn-primary btn-lg mt-4 sm:mt-6"
           >
             {isProcessing ? (
               <>
-                <Loader className="h-5 w-5 mr-2 animate-spin" />
-                Processing Order...
+                <Loader className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin" />
+                <span className="text-sm sm:text-base">Processing Order...</span>
               </>
             ) : (
               <>
-                <CreditCard className="h-5 w-5 mr-2" />
-                Place Order - {formatPrice(cartTotal)}
+                <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span className="text-sm sm:text-base">Place Order - {formatPrice(cartTotal)}</span>
               </>
             )}
           </button>
@@ -1087,56 +1150,98 @@ function PaymentStep({ cart, cartTotal, customerDetails, restaurant, formatPrice
       </div>
     </div>
   )
-}
+})
 
-// Confirmation Step Component
-function ConfirmationStep({ restaurant, customerDetails, cart, cartTotal, formatPrice }) {
+// Confirmation Step Component - Memoized for performance
+const ConfirmationStep = React.memo(function ConfirmationStep({ restaurant, customerDetails, cart, cartTotal, formatPrice }) {
   const orderNumber = `ORD${Date.now().toString().slice(-6)}`
   
   return (
-    <div className="h-96 flex items-center justify-center p-6">
-      <div className="text-center max-w-md">
-        <div className="mb-6">
-          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">Order Confirmed!</h3>
-          <p className="text-gray-600">
+    <div className="min-h-96 overflow-y-auto p-3 sm:p-6">
+      <div className="max-w-md mx-auto">
+        {/* Success Icon and Message */}
+        <div className="text-center mb-6">
+          <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 text-green-500 mx-auto mb-4" />
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Order Confirmed!</h3>
+          <p className="text-sm sm:text-base text-gray-600">
             Your order has been placed successfully.
           </p>
         </div>
         
-        <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
+        {/* Order Details */}
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+          <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Order Details</h4>
+          <div className="space-y-2 text-xs sm:text-sm">
+            <div className="flex justify-between items-start">
               <span className="font-medium">Order Number:</span>
-              <span className="font-mono">{orderNumber}</span>
+              <span className="font-mono text-right">{orderNumber}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-start">
               <span className="font-medium">Restaurant:</span>
-              <span>{restaurant.name}</span>
+              <span className="text-right truncate ml-2">{restaurant.name}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-start">
+              <span className="font-medium">Location:</span>
+              <span className="text-right truncate ml-2">{restaurant.chargingStation?.name}</span>
+            </div>
+            <div className="flex justify-between items-start">
               <span className="font-medium">Total Amount:</span>
-              <span className="font-bold">{formatPrice(cartTotal)}</span>
+              <span className="font-bold text-right">{formatPrice(cartTotal)}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-start">
               <span className="font-medium">Contact:</span>
-              <span>{customerDetails.phoneNumber}</span>
+              <span className="text-right">{customerDetails.phoneNumber}</span>
             </div>
           </div>
         </div>
         
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        {/* Order Items Summary */}
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+          <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Items Ordered</h4>
+          <div className="space-y-2 text-xs sm:text-sm">
+            {cart.map(item => (
+              <div key={item._id} className="flex justify-between items-start">
+                <span className="truncate pr-2">{item.name} x {item.quantity}</span>
+                <span className="flex-shrink-0">{formatPrice(item.price * item.quantity)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Next Steps */}
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
           <div className="flex items-start">
-            <Clock className="h-5 w-5 text-green-600 mr-3 mt-0.5" />
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" />
             <div className="text-left">
-              <h4 className="font-medium text-green-900 mb-1">What's Next?</h4>
-              <p className="text-sm text-green-700">
-                You'll receive a call at {customerDetails.phoneNumber} when your order is ready for pickup at {restaurant.chargingStation?.name}.
+              <h4 className="font-medium text-green-900 mb-1 text-sm sm:text-base">What's Next?</h4>
+              <p className="text-xs sm:text-sm text-green-700 mb-2">
+                You'll receive a call at {customerDetails.phoneNumber} when your order is ready for pickup.
               </p>
+              <p className="text-xs sm:text-sm text-green-700">
+                <strong>Pickup Location:</strong> {restaurant.chargingStation?.name}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Additional Info */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+          <div className="flex items-start">
+            <Info className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" />
+            <div className="text-left">
+              <h4 className="font-medium text-blue-900 mb-1 text-sm sm:text-base">Important Notes</h4>
+              <div className="text-xs sm:text-sm text-blue-700 space-y-1">
+                <p>• Please have your order number ready when you arrive</p>
+                <p>• Your order will be prepared fresh after confirmation</p>
+                <p>• For any changes, please call the restaurant directly</p>
+                {customerDetails.specialInstructions && (
+                  <p>• Special instructions: {customerDetails.specialInstructions}</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   )
-}
+})

@@ -259,9 +259,9 @@ export default function Home() {
 
   const stats = [
     { icon: Users, label: 'Happy Users', value: '15K+', color: 'text-blue-600' },
-    { icon: MapPin, label: 'Stations', value: '200+', color: 'text-green-600' },
+    { icon: MapPin, label: 'Charging Stations', value: '200+', color: 'text-green-600' },
+    { icon: () => <span className="text-2xl">🍽️</span>, label: 'Partner Restaurants', value: '200+', color: 'text-orange-600' },
     { icon: Battery, label: 'Charges Completed', value: '75K+', color: 'text-purple-600' },
-    { icon: Zap, label: 'Energy Delivered', value: '3.2 MWh', color: 'text-orange-600' },
   ]
 
   const benefits = [
@@ -280,6 +280,13 @@ export default function Home() {
       description: 'Terrain-aware route planning',
       action: () => navigate('/trip-ai'),
       isPrimary: true // Mark as primary action
+    },
+    {
+      icon: () => <span className="text-2xl">🍽️</span>,
+      title: 'Find Your Nearest Restaurant Now',
+      description: 'Order food to your charging station',
+      action: () => navigate('/restaurants/search?maxDistance=20&sortBy=recommended'),
+      isPrimary: false
     },
     {
       icon: Smartphone,
@@ -335,11 +342,11 @@ export default function Home() {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.8, delay: 0.2 }}
-                  className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-white/20 rounded-full px-4 sm:px-6 py-2 sm:py-3 mb-6 sm:mb-8"
+                  className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-500/20 to-orange-500/20 backdrop-blur-sm border border-white/20 rounded-full px-4 sm:px-6 py-2 sm:py-3 mb-6 sm:mb-8"
                 >
                   <Award className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
                   <span className="text-xs sm:text-sm font-semibold tracking-wide text-blue-100">
-                    NEPAL'S #1 EV CHARGING PLATFORM
+                    NEPAL'S #1 EV CHARGING + DINING PLATFORM
                   </span>
                   <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
                 </motion.div>
@@ -353,18 +360,18 @@ export default function Home() {
                 >
                   <span className="block">
                     <span className="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
-                      Say Goodbye to
+                      Power Up Your
                     </span>
                   </span>
                   <span className="block relative">
                     <span className="bg-gradient-to-r from-blue-300 via-purple-300 to-green-300 bg-clip-text text-transparent">
-                      Charge Anxiety
+                      Journey & Soul
                     </span>
                     {/* Underline decoration */}
-                    <div className="absolute -bottom-1 sm:-bottom-2 left-1/2 transform -translate-x-1/2 w-16 sm:w-24 h-0.5 sm:h-1 bg-gradient-to-r from-blue-400 to-green-400 rounded-full"></div>
+                    <div className="absolute -bottom-1 sm:-bottom-2 left-1/2 transform -translate-x-1/2 w-16 sm:w-24 h-0.5 sm:h-1 bg-gradient-to-r from-blue-400 to-orange-400 rounded-full"></div>
                   </span>
                   <span className="block text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-blue-100 mt-4 sm:mt-6 tracking-normal">
-                    <span className="font-light">Forever.</span>
+                    <span className="font-light">Simultaneously.</span>
                   </span>
                 </motion.h1>
 
@@ -377,11 +384,14 @@ export default function Home() {
                 >
                   <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-blue-100 mb-4 sm:mb-6 leading-relaxed font-light">
                     Nepal's largest EV charging network with 
-                    <span className="font-semibold text-white"> 100% slot guarantee</span>.
+                    <span className="font-semibold text-white"> 100% slot guarantee</span>
+                    <span className="text-orange-200"> + delicious food delivery</span>.
                   </p>
                   <p className="text-base sm:text-lg md:text-xl text-blue-200 leading-relaxed">
                     Find, book, and charge with complete confidence across 
-                    <span className="font-semibold text-green-300"> 200+ verified stations</span>.
+                    <span className="font-semibold text-green-300"> 200+ verified stations</span>
+                    <span className="text-orange-200"> while enjoying meals from </span>
+                    <span className="font-semibold text-orange-300"> 200+ partner restaurants</span>.
                   </p>
                 </motion.div>
 
@@ -427,7 +437,11 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.9 }}
-                  className={`grid gap-4 sm:gap-8 max-w-2xl mx-auto mb-12 sm:mb-16 px-4 ${quickActions.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-1 sm:grid-cols-2'}`}
+                  className={`grid gap-4 sm:gap-8 max-w-3xl mx-auto mb-12 sm:mb-16 px-4 ${
+                    quickActions.length === 1 ? 'grid-cols-1 max-w-md' : 
+                    quickActions.length === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+                    'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                  }`}
                 >
                   {quickActions.map((action, index) => {
                     const Icon = action.icon
@@ -437,6 +451,11 @@ export default function Home() {
                         gradient: 'from-blue-600 to-purple-600',
                         hover: 'hover:from-blue-700 hover:to-purple-700',
                         glow: 'group-hover:shadow-blue-500/25'
+                      },
+                      { 
+                        gradient: 'from-orange-500 to-amber-600',
+                        hover: 'hover:from-orange-600 hover:to-amber-700',
+                        glow: 'group-hover:shadow-orange-500/25'
                       },
                       { 
                         gradient: 'from-emerald-500 to-green-600',
@@ -470,7 +489,11 @@ export default function Home() {
                         {/* Content */}
                         <div className="relative flex items-center gap-3 sm:gap-5">
                           <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                            <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+                            {typeof Icon === 'function' ? (
+                              <Icon />
+                            ) : (
+                              <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+                            )}
                           </div>
                           <div className="text-left flex-1 min-w-0">
                             <div className="font-bold text-sm sm:text-lg text-white mb-1">
@@ -513,7 +536,11 @@ export default function Home() {
                             className="text-center group"
                           >
                             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 border border-white/10">
-                              <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                              {typeof Icon === 'function' && Icon.name === undefined ? (
+                                <Icon />
+                              ) : (
+                                <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                              )}
                             </div>
                             <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-1 sm:mb-2">{stat.value}</div>
                             <div className="text-blue-200 font-medium tracking-wide text-xs sm:text-sm">{stat.label}</div>
@@ -532,6 +559,10 @@ export default function Home() {
                         <div className="flex items-center gap-1 sm:gap-2">
                           <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                           <span className="font-medium">100% Secure</span>
+                        </div>
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <span className="text-lg">🍽️</span>
+                          <span className="font-medium">Quality Food</span>
                         </div>
                         <div className="flex items-center gap-1 sm:gap-2">
                           <Timer className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
@@ -875,6 +906,370 @@ export default function Home() {
                 </div>
               </motion.div>
             </div>
+          </div>
+        </section>
+
+        {/* Revolutionary Restaurant Experience - Award-Winning Design */}
+        <section className="py-32 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 relative overflow-hidden">
+          {/* Sophisticated Background Elements */}
+          <div className="absolute inset-0">
+            {/* Geometric Patterns */}
+            <div className="absolute inset-0 opacity-[0.03]">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23f59e0b' fill-opacity='1'%3E%3Cpath d='M30 30c0-8.5-6.5-15-15-15s-15 6.5-15 15 6.5 15 15 15 15-6.5 15-15zm15 0c0-8.5-6.5-15-15-15s-15 6.5-15 15 6.5 15 15 15 15-6.5 15-15z'/%3E%3C/g%3E%3C/svg%3E")`,
+              }} />
+            </div>
+            
+            {/* Floating Food Elements */}
+            <div className="absolute top-20 left-16 w-8 h-8 bg-orange-400 rounded-full opacity-20 animate-pulse"></div>
+            <div className="absolute top-40 right-24 w-6 h-6 bg-amber-400 rounded-full opacity-30 animate-bounce"></div>
+            <div className="absolute bottom-48 left-1/4 w-4 h-4 bg-yellow-400 rounded-full opacity-25 animate-pulse delay-300"></div>
+            <div className="absolute bottom-24 right-1/3 w-5 h-5 bg-orange-500 rounded-full opacity-20 animate-bounce delay-700"></div>
+            <div className="absolute top-2/3 right-12 w-3 h-3 bg-red-400 rounded-full opacity-25 animate-pulse delay-1000"></div>
+          </div>
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Premium Header */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              viewport={{ once: true }}
+              className="text-center mb-20"
+            >
+              {/* Premium Badge */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-200 rounded-full px-8 py-4 mb-8 shadow-lg"
+              >
+                <div className="w-6 h-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">🍽️</span>
+                </div>
+                <span className="text-lg font-bold text-orange-800 tracking-wide">
+                  NEVER STAY HUNGRY
+                </span>
+                <div className="w-5 h-5 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">⚡</span>
+                </div>
+              </motion.div>
+
+              {/* Revolutionary Headline */}
+              <h2 className="text-5xl sm:text-6xl lg:text-8xl font-black leading-[0.9] text-gray-900 mb-8 tracking-tight font-display">
+                <span className="block">
+                  <span className="text-orange-600">Fuel Your</span>
+                  <span className="text-gray-900"> Journey</span>
+                </span>
+                <span className="block text-gray-900 relative">
+                  <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">
+                    & Your Soul
+                  </span>
+                  {/* Decorative underline */}
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-2 bg-gradient-to-r from-orange-400 to-amber-400 rounded-full opacity-20"></div>
+                </span>
+              </h2>
+
+              <p className="text-xl sm:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-light">
+                While your EV charges, treat yourself to <span className="font-semibold text-orange-600">delicious food</span> from 
+                nearby restaurants. The perfect combination of <span className="font-semibold text-amber-600">sustainable transport</span> 
+                and <span className="font-semibold text-orange-600">incredible cuisine</span>.
+              </p>
+            </motion.div>
+
+            {/* Revolutionary Content Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+              
+              {/* Left Side - Experience Features */}
+              <motion.div
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                viewport={{ once: true }}
+                className="space-y-10"
+              >
+                {[
+                  {
+                    icon: "🍜",
+                    title: "Smart Restaurant Discovery",
+                    description: "AI-powered recommendations based on your charging time, dietary preferences, and location. Never waste time searching for the perfect meal.",
+                    color: "from-orange-500 to-red-500",
+                    bgColor: "bg-orange-50",
+                    borderColor: "border-orange-200"
+                  },
+                  {
+                    icon: "⚡",
+                    title: "Charge-Time Synchronized",
+                    description: "Order food that perfectly matches your charging duration. Your meal arrives just as you're ready to hit the road again.",
+                    color: "from-amber-500 to-yellow-500",
+                    bgColor: "bg-amber-50",
+                    borderColor: "border-amber-200"
+                  },
+                  {
+                    icon: "🚗",
+                    title: "Curbside Delivery",
+                    description: "Skip the restaurant queues. Get your food delivered directly to your charging station with real-time tracking and GPS precision.",
+                    color: "from-yellow-500 to-orange-500",
+                    bgColor: "bg-yellow-50",
+                    borderColor: "border-yellow-200"
+                  }
+                ].map((feature, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8, delay: 0.2 + index * 0.2 }}
+                    viewport={{ once: true }}
+                    className={`group ${feature.bgColor} ${feature.borderColor} border-2 rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 relative overflow-hidden`}
+                  >
+                    {/* Background decoration */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/50 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
+                    
+                    <div className="relative flex items-start gap-6">
+                      <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300 text-2xl`}>
+                        {feature.icon}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold text-gray-900 mb-4">{feature.title}</h3>
+                        <p className="text-gray-600 leading-relaxed text-lg">{feature.description}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Hover accent line */}
+                    <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.color} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
+                  </motion.div>
+                ))}
+
+                {/* CTA Button */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.8 }}
+                  viewport={{ once: true }}
+                  className="pt-8"
+                >
+                  <Link
+                    to="/restaurants"
+                    className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-600 to-amber-600 text-white font-bold text-base rounded-xl hover:from-orange-700 hover:to-amber-700 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
+                  >
+                    <span className="text-xl">🍽️</span>
+                    <span>Explore Restaurants</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  </Link>
+                </motion.div>
+              </motion.div>
+
+              {/* Right Side - Interactive Food Experience */}
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                viewport={{ once: true }}
+                className="relative"
+              >
+                {/* Main Experience Card */}
+                <div className="bg-white rounded-4xl p-10 shadow-3xl border border-orange-100 relative overflow-hidden">
+                  {/* Background decoration */}
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-orange-50 to-transparent rounded-full transform translate-x-20 -translate-y-20"></div>
+                  
+                  <div className="relative">
+                    {/* Header */}
+                    <div className="text-center mb-12">
+                      <div className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-100 to-amber-100 rounded-full px-6 py-3 mb-6">
+                        <span className="text-2xl">🎯</span>
+                        <span className="font-bold text-orange-800">Perfect Timing</span>
+                      </div>
+                      <h4 className="text-2xl font-bold text-gray-900 mb-3">Experience Overview</h4>
+                      <p className="text-gray-600">How we revolutionize your charging break</p>
+                    </div>
+                    
+                    {/* Experience Steps */}
+                    <div className="space-y-8 mb-12">
+                      {[
+                        { step: "01", title: "Arrive & Plug In", desc: "Start charging your EV", emoji: "🔌", color: "from-blue-500 to-cyan-500" },
+                        { step: "02", title: "Browse Local Food", desc: "Discover nearby restaurants", emoji: "📱", color: "from-orange-500 to-red-500" },
+                        { step: "03", title: "Order & Wait", desc: "Food arrives at your car", emoji: "🍽️", color: "from-green-500 to-emerald-500" },
+                        { step: "04", title: "Drive Away Happy", desc: "Charged & satisfied", emoji: "😊", color: "from-purple-500 to-indigo-500" }
+                      ].map((step, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: 20 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
+                          viewport={{ once: true }}
+                          className="flex items-center gap-4"
+                        >
+                          <div className={`w-12 h-12 bg-gradient-to-r ${step.color} rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0`}>
+                            {step.step}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xl">{step.emoji}</span>
+                              <h5 className="font-bold text-gray-900">{step.title}</h5>
+                            </div>
+                            <p className="text-gray-600 text-sm">{step.desc}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {/* Success Metrics */}
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-8 border border-orange-100">
+                      <h5 className="text-lg font-bold text-gray-900 mb-6 text-center">Success Metrics</h5>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="text-center">
+                          <div className="text-3xl font-black text-orange-600 mb-2">95%</div>
+                          <div className="text-sm text-gray-600 font-semibold">Perfect Timing</div>
+                          <div className="text-xs text-gray-500">Food arrives on time</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-black text-amber-600 mb-2">4.9★</div>
+                          <div className="text-sm text-gray-600 font-semibold">User Rating</div>
+                          <div className="text-xs text-gray-500">Average experience</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-black text-orange-600 mb-2">200+</div>
+                          <div className="text-sm text-gray-600 font-semibold">Restaurants</div>
+                          <div className="text-xs text-gray-500">Partner locations</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-black text-amber-600 mb-2">15min</div>
+                          <div className="text-sm text-gray-600 font-semibold">Avg Delivery</div>
+                          <div className="text-xs text-gray-500">To your car</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Real Example */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 1.2 }}
+                      viewport={{ once: true }}
+                      className="mt-8 p-6 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl border-2 border-orange-100"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0 text-xl">
+                          🎯
+                        </div>
+                        <div>
+                          <p className="font-bold text-orange-900 mb-2">Real Example:</p>
+                          <p className="text-gray-800 leading-relaxed">
+                            <strong>45-minute charge</strong> at Kathmandu station = Perfect time for 
+                            <strong className="text-orange-600"> momos + chiya</strong> from nearby restaurant, 
+                            delivered right to your car door.
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* Floating Achievement Badge */}
+                <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-r from-orange-400 to-amber-400 rounded-full flex items-center justify-center shadow-2xl border-4 border-white">
+                  <span className="text-3xl">🏆</span>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Premium Features Row */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.5 }}
+              viewport={{ once: true }}
+              className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8"
+            >
+              {[
+                {
+                  icon: "🌟",
+                  title: "Zero Wait Time",
+                  description: "Pre-order during travel, arrive to ready food",
+                  color: "from-blue-500 to-cyan-500"
+                },
+                {
+                  icon: "🎯",
+                  title: "Smart Recommendations",
+                  description: "AI suggests perfect meals for your charging duration",
+                  color: "from-purple-500 to-indigo-500"
+                },
+                {
+                  icon: "🚗",
+                  title: "Car-Side Service",
+                  description: "Never leave your vehicle, food comes to you",
+                  color: "from-green-500 to-emerald-500"
+                }
+              ].map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.7 + index * 0.1 }}
+                  viewport={{ once: true }}
+                  className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-orange-100 text-center"
+                >
+                  <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg text-2xl`}>
+                    {feature.icon}
+                  </div>
+                  <h4 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h4>
+                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Premium CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.8 }}
+              viewport={{ once: true }}
+              className="text-center mt-20"
+            >
+              <div className="bg-gradient-to-r from-white via-orange-50 to-white rounded-4xl p-12 shadow-3xl border border-orange-100 max-w-4xl mx-auto">
+                <h3 className="text-4xl font-black text-gray-900 mb-6">
+                  Never Go Hungry on Any Route
+                </h3>
+                <p className="text-xl text-gray-600 mb-10 leading-relaxed">
+                  Transform your charging stops into delightful dining experiences. 
+                  <span className="font-semibold text-orange-600"> 200+ partner restaurants</span> ready to serve you.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-6 justify-center">
+                  <Link
+                    to="/restaurants"
+                    className="group px-12 py-5 bg-gradient-to-r from-orange-600 to-amber-600 text-white font-black text-lg rounded-2xl hover:from-orange-700 hover:to-amber-700 transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center justify-center gap-4"
+                  >
+                    <span className="text-xl">🍽️</span>
+                    <span>Explore Restaurants</span>
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" />
+                  </Link>
+                  
+                  <Link
+                    to="/search"
+                    className="group px-12 py-5 border-2 border-orange-300 text-orange-700 font-black text-lg rounded-2xl hover:bg-orange-600 hover:text-white hover:border-orange-600 transition-all duration-300 flex items-center justify-center gap-4"
+                  >
+                    <span className="text-xl">🔍</span>
+                    <span>Find Stations</span>
+                  </Link>
+                </div>
+
+                <div className="mt-8 flex flex-wrap justify-center gap-8 text-sm text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">✅</span>
+                    <span>Real-time tracking</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🎯</span>
+                    <span>Perfect timing</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">💯</span>
+                    <span>Quality guaranteed</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </section>
 
