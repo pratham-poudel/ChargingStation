@@ -393,7 +393,7 @@ router.post('/:stationId/bookings/:bookingId/send-start-otp', [
 
     // Send OTP via SMS
     try {
-      const smsMessage = `🔐 OTP to start charging at ${stationName}: ${otp}. Share this with the station employee to begin your session. Valid for 10 minutes. - ChargingStation Nepal`;
+      const smsMessage = `🔐 OTP to start charging at ${stationName}: ${otp}. Share this with the station employee to begin your session. Valid for 10 minutes. - Dockit`;
       
       const smsResult = await smsService.sendSMS(customerPhone, smsMessage);
       console.log('Start session OTP SMS result:', smsResult);
@@ -532,7 +532,7 @@ router.post('/:stationId/bookings/:bookingId/verify-start-otp', [
       
       await smsService.sendSMS(
         booking.user.phoneNumber,
-        `Welcome to ${station.name}! Your charging session has started. We have ${amenitiesText} available. Have a great experience! - ChargingStation Nepal`
+        `Welcome to ${station.name}! Your charging session has started. We have ${amenitiesText} available. Have a great experience! - Dockit`
       );
     } catch (smsError) {
       console.error('Welcome SMS sending error:', smsError);
@@ -822,7 +822,7 @@ router.post('/:stationId/assign-employee', [
       const station = await ChargingStation.findById(stationId);
       const stationName = station?.name || 'the charging station';
       
-      const smsMessage = `Welcome! You have been assigned as an employee at ${stationName}. Your login credentials are: Assignment Number: ${employee.assignmentNumber}, Password: ${password}. Please login at the station management portal and change your password. - ChargingStation Nepal`;
+      const smsMessage = `Welcome! You have been assigned as an employee at ${stationName}. Your login credentials are: Assignment Number: ${employee.assignmentNumber}, Password: ${password}. Please login at the station management portal and change your password. - Dockit`;
       
       console.log(`Sending SMS to ${employee.phoneNumber}: ${smsMessage}`);
       
@@ -1036,7 +1036,7 @@ router.patch('/:stationId/bookings/:bookingId/status', [
         
         await smsService.sendSMS(
           booking.user.phoneNumber,
-          `Welcome to ${station.name}! Your charging session has started. We have ${amenitiesText} available. Have a great experience! - ChargingStation Nepal`
+          `Welcome to ${station.name}! Your charging session has started. We have ${amenitiesText} available. Have a great experience! - Dockit`
         );
       } catch (smsError) {
         console.error('SMS sending error:', smsError);
@@ -1054,7 +1054,7 @@ router.patch('/:stationId/bookings/:bookingId/status', [
         console.log(`Attempting to send completion SMS to ${booking.user.phoneNumber}`);
         const smsResult = await smsService.sendSMS(
           booking.user.phoneNumber,
-          `Thank you for using ${station.name}! Your charging session is complete. Please rate your experience at ${ratingUrl} to help us improve. - ChargingStation Nepal`
+          `Thank you for using ${station.name}! Your charging session is complete. Please rate your experience at ${ratingUrl} to help us improve. - Dockit`
         );
         
         if (smsResult.success) {
@@ -1198,11 +1198,11 @@ router.post('/debug/test-sms', authorizeStationAccess, async (req, res) => {
     let message;
     if (messageType === 'completion') {
       const ratingUrl = `${process.env.FRONTEND_URL || 'https://chargingstation.com.np'}/rate-experience?bookingId=${bookingId || 'test123'}`;
-      message = `Thank you for using Test Station! Your charging session is complete. Please rate your experience at ${ratingUrl} to help us improve. - ChargingStation Nepal`;
+      message = `Thank you for using Test Station! Your charging session is complete. Please rate your experience at ${ratingUrl} to help us improve. - Dockit`;
     } else if (messageType === 'welcome') {
-      message = `Welcome to Test Station! Your charging session has started. We have WiFi, Coffee, Restroom available. Have a great experience! - ChargingStation Nepal`;
+      message = `Welcome to Test Station! Your charging session has started. We have WiFi, Coffee, Restroom available. Have a great experience! - Dockit`;
     } else {
-      message = req.body.message || 'Test message from ChargingStation Nepal';
+      message = req.body.message || 'Test message from Dockit';
     }
 
     console.log(`Testing SMS to ${phoneNumber}: ${message}`);
@@ -1475,7 +1475,7 @@ router.patch('/:stationId/employees/:employeeId/change-password', [
 
     // Send SMS notification about password change
     try {
-      const smsMessage = `Your password for ${station.name} has been changed by your supervisor. Your new password is: ${newPassword}. Please login and change it to something secure. Assignment Number: ${employee.assignmentNumber} - ChargingStation Nepal`;
+      const smsMessage = `Your password for ${station.name} has been changed by your supervisor. Your new password is: ${newPassword}. Please login and change it to something secure. Assignment Number: ${employee.assignmentNumber} - Dockit`;
       
       const smsResult = await smsService.sendSMS(employee.phoneNumber, smsMessage);
       

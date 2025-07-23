@@ -1638,7 +1638,7 @@ const verifyVendor = async (req, res) => {
                 <a href="${process.env.FRONTEND_URL || 'https://chargingstation.com.np/merchant/login'}" style="background: #22c55e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">Go to Merchant Dashboard</a>
               </div>
               <p style="color: #9ca3af; font-size: 14px; text-align: center; margin-top: 30px;">
-                Best regards,<br>ChargingStation Nepal Team
+                Best regards,<br>Dockit Team
               </p>
             </div>
           </div>`
@@ -2726,7 +2726,7 @@ const completeSettlement = async (req, res) => {
             
             <!-- Footer -->
             <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 14px;">
-              <p style="margin: 0;">ChargingStation Nepal</p>
+              <p style="margin: 0;">Dockit</p>
               <p style="margin: 5px 0 0 0;">This is an automated notification. Please do not reply to this email.</p>
             </div>
           </div>
@@ -2952,7 +2952,7 @@ const processRefundPayment = async (req, res) => {
             
             <!-- Footer -->
             <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 14px;">
-              <p style="margin: 0;">ChargingStation Nepal</p>
+              <p style="margin: 0;">Dockit</p>
               <p style="margin: 5px 0 0 0;">Thank you for using our service!</p>
             </div>
           </div>

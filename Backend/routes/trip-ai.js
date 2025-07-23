@@ -1436,7 +1436,7 @@ async function sendTripConfirmationEmail(user, bookings, totalAmount, tripPlanId
 
       <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">
         <p>Happy Charging! 🔋</p>
-        <p>Team ChargEase & Dally Tech</p>
+        <p>Team Dockit & Dally Tech</p>
       </div>
     </div>
   `;
@@ -1463,7 +1463,7 @@ async function sendTripConfirmationSMS(user, sessionCount, totalAmount) {
     return;
   }
   
-  const message = `🚗⚡ Trip AI Success! ${sessionCount} charging stations booked for ₹${totalAmount}. Check email for details. Safe travels! - ChargEase`;
+  const message = `🚗⚡ Trip AI Success! ${sessionCount} charging stations booked for ₹${totalAmount}. Check email for details. Safe travels! - Dockit`;
   
   try {
     const result = await smsService.sendSMS(user.phoneNumber, message);

@@ -39,7 +39,7 @@ class SMSService {
   }
 
   async sendOTP(phoneNumber, otp) {
-    const message = `Your ChargingStation Nepal verification code is: ${otp}.`;
+    const message = `Your Dockit verification code is: ${otp}.`;
     return await this.sendSMS(phoneNumber, message);
   }
 
@@ -55,7 +55,7 @@ class SMSService {
       message += ` Food Order: ${itemNames}${moreItems} (${itemCount} items, Rs.${foodOrder.totalAmount}). Food will be prepared during charging.`;
     }
     
-    message += ` Thank you for choosing ChargingStation Nepal!`;
+    message += ` Thank you for choosing Dockit!`;
     
     return await this.sendSMS(phoneNumber, message);
   }
@@ -66,22 +66,22 @@ class SMSService {
   }
 
   async sendAdminLoginOTP(phoneNumber, fullName, otp) {
-    const message = `ChargEase Admin Login OTP: ${otp}. Valid for 5 minutes. Do not share this code. -ChargEase Security`;
+    const message = `Dockit Admin Login OTP: ${otp}. Valid for 5 minutes. Do not share this code. -Dockit Security`;
     return await this.sendSMS(phoneNumber, message);
   }
 
   async sendEmployeeAssignment(phoneNumber, employeeName, employeeId, password, restaurantName, role, loginUrl) {
-    const message = `Welcome ${employeeName}! You've been assigned as ${role} at ${restaurantName}. Login ID: ${employeeId}, Password: ${password}. Login: ${loginUrl} -ChargingStation Nepal`;
+    const message = `Welcome ${employeeName}! You've been assigned as ${role} at ${restaurantName}. Login ID: ${employeeId}, Password: ${password}. Login: ${loginUrl} -Dockit`;
     return await this.sendSMS(phoneNumber, message);
   }
 
   async sendPasswordChangeOTP(phoneNumber, employeeName, otp) {
-    const message = `ChargingStation Nepal: OTP to change password for employee ${employeeName}: ${otp}. Valid for 10 minutes. Do not share this code.`;
+    const message = `Dockit: OTP to change password for employee ${employeeName}: ${otp}. Valid for 10 minutes. Do not share this code.`;
     return await this.sendSMS(phoneNumber, message);
   }
 
   async sendPasswordChangeNotification(phoneNumber, employeeName, newPassword) {
-    const message = `ChargingStation Nepal: Your login password for ${employeeName} has been changed by the restaurant owner. New Password: ${newPassword}. Please use this new password for future logins.`;
+    const message = `Dockit: Your login password for ${employeeName} has been changed by the restaurant owner. New Password: ${newPassword}. Please use this new password for future logins.`;
     return await this.sendSMS(phoneNumber, message);
   }
 }

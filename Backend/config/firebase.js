@@ -80,7 +80,7 @@ class FirebaseAdminService {
       const message = {
         token: fcmToken,
         notification: {
-          title: notification.title || 'ChargEase Notification',
+          title: notification.title || 'Dockit Notification',
           body: notification.body || 'You have a new notification',
           ...notification
         },
@@ -159,7 +159,7 @@ class FirebaseAdminService {
 
       const message = {
         notification: {
-          title: notification.title || 'ChargEase Notification',
+          title: notification.title || 'Dockit Notification',
           body: notification.body || 'You have a new notification',
           ...notification
         },
@@ -255,7 +255,7 @@ class FirebaseAdminService {
       const message = {
         topic,
         notification: {
-          title: notification.title || 'ChargEase Notification',
+          title: notification.title || 'Dockit Notification',
           body: notification.body || 'You have a new notification',
           ...notification
         },

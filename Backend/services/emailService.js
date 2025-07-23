@@ -139,42 +139,88 @@ class EmailService {
   }
 
   async sendWelcomeEmail(userEmail, userName) {
-    const subject = 'Welcome to ChargingStation Nepal!';
+    const subject = 'Welcome to Dockit';
     const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #0ea5e9 0%, #22c55e 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to ChargingStation Nepal!</h1>
-        </div>
-        <div style="padding: 30px; background-color: #f9fafb;">
-          <h2 style="color: #1f2937; margin-bottom: 20px;">Hello ${userName}!</h2>
-          <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
-            Thank you for joining ChargingStation Nepal - Nepal's first comprehensive EV charging station booking platform!
-          </p>
-          <p style="color: #6b7280; line-height: 1.6; margin-bottom: 20px;">
-            With our platform, you can:
-          </p>
-          <ul style="color: #6b7280; line-height: 1.8; margin-bottom: 25px;">
-            <li>Find nearby charging stations</li>
-            <li>Book charging slots in advance</li>
-            <li>Track your charging history</li>
-            <li>Get real-time availability updates</li>
-          </ul>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.FRONTEND_URL}" style="background: #0ea5e9; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">Start Exploring</a>
-          </div>
-          <p style="color: #9ca3af; font-size: 14px; text-align: center; margin-top: 30px;">
-            Best regards,<br>
-            ChargingStation Nepal Team
-          </p>
-        </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Welcome to our platform</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello ${userName},
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Thank you for joining Dockit - Nepal's comprehensive EV charging station booking platform.
+              </p>
+              
+              <!-- Features List -->
+              <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">What you can do with our platform:</h3>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0 32px 0;">
+                <tr>
+                  <td style="padding: 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">• Find nearby charging stations</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">• Book charging slots in advance</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">• Track your charging history</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">• Get real-time availability updates</td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <a href="${process.env.FRONTEND_URL}" style="display: inline-block; background: #1f2937; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px;">Start Exploring</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                Best regards,<br>
+                Dockit Team
+              </p>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                Need help? Contact us at support@dockit.dallytech.com
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                Dockit - Making EV charging easy and reliable
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
-    return await this.sendEmail(
-      { email: userEmail, name: userName },
+    return await this.sendEmail({
+      to: userEmail,
       subject,
-      htmlBody
-    );
+      htmlBody,
+      data: { userName }
+    });
   }  async sendBookingConfirmationEmail(userEmail, userName, booking) {
     console.log('Email Service - Parameters received:', {
       userEmail,
@@ -188,90 +234,157 @@ class EmailService {
     let foodOrderSection = '';
     if (booking.foodOrder && booking.foodOrder.items && booking.foodOrder.items.length > 0) {
       const foodItems = booking.foodOrder.items.map(item => 
-        `<tr>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">x${item.quantity}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">Rs. ${item.price * item.quantity}</td>
+        `<tr style="border-bottom: 1px solid #f3f4f6;">
+          <td style="padding: 12px 16px; color: #1f2937;">${item.name}</td>
+          <td style="padding: 12px 16px; color: #1f2937; text-align: center;">x${item.quantity}</td>
+          <td style="padding: 12px 16px; color: #1f2937; text-align: right;">Rs. ${item.price * item.quantity}</td>
         </tr>`
       ).join('');
       
       foodOrderSection = `
-        <div style="background: white; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #f59e0b;">
-          <h3 style="color: #1f2937; margin: 0 0 15px 0;">🍽️ Food Order</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background-color: #f9fafb;">
-                <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">Item</th>
-                <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qty</th>
-                <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #e5e7eb;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${foodItems}
-              <tr style="background-color: #f9fafb; font-weight: bold;">
-                <td style="padding: 12px 8px; border-top: 2px solid #e5e7eb;" colspan="2">Food Total:</td>
-                <td style="padding: 12px 8px; border-top: 2px solid #e5e7eb; text-align: right;">Rs. ${booking.foodOrder.totalAmount}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p style="color: #6b7280; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
-            🕒 Your food will be prepared during your charging session and served at your vehicle or the restaurant area.
-          </p>
-        </div>
+        <!-- Food Order Section -->
+        <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Food Order</h3>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 16px 0 24px 0;">
+          <thead>
+            <tr style="background: #f8fafc; border-bottom: 1px solid #e5e7eb;">
+              <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #6b7280;">Item</th>
+              <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #6b7280;">Qty</th>
+              <th style="padding: 12px 16px; text-align: right; font-weight: 500; color: #6b7280;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${foodItems}
+            <tr style="background: #f8fafc; border-top: 2px solid #e5e7eb;">
+              <td style="padding: 12px 16px; font-weight: 600; color: #1f2937;" colspan="2">Food Total:</td>
+              <td style="padding: 12px 16px; font-weight: 600; color: #1f2937; text-align: right;">Rs. ${booking.foodOrder.totalAmount}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 14px; line-height: 1.5; font-style: italic;">
+          Your food will be prepared during your charging session and served at your vehicle or the restaurant area.
+        </p>
       `;
     }
     
     const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Booking Confirmed!</h1>
-          ${booking.foodOrder ? '<p style="color: white; margin: 10px 0 0 0; font-size: 16px;">🍽️ Including Food Order</p>' : ''}
-        </div>
-        <div style="padding: 30px; background-color: #f9fafb;">
-          <h2 style="color: #1f2937; margin-bottom: 20px;">Hello ${userName}!</h2>
-          <p style="color: #6b7280; line-height: 1.6; margin-bottom: 25px;">
-            Your charging session has been successfully booked${booking.foodOrder ? ' along with your food order' : ''}. Here are your booking details:
-          </p>
-          
-          <div style="background: white; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #22c55e;">
-            <h3 style="color: #1f2937; margin: 0 0 15px 0;">⚡ Charging Details</h3>
-            <p style="margin: 8px 0; color: #374151;"><strong>Booking ID:</strong> ${booking.bookingId}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Station:</strong> ${booking.stationName}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Location:</strong> ${booking.location}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Date & Time:</strong> ${booking.dateTime}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Duration:</strong> ${booking.duration}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Connector Type:</strong> ${booking.connectorType}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Charging Cost:</strong> Rs. ${booking.chargingAmount || (booking.totalAmount - (booking.foodOrder?.totalAmount || 0))}</p>
-          </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Booking Confirmed${booking.foodOrder ? ' - Including Food Order' : ''}</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello ${userName},
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Your charging session has been successfully booked${booking.foodOrder ? ' along with your food order' : ''}. Here are your booking details:
+              </p>
+              
+              <!-- Charging Details -->
+              <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Charging Details</h3>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 16px 0 24px 0;">
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280; width: 40%;">Booking ID</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.bookingId}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Station</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.stationName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Location</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.location}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Date & Time</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.dateTime}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Duration</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.duration}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Connector Type</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.connectorType}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Charging Cost</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">Rs. ${booking.chargingAmount || (booking.totalAmount - (booking.foodOrder?.totalAmount || 0))}</td>
+                </tr>
+              </table>
 
-          ${foodOrderSection}
+              ${foodOrderSection}
 
-          <div style="background: white; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3b82f6;">
-            <h3 style="color: #1f2937; margin: 0 0 15px 0;">💰 Payment Summary</h3>
-            <p style="margin: 8px 0; color: #374151;"><strong>Total Amount Paid:</strong> Rs. ${booking.totalAmount}</p>
-            <p style="margin: 8px 0; color: #6b7280; font-size: 14px;">Payment Status: ✅ Confirmed</p>
-          </div>
+              <!-- Payment Summary -->
+              <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Payment Summary</h3>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 16px 0 24px 0;">
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280; width: 40%;">Total Amount Paid</td>
+                  <td style="padding: 12px 16px; color: #1f2937; font-weight: 600;">Rs. ${booking.totalAmount}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Payment Status</td>
+                  <td style="padding: 12px 16px; color: #059669; font-weight: 500;">Confirmed</td>
+                </tr>
+              </table>
 
-          <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 25px 0;">
-            <h4 style="color: #92400e; margin: 0 0 10px 0;">Important Reminders:</h4>
-            <ul style="color: #92400e; margin: 0; padding-left: 20px;">
-              <li>Please arrive 10 minutes before your scheduled time</li>
-              <li>Bring your charging cable if required</li>
-              ${booking.foodOrder ? '<li>Your food will be prepared during charging and served to you</li>' : ''}
-              <li>Contact the station if you need to modify your booking</li>
-              ${booking.foodOrder ? '<li>For food-related queries, speak with restaurant staff on-site</li>' : ''}
-            </ul>
-          </div>
+              <!-- Important Reminders -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">Important Reminders:</h4>
+                    <ul style="margin: 0; padding-left: 16px; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                      <li>Please arrive 10 minutes before your scheduled time</li>
+                      <li>Bring your charging cable if required</li>
+                      ${booking.foodOrder ? '<li>Your food will be prepared during charging and served to you</li>' : ''}
+                      <li>Contact the station if you need to modify your booking</li>
+                      ${booking.foodOrder ? '<li>For food-related queries, speak with restaurant staff on-site</li>' : ''}
+                    </ul>
+                  </td>
+                </tr>
+              </table>
 
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.FRONTEND_URL}/bookings" style="background: #22c55e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">View My Bookings</a>
-          </div>
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <a href="${process.env.FRONTEND_URL}/bookings" style="display: inline-block; background: #1f2937; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px;">View My Bookings</a>
+                  </td>
+                </tr>
+              </table>
 
-          <p style="color: #9ca3af; font-size: 14px; text-align: center; margin-top: 30px;">
-            Thank you for choosing ChargingStation Nepal!<br>
-            Safe travels and happy charging${booking.foodOrder ? ' & dining' : ''}!
-          </p>
-        </div>
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5; text-align: center;">
+                Thank you for choosing Dockit!<br>
+                Safe travels and happy charging${booking.foodOrder ? ' & dining' : ''}!
+              </p>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                Need help? Contact us at support@dockit.dallytech.com
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                Dockit - Making EV charging easy and reliable
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
@@ -286,96 +399,180 @@ class EmailService {
   async sendBookingCancellationEmail(userEmail, userName, booking) {
     const subject = `Booking Cancelled - ${booking.stationName}`;
     const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Booking Cancelled</h1>
-        </div>
-        <div style="padding: 30px; background-color: #f9fafb;">
-          <h2 style="color: #1f2937; margin-bottom: 20px;">Hello ${userName}!</h2>
-          <p style="color: #6b7280; line-height: 1.6; margin-bottom: 25px;">
-            Your booking has been cancelled as requested. Here are the details:
-          </p>
-          
-          <div style="background: white; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ef4444;">
-            <h3 style="color: #1f2937; margin: 0 0 15px 0;">Cancelled Booking</h3>
-            <p style="margin: 8px 0; color: #374151;"><strong>Booking ID:</strong> ${booking.bookingId}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Station:</strong> ${booking.stationName}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Originally Scheduled:</strong> ${booking.dateTime}</p>
-            <p style="margin: 8px 0; color: #374151;"><strong>Refund Amount:</strong> Rs. ${booking.refundAmount}</p>
-          </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Booking Cancelled</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello ${userName},
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Your booking has been cancelled as requested. Here are the details:
+              </p>
+              
+              <!-- Booking Details -->
+              <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Cancelled Booking Details</h3>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 16px 0 24px 0;">
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280; width: 40%;">Booking ID</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.bookingId}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Station</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.stationName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Originally Scheduled</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${booking.dateTime}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Refund Amount</td>
+                  <td style="padding: 12px 16px; color: #1f2937; font-weight: 600;">Rs. ${booking.refundAmount}</td>
+                </tr>
+              </table>
 
-          <p style="color: #6b7280; line-height: 1.6; margin-bottom: 25px;">
-            ${booking.refundAmount > 0 ? 'Your refund will be processed within 3-5 business days.' : 'As per our cancellation policy, no refund is applicable for this booking.'}
-          </p>
+              <p style="margin: 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                ${booking.refundAmount > 0 ? 'Your refund will be processed within 3-5 business days.' : 'As per our cancellation policy, no refund is applicable for this booking.'}
+              </p>
 
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.FRONTEND_URL}/stations" style="background: #0ea5e9; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">Book Again</a>
-          </div>
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <a href="${process.env.FRONTEND_URL}/stations" style="display: inline-block; background: #1f2937; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px;">Book Again</a>
+                  </td>
+                </tr>
+              </table>
 
-          <p style="color: #9ca3af; font-size: 14px; text-align: center; margin-top: 30px;">
-            We hope to serve you again soon!<br>
-            ChargingStation Nepal Team
-          </p>
-        </div>
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5; text-align: center;">
+                We hope to serve you again soon!<br>
+                Dockit Team
+              </p>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                Need help? Contact us at support@dockit.dallytech.com
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                Dockit - Making EV charging easy and reliable
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
-    return await this.sendEmail(
-      { email: userEmail, name: userName },
+    return await this.sendEmail({
+      to: userEmail,
       subject,
-      htmlBody
-    );
+      htmlBody,
+      data: { userName }
+    });
   }
 
   /**
    * Send admin welcome email
    */
   async sendAdminWelcomeEmail(email, fullName, adminId) {
-    const subject = 'Welcome to ChargEase Admin Portal';
+    const subject = 'Welcome to Dockit Admin Portal';
     const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb;">
-        <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 40px 20px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Welcome to ChargEase</h1>
-          <p style="color: #e0e7ff; margin: 10px 0 0 0; font-size: 16px;">Admin Portal Access Granted</p>
-        </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Admin Portal</p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="padding: 40px 20px; background-color: white;">
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-            Hello <strong>${fullName}</strong>,
-          </p>
-          
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-            Welcome to the ChargEase Admin Portal! Your admin account has been successfully created.
-          </p>
-          
-          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">Your Admin Details:</h3>
-            <p style="color: #374151; margin: 5px 0;"><strong>Admin ID:</strong> ${adminId}</p>
-            <p style="color: #374151; margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-          </div>
-          
-          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-            <p style="color: #92400e; margin: 0; font-size: 14px;">
-              <strong>Security Notice:</strong> Your admin account requires dual-factor authentication. 
-              When logging in, you'll receive OTP codes on both your email and phone number.
-            </p>
-          </div>
-          
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-            To access the admin portal, visit: <a href="${process.env.ADMIN_PORTAL_URL || 'https://admin.chargease.com.np'}" style="color: #2563eb;">Admin Portal</a>
-          </p>
-          
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-            If you have any questions or need assistance, please contact the system administrator.
-          </p>
-        </div>
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Welcome to the Admin Portal</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello <strong>${fullName}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Welcome to the Dockit Admin Portal! Your admin account has been successfully created.
+              </p>
+              
+              <!-- Admin Details -->
+              <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Your Admin Details</h3>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 16px 0 24px 0;">
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280; width: 30%;">Admin ID</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${adminId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Email</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${email}</td>
+                </tr>
+              </table>
+              
+              <!-- Security Notice -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #fef3c7; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 500;">
+                      <strong>Security Notice:</strong> Your admin account requires dual-factor authentication. When logging in, you'll receive OTP codes on both your email and phone number.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <a href="${process.env.ADMIN_PORTAL_URL || 'https://admin.dockit.dallytech.com'}" style="display: inline-block; background: #1f2937; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px;">Access Admin Portal</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                If you have any questions or need assistance, please contact the system administrator.
+              </p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #9ca3af; font-size: 14px; margin: 0; line-height: 1.5;">
-            This is an automated message from ChargEase Admin System.<br>
-            Please do not reply to this email.
-          </p>
-        </div>
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                This is an automated message from Dockit Admin System.
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                Please do not reply to this email.
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
@@ -390,43 +587,81 @@ class EmailService {
    * Send admin login OTP email
    */
   async sendAdminLoginOTP(email, fullName, otp) {
-    const subject = 'ChargEase Admin Portal - Login OTP';
+    const subject = 'Dockit Admin Portal - Login OTP';
     const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb;">
-        <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px 20px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">Admin Login Verification</h1>
-          <p style="color: #fecaca; margin: 10px 0 0 0; font-size: 14px;">Secure Access Required</p>
-        </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Admin Login Verification</p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="padding: 30px 20px; background-color: white;">
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-            Hello <strong>${fullName}</strong>,
-          </p>
-          
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-            A login attempt has been made to your admin account. Please use the OTP below to complete your login:
-          </p>
-          
-          <div style="background-color: #fee2e2; border: 2px solid #dc2626; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-            <p style="color: #374151; margin: 0 0 10px 0; font-size: 14px;">Your Admin Login OTP:</p>
-            <h2 style="color: #dc2626; margin: 0; font-size: 32px; font-weight: bold; letter-spacing: 4px;">${otp}</h2>
-            <p style="color: #991b1b; margin: 10px 0 0 0; font-size: 12px;">Valid for 5 minutes</p>
-          </div>
-          
-          <div style="background-color: #fee2e2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
-            <p style="color: #991b1b; margin: 0; font-size: 14px;">
-              <strong>Security Warning:</strong> If you did not attempt to log in, 
-              please contact the system administrator immediately.
-            </p>
-          </div>
-        </div>
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Login Verification Required</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello <strong>${fullName}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                A login attempt has been made to your admin account. Please use the OTP below to complete your login:
+              </p>
+              
+              <!-- OTP Display -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 32px; display: inline-block;">
+                      <p style="margin: 0 0 16px 0; color: #64748b; font-size: 14px; font-weight: 500;">Your Admin Login OTP</p>
+                      <div style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; color: #dc2626; letter-spacing: 6px; background: #ffffff; padding: 16px 24px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        ${otp}
+                      </div>
+                      <p style="margin: 16px 0 0 0; color: #ef4444; font-size: 12px; font-weight: 500;">
+                        Valid for 5 minutes only
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Security Warning -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #fef2f2; border-left: 4px solid #dc2626; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; color: #991b1b; font-size: 14px; font-weight: 500;">
+                      <strong>Security Warning:</strong> If you did not attempt to log in, please contact the system administrator immediately.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                For security reasons, do not share this code with anyone.
+              </p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #9ca3af; font-size: 14px; margin: 0; line-height: 1.5;">
-            For security reasons, do not share this code with anyone.<br>
-            ChargEase Admin Security System
-          </p>
-        </div>
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                Dockit Admin Security System
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                This is an automated security message.
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
@@ -441,51 +676,90 @@ class EmailService {
    * Send employee welcome email
    */
   async sendEmployeeWelcomeEmail(email, fullName, employeeId, temporaryPassword) {
-    const subject = 'Welcome to ChargEase - Employee Portal Access';
+    const subject = 'Welcome to Dockit - Employee Portal Access';
     const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb;">
-        <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 40px 20px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Welcome to ChargEase</h1>
-          <p style="color: #a7f3d0; margin: 10px 0 0 0; font-size: 16px;">Employee Portal Access</p>
-        </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Employee Portal Access</p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="padding: 40px 20px; background-color: white;">
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-            Hello <strong>${fullName}</strong>,
-          </p>
-          
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-            Welcome to the ChargEase team! Your employee account has been created and you now have access to our employee portal.
-          </p>
-          
-          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">Your Login Credentials:</h3>
-            <p style="color: #374151; margin: 5px 0;"><strong>Employee ID:</strong> ${employeeId}</p>
-            <p style="color: #374151; margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-            <p style="color: #374151; margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${temporaryPassword}</code></p>
-          </div>
-          
-          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-            <p style="color: #92400e; margin: 0; font-size: 14px;">
-              <strong>Important:</strong> Please change your password immediately after your first login for security purposes.
-            </p>
-          </div>
-          
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-            To access the employee portal, visit: <a href="${process.env.EMPLOYEE_PORTAL_URL || 'https://employee.chargease.com.np'}" style="color: #059669;">Employee Portal</a>
-          </p>
-          
-          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-            If you have any questions or need assistance, please contact your supervisor or the admin team.
-          </p>
-        </div>
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Welcome to the Team</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello <strong>${fullName}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Welcome to the Dockit team! Your employee account has been created and you now have access to our employee portal.
+              </p>
+              
+              <!-- Login Credentials -->
+              <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Your Login Credentials</h3>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 16px 0 24px 0;">
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280; width: 40%;">Employee ID</td>
+                  <td style="padding: 12px 16px; color: #1f2937; font-family: 'Courier New', monospace; background: #f8fafc;">${employeeId}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Email</td>
+                  <td style="padding: 12px 16px; color: #1f2937;">${email}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-weight: 500; color: #6b7280;">Temporary Password</td>
+                  <td style="padding: 12px 16px; color: #1f2937; font-family: 'Courier New', monospace; background: #f8fafc;">${temporaryPassword}</td>
+                </tr>
+              </table>
+              
+              <!-- Important Notice -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #fef3c7; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 500;">
+                      <strong>Important:</strong> Please change your password immediately after your first login for security purposes.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <a href="${process.env.EMPLOYEE_PORTAL_URL || 'https://employee.dockit.dallytech.com'}" style="display: inline-block; background: #1f2937; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px;">Access Employee Portal</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                If you have any questions or need assistance, please contact your supervisor or the admin team.
+              </p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #9ca3af; font-size: 14px; margin: 0; line-height: 1.5;">
-            This is an automated message from ChargEase HR System.<br>
-            Please do not reply to this email.
-          </p>
-        </div>
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                This is an automated message from Dockit HR System.
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                Please do not reply to this email.
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
@@ -506,7 +780,7 @@ class MerchantEmailService {
       token: "Zoho-enczapikey PHtE6r0FRuDq32Mm8UIG4aW6EJajPIl7/Ls0eFIVsI8UDKACGE0GrIh/xDXh+BosVKNKE/GdyYtpteybte/UJzrtZG8dXWqyqK3sx/VYSPOZsbq6x00UsFoYc0bbU47sdNRt1yDRs9nZNA=="
     });
     this.fromEmail = "noreply@gogoiarmaantech.me";
-    this.fromName = "ChargingStation Merchant";
+    this.fromName = "Dockit Merchant";
   }
 
   async sendMerchantEmail(to, subject, htmlBody, textBody = null) {
@@ -551,46 +825,77 @@ class MerchantEmailService {
   }
 
   async sendMerchantOTP(merchantEmail, merchantName, otp) {
-    const subject = 'Your Login OTP - ChargingStation Merchant';
+    const subject = 'Your Login OTP - Dockit Merchant';
     const htmlBody = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-        <div style="padding: 40px 30px; text-align: center; background-color: #ffffff;">
-          <h1 style="color: #1f2937; margin: 0 0 20px 0; font-size: 32px; font-weight: 300; letter-spacing: -0.5px;">
-            ChargingStation
-          </h1>
-          <p style="color: #6b7280; font-size: 18px; font-weight: 300; margin: 0;">
-            Merchant Portal
-          </p>
-        </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Merchant Portal</p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="padding: 0 30px 40px 30px;">
-          <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 28px; font-weight: 300; text-align: center;">
-            Your verification code
-          </h2>
-          
-          <p style="color: #6b7280; line-height: 1.6; margin: 0 0 30px 0; text-align: center; font-size: 16px;">
-            Hello ${merchantName}, use this code to sign in to your merchant account:
-          </p>
-          
-          <div style="text-align: center; margin: 40px 0;">
-            <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 30px; display: inline-block;">
-              <div style="font-size: 36px; font-weight: 500; letter-spacing: 8px; color: #1f2937; font-family: 'Courier New', monospace;">
-                ${otp}
-              </div>
-            </div>
-          </div>
-          
-          <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 30px 0 0 0; line-height: 1.5;">
-            This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
-          </p>
-          
-          <div style="border-top: 1px solid #e5e7eb; margin-top: 40px; padding-top: 30px;">
-            <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0; line-height: 1.4;">
-              ChargingStation Merchant Portal<br>
-              This is an automated message, please do not reply.
-            </p>
-          </div>
-        </div>
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Login Verification</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello <strong>${merchantName}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Please use the following OTP to sign in to your merchant account:
+              </p>
+              
+              <!-- OTP Display -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 32px; display: inline-block;">
+                      <p style="margin: 0 0 16px 0; color: #64748b; font-size: 14px; font-weight: 500;">Your Merchant Login OTP</p>
+                      <div style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; color: #1f2937; letter-spacing: 6px; background: #ffffff; padding: 16px 24px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        ${otp}
+                      </div>
+                      <p style="margin: 16px 0 0 0; color: #dc2626; font-size: 12px; font-weight: 500;">
+                        Valid for 10 minutes only
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Security Notice -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                      If you didn't request this code, please ignore this email. For security reasons, do not share this code with anyone.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                Dockit Merchant Portal
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                This is an automated message, please do not reply.
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
@@ -602,53 +907,81 @@ class MerchantEmailService {
   }
 
   async sendMerchantWelcomeEmail(merchantEmail, merchantName, businessName) {
-    const subject = 'Welcome to ChargingStation Merchant Portal!';
+    const subject = 'Welcome to Dockit Merchant Portal';
     const htmlBody = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-        <div style="padding: 40px 30px; text-align: center; background-color: #1f2937;">
-          <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px; font-weight: 300; letter-spacing: -0.5px;">
-            Welcome to ChargingStation
-          </h1>
-          <p style="color: #9ca3af; font-size: 18px; font-weight: 300; margin: 0;">
-            Merchant Partner Program
-          </p>
-        </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Merchant Partner Program</p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="padding: 40px 30px;">
-          <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">
-            Hello ${merchantName}!
-          </h2>
-          
-          <p style="color: #6b7280; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px;">
-            Thank you for joining ChargingStation as a merchant partner. Your business <strong>${businessName}</strong> is now part of Nepal's growing EV charging network.
-          </p>
-          
-          <div style="background-color: #f9fafb; border-radius: 8px; padding: 25px; margin: 30px 0;">
-            <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px; font-weight: 500;">
-              Next Steps:
-            </h3>
-            <ul style="color: #6b7280; margin: 0; padding-left: 20px; line-height: 1.6;">
-              <li>Complete your merchant profile setup</li>
-              <li>Add your charging station details</li>
-              <li>Configure pricing and availability</li>
-              <li>Start accepting bookings from customers</li>
-            </ul>
-          </div>
-          
-          <div style="text-align: center; margin: 35px 0;">
-            <a href="${process.env.FRONTEND_URL}/merchant/dashboard" 
-               style="background-color: #1f2937; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;">
-              Access Merchant Dashboard
-            </a>
-          </div>
-          
-          <div style="border-top: 1px solid #e5e7eb; margin-top: 40px; padding-top: 30px;">
-            <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 0; line-height: 1.5;">
-              Questions? Contact our merchant support team.<br>
-              ChargingStation Merchant Portal
-            </p>
-          </div>
-        </div>
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Welcome to our Merchant Program</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello <strong>${merchantName}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Thank you for joining Dockit as a merchant partner. Your business <strong>${businessName}</strong> is now part of Nepal's growing EV charging network.
+              </p>
+              
+              <!-- Next Steps -->
+              <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Next Steps to Get Started:</h3>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0 32px 0;">
+                <tr>
+                  <td style="padding: 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">• Complete your merchant profile setup</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">• Add your charging station details</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">• Configure pricing and availability</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">• Start accepting bookings from customers</td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <a href="${process.env.FRONTEND_URL}/merchant/dashboard" style="display: inline-block; background: #1f2937; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px;">Access Merchant Dashboard</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                Questions? Contact our merchant support team for assistance.<br>
+                Best regards,<br>
+                Dockit Team
+              </p>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                Dockit Merchant Portal
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                Making EV charging accessible across Nepal
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
@@ -660,47 +993,81 @@ class MerchantEmailService {
   }
 
   async sendMerchantPasswordResetOTP(merchantEmail, merchantName, otp) {
-    const subject = 'Password Reset Code - ChargingStation Merchant';
+    const subject = 'Password Reset Code - Dockit Merchant';
     const htmlBody = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-        <div style="padding: 40px 30px; text-align: center; background-color: #1f2937;">
-          <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px; font-weight: 300; letter-spacing: -0.5px;">
-            Password Reset
-          </h1>
-          <p style="color: #9ca3af; font-size: 18px; font-weight: 300; margin: 0;">
-            ChargingStation Merchant Portal
-          </p>
-        </div>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">Dockit</h1>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Merchant Password Reset</p>
+            </td>
+          </tr>
+        </table>
         
-        <div style="padding: 40px 30px; text-align: center;">
-          <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">
-            Hello ${merchantName}!
-          </h2>
-          
-          <p style="color: #6b7280; line-height: 1.6; margin: 0 0 30px 0; font-size: 16px;">
-            You requested to reset your password. Use the code below to set a new password:
-          </p>
-          
-          <div style="background-color: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; padding: 30px; margin: 30px 0;">
-            <div style="font-size: 36px; font-weight: 600; letter-spacing: 8px; color: #1f2937; margin: 0;">
-              ${otp}
-            </div>
-            <p style="color: #9ca3af; font-size: 14px; margin: 15px 0 0 0;">
-              This code expires in 5 minutes
-            </p>
-          </div>
-          
-          <p style="color: #ef4444; font-size: 14px; margin: 25px 0; padding: 15px; background-color: #fef2f2; border-radius: 6px;">
-            <strong>Security Note:</strong> If you didn't request this password reset, please ignore this email and contact support immediately.
-          </p>
-          
-          <div style="border-top: 1px solid #e5e7eb; margin-top: 40px; padding-top: 30px;">
-            <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 0; line-height: 1.5;">
-              For security reasons, do not share this code with anyone.<br>
-              ChargingStation Merchant Portal
-            </p>
-          </div>
-        </div>
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 600; color: #1f2937;">Password Reset Request</h2>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                Hello <strong>${merchantName}</strong>,
+              </p>
+              
+              <p style="margin: 0 0 24px 0; color: #374151; line-height: 1.6; font-size: 16px;">
+                You requested to reset your password. Use the code below to set a new password:
+              </p>
+              
+              <!-- OTP Display -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td style="text-align: center;">
+                    <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 32px; display: inline-block;">
+                      <p style="margin: 0 0 16px 0; color: #64748b; font-size: 14px; font-weight: 500;">Password Reset Code</p>
+                      <div style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; color: #dc2626; letter-spacing: 6px; background: #ffffff; padding: 16px 24px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        ${otp}
+                      </div>
+                      <p style="margin: 16px 0 0 0; color: #dc2626; font-size: 12px; font-weight: 500;">
+                        Valid for 5 minutes only
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Security Warning -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #fef2f2; border-left: 4px solid #dc2626; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; color: #991b1b; font-size: 14px; font-weight: 500;">
+                      <strong>Security Notice:</strong> If you didn't request this password reset, please ignore this email and contact support immediately.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                For security reasons, do not share this code with anyone.
+              </p>
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+          <tr>
+            <td style="padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                Dockit Merchant Portal
+              </p>
+              <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+                This is an automated security message.
+              </p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 

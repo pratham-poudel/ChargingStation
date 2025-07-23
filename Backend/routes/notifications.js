@@ -506,7 +506,7 @@ router.post('/test-broadcast', [
 ], async (req, res) => {
   try {
     // Allow in any environment for testing
-    const { title = 'Test Notification', body = 'This is a test broadcast notification from ChargEase backend' } = req.body;
+    const { title = 'Test Notification', body = 'This is a test broadcast notification from Dockit backend' } = req.body;
 
     // Get all users with FCM tokens
     const User = require('../models/User');

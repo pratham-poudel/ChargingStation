@@ -629,7 +629,7 @@ class DistributedBookingScheduler {
       try {
         await smsService.sendSMS(
           user.phoneNumber,
-          `ChargEase: Your charging slot #${booking.bookingId} at ${station.name} has started. You have 30 minutes to check in or the slot will be released. Check in now!`
+          `Dockit: Your charging slot #${booking.bookingId} at ${station.name} has started. You have 30 minutes to check in or the slot will be released. Check in now!`
         );
         
         booking.slotStatus.notificationsSent.slotStart.sms = {
@@ -694,7 +694,7 @@ class DistributedBookingScheduler {
       try {
         await smsService.sendSMS(
           user.phoneNumber,
-          `ChargEase ALERT: Booking #${booking.bookingId} has been EXPIRED due to no-show. No refund will be processed. Please arrive on time for future bookings.`
+          `Dockit ALERT: Booking #${booking.bookingId} has been EXPIRED due to no-show. No refund will be processed. Please arrive on time for future bookings.`
         );
         
         booking.slotStatus.notificationsSent.slotExpired.sms = {
