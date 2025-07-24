@@ -82,7 +82,7 @@ const AdminRestaurants = () => {
         ...(verificationFilter && { verificationStatus: verificationFilter })
       })
 
-      const response = await fetch(`http://localhost:5000/api/admin/restaurants?${params}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/admin/restaurants?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-API-Key':'your-super-secret-api-key-2024',
