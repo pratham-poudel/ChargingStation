@@ -776,11 +776,11 @@ class MerchantEmailService {
   constructor() {
     // Merchant-specific ZeptoMail configuration
     this.client = new SendMailClient({
-      url: "api.zeptomail.in/",
-      token: "Zoho-enczapikey PHtE6r0FRuDq32Mm8UIG4aW6EJajPIl7/Ls0eFIVsI8UDKACGE0GrIh/xDXh+BosVKNKE/GdyYtpteybte/UJzrtZG8dXWqyqK3sx/VYSPOZsbq6x00UsFoYc0bbU47sdNRt1yDRs9nZNA=="
+      url: process.env.ZEPTOMAIL_API_URL || "api.zeptomail.in/",
+      token: process.env.ZEPTOMAIL_API_KEY
     });
-    this.fromEmail = "noreply@gogoiarmaantech.me";
-    this.fromName = "Dockit Merchant";
+    this.fromEmail = process.env.ZEPTOMAIL_FROM_EMAIL || "noreply@gogoiarmaantech.me";
+    this.fromName = process.env.ZEPTOMAIL_FROM_NAME || "Dockit Merchant";
   }
 
   async sendMerchantEmail(to, subject, htmlBody, textBody = null) {
