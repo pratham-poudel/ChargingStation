@@ -55,7 +55,7 @@ export default function Layout({ children }) {
                 <Zap className="h-6 w-6 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg xl:text-xl font-bold text-gray-900 truncate">ChargEase</h1>
+                <h1 className="text-lg xl:text-xl font-bold text-gray-900 truncate">Dockit</h1>
                 <p className="text-xs text-gray-500 truncate hidden sm:block">Nepal's EV Network</p>
               </div>
             </Link>            {/* Desktop Navigation - Show from large screens */}

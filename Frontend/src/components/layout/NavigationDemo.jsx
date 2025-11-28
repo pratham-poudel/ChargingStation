@@ -29,7 +29,7 @@ const NavigationDemo = () => {
 
   const merchant = {
     name: 'John Doe',
-    businessName: 'ChargEase Station Network'
+    businessName: 'Dockit Station Network'
   }
 
   return (

@@ -1,6 +1,6 @@
 {
-  "name": "ChargEase - Nepal's EV Charging Network",
-  "short_name": "ChargEase",
+  "name": "Dockit - Nepal's EV Charging Network",
+  "short_name": "Dockit",
   "description": "Nepal's premier electric vehicle charging network. Find, book, and charge your EV at the most reliable charging stations across Nepal.",
   "start_url": "/",
   "display": "standalone",

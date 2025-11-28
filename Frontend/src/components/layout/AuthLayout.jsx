@@ -17,7 +17,7 @@ export default function AuthLayout({ children }) {
               <Zap className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">ChargEase</h1>
+              <h1 className="text-xl font-bold text-gray-900">Dockit</h1>
               <p className="text-xs text-gray-500">Nepal's EV Network</p>
             </div>
           </Link>
